@@ -1,0 +1,24 @@
+{
+  "name": "neo-multi-server-manager",
+  "version": "1.0.0",
+  "description": "Multi-server SSH connection management application",
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:client\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:client\"",
+    "start:backend": "cd backend && npm start",
+    "start:client": "cd client && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:client": "cd client && PORT=3000 npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../client && npm install"
+  },
+  "keywords": [
+    "ssh",
+    "server",
+    "management"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
