@@ -1,0 +1,154 @@
+.fileBrowser {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.header {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 16px;
+}
+
+.pathBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navButton,
+.refreshButton {
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.navButton:hover:not(:disabled),
+.refreshButton:hover {
+  background: var(--button-hover-bg);
+  border-color: var(--primary-color);
+}
+
+.navButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.currentPath {
+  flex: 1;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.loading,
+.error {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-medium);
+}
+
+.error button {
+  margin-top: 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fileList {
+  min-height: 400px;
+  max-height: calc(100vh - 450px);
+  overflow-y: auto;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1fr 120px 180px 120px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fileRow {
+  display: grid;
+  grid-template-columns: 1fr 120px 180px 120px;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.2s;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.fileRow:hover {
+  background: var(--hover-bg);
+}
+
+.directory {
+  cursor: pointer;
+}
+
+.directory:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.nameColumn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.sizeColumn,
+.dateColumn,
+.permColumn {
+  display: flex;
+  align-items: center;
+  color: var(--text-medium);
+  font-size: 0.85rem;
+}
+
+.emptyState {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-medium);
+}
+
+@media (max-width: 768px) {
+  .tableHeader,
+  .fileRow {
+    grid-template-columns: 1fr 80px;
+  }
+
+  .dateColumn,
+  .permColumn {
+    display: none;
+  }
+}

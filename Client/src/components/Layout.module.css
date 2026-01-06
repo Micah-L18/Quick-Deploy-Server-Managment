@@ -1,0 +1,23 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mainContent {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  padding: 30px;
+  animation: fadeIn 0.3s ease;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 70px;
+    padding: 20px;
+  }
+}
