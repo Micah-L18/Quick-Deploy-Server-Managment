@@ -13,12 +13,13 @@ const Servers = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [newServerData, setNewServerData] = useState(null);
   const [hiddenIPs, setHiddenIPs] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     region: 'us-east',
     ip: '',
-    username: '',
   });
 
   const { data: servers, isLoading } = useQuery({
@@ -50,10 +51,13 @@ const Servers = () => {
 
   const addServerMutation = useMutation({
     mutationFn: serversService.addServer,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['servers']);
       setShowAddModal(false);
-      setFormData({ name: '', region: 'us-east', ip: '', username: '' });
+      setFormData({ name: '', region: 'us-east', ip: '' });
+      // Show setup command modal
+      setNewServerData(data);
+      setShowSetupModal(true);
     },
   });
 
@@ -73,7 +77,7 @@ const Servers = () => {
 
   const handleAddServer = (e) => {
     e.preventDefault();
-    addServerMutation.mutate(formData);
+    addServerMutation.mutate({ ...formData, username: 'root' });
   };
 
   const handleDeleteServer = (id, name) => {
@@ -299,20 +303,7 @@ const Servers = () => {
                 required
                 placeholder="192.168.1.100"
               />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>SSH Username</label>
-              <input
-                type="text"
-                className={styles.formInput}
-                value={formData.username}
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-                required
-                placeholder="root"
-              />
+              <p className={styles.formHint}>SSH connection will use root user</p>
             </div>
           </div>
 
@@ -332,6 +323,50 @@ const Servers = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Setup Command Modal */}
+      <Modal
+        isOpen={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        title="🔑 SSH Key Setup Required"
+      >
+        <div className={styles.setupModal}>
+          <p className={styles.setupDescription}>
+            <strong>Important:</strong> You must run this command on your server <strong>{newServerData?.ip}</strong> to enable SSH key authentication:
+          </p>
+          
+          <div className={styles.setupInstructions}>
+            <ol>
+              <li>SSH into your server using password: <code>ssh root@{newServerData?.ip}</code></li>
+              <li>Run this command on the server:</li>
+            </ol>
+          </div>
+          
+          <div className={styles.codeBlock}>
+            {newServerData?.setupCommand || 'No setup command available'}
+          </div>
+          
+          <Button 
+            onClick={() => {
+              navigator.clipboard.writeText(newServerData?.setupCommand || '');
+              alert('Command copied to clipboard!');
+            }}
+            style={{ marginTop: '1rem', width: '100%' }}
+          >
+            📋 Copy Setup Command
+          </Button>
+          
+          <p className={styles.setupNote}>
+            After running the command, click "Check Status" on the server to verify the connection.
+          </p>
+          
+          <div className={styles.modalFooter}>
+            <Button onClick={() => setShowSetupModal(false)} variant="outline">
+              Done
+            </Button>
+          </div>
+        </div>
       </Modal>
     </Layout>
   );

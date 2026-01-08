@@ -1,15 +1,74 @@
+.fileBrowserContainer {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  height: calc(100vh - 180px);
+  min-height: 500px;
+  width: 100%;
+}
+
 .fileBrowser {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
-  margin-top: 16px;
+  /* flex: 0 0 350px; */
+  /* min-width: 300px; */
+  /* max-width: 500px; */
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+}
+
+.editorPanel {
+  flex: 1;
+  min-width: 0;
+  /* display: flex; */
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.editorPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.placeholderContent {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-medium);
+}
+
+.placeholderIcon {
+  font-size: 64px;
+  display: block;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.placeholderContent h3 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.placeholderContent p {
+  font-size: 0.9rem;
+  color: var(--text-medium);
+  margin: 0;
+  opacity: 0.8;
 }
 
 .header {
   background: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
-  padding: 16px;
+  padding: 12px;
 }
 
 .pathBar {
@@ -23,10 +82,10 @@
   background: var(--button-bg);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 8px 16px;
+  padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
@@ -45,11 +104,119 @@
   flex: 1;
   color: var(--text-primary);
   font-family: 'Courier New', monospace;
-  font-size: 0.95rem;
-  padding: 8px 12px;
+  font-size: 0.85rem;
+  padding: 6px 10px;
   background: var(--input-bg);
   border-radius: 6px;
   border: 1px solid var(--border-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  position: relative;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--primary-color);
+  background: var(--card-bg);
+}
+
+.searchInput::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.clearSearch {
+  position: absolute;
+  right: 130px;
+  background: transparent;
+  border: none;
+  color: var(--text-medium);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.clearSearch:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+/* Search whole system toggle */
+.searchToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.searchToggle:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary-color);
+}
+
+.searchToggle input[type="checkbox"] {
+  accent-color: var(--primary-color);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.searchToggle span {
+  user-select: none;
+}
+
+.resultCount {
+  margin-left: 8px;
+  font-size: 0.7rem;
+  font-weight: normal;
+  color: var(--primary-color);
+  text-transform: none;
+}
+
+.clearSearchBtn {
+  margin-top: 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.clearSearchBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .loading,
@@ -70,20 +237,20 @@
 }
 
 .fileList {
-  min-height: 400px;
-  max-height: calc(100vh - 450px);
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1fr 120px 180px 120px;
-  gap: 12px;
-  padding: 12px 16px;
+  grid-template-columns: 1fr 100px 160px 100px;
+  gap: 8px;
+  padding: 10px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text-medium);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -91,13 +258,13 @@
 
 .fileRow {
   display: grid;
-  grid-template-columns: 1fr 120px 180px 120px;
-  gap: 12px;
-  padding: 12px 16px;
+  grid-template-columns: 1fr 100px 160px 100px;
+  gap: 8px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
   transition: background 0.2s;
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .fileRow:hover {
@@ -112,6 +279,33 @@
   background: rgba(139, 92, 246, 0.1);
 }
 
+.file {
+  cursor: pointer;
+}
+
+.file:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.file .icon {
+  transition: transform 0.2s;
+}
+
+.file:hover .icon {
+  transform: scale(1.1);
+}
+
+.selected {
+  background: rgba(0, 212, 255, 0.2) !important;
+  border-left: 3px solid var(--primary, #00d4ff);
+  padding-left: 13px;
+}
+
+.selected .nameColumn {
+  font-weight: 600;
+  color: var(--primary, #00d4ff);
+}
+
 .nameColumn {
   display: flex;
   align-items: center;
@@ -119,6 +313,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nameWithPath {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.fileName {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filePath {
+  font-size: 0.7rem;
+  color: var(--text-medium);
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Courier New', monospace;
 }
 
 .icon {
@@ -150,5 +368,23 @@
   .dateColumn,
   .permColumn {
     display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .fileBrowserContainer {
+    flex-direction: column;
+    height: auto;
+    min-height: auto;
+  }
+
+  .fileBrowser {
+    min-width: unset;
+    max-height: 400px;
+  }
+
+  .editorPanel {
+    min-width: unset;
+    height: 600px;
   }
 }

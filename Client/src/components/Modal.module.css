@@ -24,6 +24,26 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
+.modal:has(.fileEditor) {
+  max-width: 95vw;
+  width: 95vw;
+  max-height: 90vh;
+  height: 90vh;
+  padding: 0;
+  background: var(--background, #0a0e27);
+  overflow: hidden;
+}
+
+.modal:has(.fileEditor) .modalHeader {
+  display: none;
+}
+
+.modal:has(.fileEditor) .modalBody {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .modalHeader {
   display: flex;
   justify-content: space-between;

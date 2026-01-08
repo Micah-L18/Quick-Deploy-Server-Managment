@@ -15,6 +15,21 @@ export const filesService = {
     return response.data;
   },
 
+  writeFile: async (serverId, path, content) => {
+    const response = await api.post(`/servers/${serverId}/files/write`, {
+      path,
+      content,
+    });
+    return response.data;
+  },
+
+  searchFiles: async (serverId, query, searchPath = '/home') => {
+    const response = await api.get(`/servers/${serverId}/files/search`, {
+      params: { q: query, path: searchPath },
+    });
+    return response.data;
+  },
+
   getStats: async (serverId, path) => {
     const response = await api.get(`/servers/${serverId}/files/stats`, {
       params: { path },

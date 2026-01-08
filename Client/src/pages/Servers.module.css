@@ -316,6 +316,13 @@
   box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
 }
 
+.formHint {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .modalFooter {
   display: flex;
   gap: 10px;
@@ -331,4 +338,62 @@
   .formRow {
     grid-template-columns: 1fr;
   }
+}
+
+/* Setup Command Modal */
+.setupModal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.setupDescription {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.setupDescription strong {
+  color: #ef4444;
+}
+
+.setupInstructions {
+  margin: 0.5rem 0;
+}
+
+.setupInstructions ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.setupInstructions code {
+  background: rgba(0, 212, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.875rem;
+  color: var(--primary);
+}
+
+.codeBlock {
+  background: #1a1a2e;
+  color: #00d4ff;
+  padding: 1rem;
+  border-radius: 8px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.setupNote {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 0.5rem;
 }

@@ -1,0 +1,235 @@
+.fileEditor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--background);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border, #2a3150);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--card-background, #1a1f3a);
+  border-bottom: 1px solid var(--border, #2a3150);
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.fileName {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filePath {
+  font-size: 12px;
+  color: var(--text-secondary, #8b92b0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileExtension {
+  padding: 2px 8px;
+  background: var(--primary-dark, #0099cc);
+  color: var(--text, #ffffff);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.unsavedIndicator {
+  font-size: 13px;
+  color: var(--warning, #ffa500);
+  font-weight: 500;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.saveSuccess {
+  font-size: 13px;
+  color: var(--success, #00ff88);
+  font-weight: 500;
+}
+
+.saveError {
+  font-size: 13px;
+  color: var(--error, #ff4444);
+  font-weight: 500;
+}
+
+.saveButton {
+  padding: 6px 16px;
+  background: var(--primary, #00d4ff);
+  color: var(--background, #0a0e27);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: var(--primary-light, #33ddff);
+  transform: translateY(-1px);
+}
+
+.saveButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.closeButton {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-secondary, #8b92b0);
+  border: 1px solid var(--border, #2a3150);
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: var(--error, #ff4444);
+  color: var(--text, #ffffff);
+  border-color: var(--error, #ff4444);
+}
+
+.editorContainer {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  background: var(--background, #0a0e27);
+  color: var(--text, #ffffff);
+  border: none;
+  outline: none;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.editor::selection {
+  background: var(--primary-dark, #0099cc);
+  color: var(--text, #ffffff);
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: var(--text-secondary, #8b92b0);
+  gap: 16px;
+  width: 100%;
+}
+
+.error {
+  color: var(--error, #ff4444);
+}
+
+.error button {
+  padding: 8px 16px;
+  background: var(--primary, #00d4ff);
+  color: var(--background, #0a0e27);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.error button:hover {
+  background: var(--primary-light, #33ddff);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--card-background, #1a1f3a);
+  border-top: 1px solid var(--border, #2a3150);
+  font-size: 12px;
+  color: var(--text-secondary, #8b92b0);
+  flex-shrink: 0;
+}
+
+.footerLeft,
+.footerRight {
+  display: flex;
+  gap: 16px;
+}
+
+.lineCount,
+.charCount {
+  font-weight: 500;
+}
+
+.hint {
+  font-style: italic;
+  opacity: 0.7;
+}

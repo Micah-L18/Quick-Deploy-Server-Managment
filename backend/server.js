@@ -227,8 +227,10 @@ async function loadServers(userId = null) {
           region: row.region,
           ip: row.ip,
           username: row.username,
-          // Resolve relative path to absolute path at runtime
-          privateKeyPath: path.join(__dirname, row.private_key_path),
+          // Resolve relative path to absolute path at runtime, or use as-is if already absolute
+          privateKeyPath: path.isAbsolute(row.private_key_path) 
+            ? row.private_key_path 
+            : path.join(__dirname, row.private_key_path),
           publicKey: row.public_key,
           setupCommand: row.setup_command,
           status: row.status,
@@ -273,8 +275,34 @@ async function saveServer(server) {
   });
 }
 
-// Delete a server from database
+// Delete a server from database (also removes SSH keys)
 async function deleteServer(serverId) {
+  // First, get the server to find the SSH key path
+  const server = await getServer(serverId);
+  
+  if (server && server.privateKeyPath) {
+    // Delete the private key file
+    try {
+      await fs.promises.unlink(server.privateKeyPath);
+      console.log(`Deleted private key: ${server.privateKeyPath}`);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error(`Failed to delete private key: ${err.message}`);
+      }
+    }
+    
+    // Delete the public key file (.pub)
+    try {
+      await fs.promises.unlink(server.privateKeyPath + '.pub');
+      console.log(`Deleted public key: ${server.privateKeyPath}.pub`);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error(`Failed to delete public key: ${err.message}`);
+      }
+    }
+  }
+  
+  // Delete from database
   return new Promise((resolve, reject) => {
     db.run('DELETE FROM servers WHERE id = ?', [serverId], function(err) {
       if (err) {
@@ -302,8 +330,10 @@ async function getServer(serverId) {
           region: row.region,
           ip: row.ip,
           username: row.username,
-          // Resolve relative path to absolute path at runtime
-          privateKeyPath: path.join(__dirname, row.private_key_path),
+          // Resolve relative path to absolute path at runtime, or use as-is if already absolute
+          privateKeyPath: path.isAbsolute(row.private_key_path) 
+            ? row.private_key_path 
+            : path.join(__dirname, row.private_key_path),
           publicKey: row.public_key,
           setupCommand: row.setup_command,
           status: row.status,
@@ -334,7 +364,7 @@ async function generateSSHKey(serverId) {
       // Store relative path to ssh_keys directory (portable)
       privateKeyPath: `ssh_keys/server_${serverId}`,
       publicKey: publicKey.trim(),
-      setupCommand: `echo "${publicKey.trim()}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`
+      setupCommand: `sudo su -c 'mkdir -p /root/.ssh && chmod 700 /root/.ssh && echo "${publicKey.trim()}" >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'`
     };
   } catch (error) {
     throw new Error(`Failed to generate SSH key: ${error.message}`);
@@ -475,6 +505,431 @@ async function getFileStats(host, username, privateKeyPath, filePath) {
             modified: stats.mtime * 1000,
             isDirectory: stats.isDirectory(),
             isFile: stats.isFile()
+          });
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    }).connect({
+      host,
+      port: 22,
+      username,
+      privateKey: require('fs').readFileSync(privateKeyPath),
+      readyTimeout: 10000
+    });
+  });
+}
+
+// SFTP - Write file contents
+async function writeFile(host, username, privateKeyPath, filePath, content) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    
+    conn.on('ready', () => {
+      conn.sftp((err, sftp) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        
+        sftp.writeFile(filePath, content, 'utf8', (err) => {
+          conn.end();
+          
+          if (err) {
+            return reject(err);
+          }
+          
+          resolve({ success: true, path: filePath });
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    }).connect({
+      host,
+      port: 22,
+      username,
+      privateKey: require('fs').readFileSync(privateKeyPath),
+      readyTimeout: 10000
+    });
+  });
+}
+
+// Recursive file search
+async function searchFiles(host, username, privateKeyPath, searchPath, query, maxResults = 100) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    
+    conn.on('ready', () => {
+      // Use find command for recursive search with maxdepth to prevent infinite loops
+      // Output format: type|path (d for directory, f for file)
+      const escapedQuery = query.replace(/'/g, "'\\''");
+      const command = `find "${searchPath}" -maxdepth 10 \\( -iname "*${escapedQuery}*" -type f -printf "f|%p\\n" \\) -o \\( -iname "*${escapedQuery}*" -type d -printf "d|%p\\n" \\) 2>/dev/null | head -n ${maxResults}`;
+      
+      conn.exec(command, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        
+        let output = '';
+        
+        stream.on('close', (code, signal) => {
+          conn.end();
+          
+          if (code !== 0 && output.trim() === '') {
+            return resolve([]);
+          }
+          
+          const lines = output.trim().split('\n').filter(p => p);
+          resolve(lines.map(line => {
+            // Parse format: type|path
+            const pipeIndex = line.indexOf('|');
+            const type = pipeIndex > 0 ? line.substring(0, pipeIndex) : 'f';
+            const filePath = pipeIndex > 0 ? line.substring(pipeIndex + 1) : line;
+            
+            return {
+              path: filePath,
+              name: filePath.split('/').pop(),
+              directory: filePath.substring(0, filePath.lastIndexOf('/')) || '/',
+              isDirectory: type === 'd'
+            };
+          }));
+        }).on('data', (data) => {
+          output += data.toString();
+        }).stderr.on('data', (data) => {
+          // Ignore stderr for now (permission denied, etc.)
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    }).connect({
+      host,
+      port: 22,
+      username,
+      privateKey: require('fs').readFileSync(privateKeyPath),
+      readyTimeout: 10000
+    });
+  });
+}
+
+// Detect OS distribution and version
+async function detectOS(host, username, privateKeyPath) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    
+    conn.on('ready', () => {
+      const command = `
+        if [ -f /etc/os-release ]; then
+          cat /etc/os-release
+        elif [ -f /etc/lsb-release ]; then
+          cat /etc/lsb-release
+        else
+          uname -a
+        fi
+      `;
+      
+      conn.exec(command, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        
+        let output = '';
+        stream.on('data', (data) => {
+          output += data.toString();
+        }).on('close', () => {
+          conn.end();
+          
+          const osInfo = {};
+          const lines = output.split('\n');
+          
+          lines.forEach(line => {
+            const match = line.match(/^(\w+)="?([^"]+)"?$/);
+            if (match) {
+              osInfo[match[1]] = match[2];
+            }
+          });
+          
+          // Determine OS type and package manager
+          let osType = 'unknown';
+          let packageManager = 'unknown';
+          
+          if (osInfo.ID || osInfo.DISTRIB_ID) {
+            const id = (osInfo.ID || osInfo.DISTRIB_ID).toLowerCase();
+            
+            if (id.includes('ubuntu') || id.includes('debian')) {
+              osType = 'debian';
+              packageManager = 'apt';
+            } else if (id.includes('centos') || id.includes('rhel') || id.includes('fedora')) {
+              osType = 'redhat';
+              packageManager = 'yum';
+            } else if (id.includes('arch')) {
+              osType = 'arch';
+              packageManager = 'pacman';
+            } else if (id.includes('alpine')) {
+              osType = 'alpine';
+              packageManager = 'apk';
+            }
+          }
+          
+          resolve({
+            id: osInfo.ID || osInfo.DISTRIB_ID || 'unknown',
+            name: osInfo.NAME || osInfo.DISTRIB_DESCRIPTION || 'Unknown',
+            version: osInfo.VERSION || osInfo.DISTRIB_RELEASE || 'unknown',
+            versionId: osInfo.VERSION_ID || osInfo.DISTRIB_RELEASE || 'unknown',
+            prettyName: osInfo.PRETTY_NAME || osInfo.DISTRIB_DESCRIPTION || 'Unknown OS',
+            osType,
+            packageManager,
+            raw: osInfo
+          });
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    }).connect({
+      host,
+      port: 22,
+      username,
+      privateKey: require('fs').readFileSync(privateKeyPath),
+      readyTimeout: 10000
+    });
+  });
+}
+
+// Check service status
+async function checkServiceStatus(host, username, privateKeyPath, serviceName) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    
+    conn.on('ready', () => {
+      // Check if service is actually installed by looking for systemd unit file or checking package
+      const command = `
+        # Check if service unit exists or package is installed
+        if command -v systemctl &> /dev/null; then
+          if systemctl list-unit-files ${serviceName}.service 2>/dev/null | grep -q "${serviceName}.service"; then
+            echo "INSTALLED"
+            systemctl is-active ${serviceName} 2>/dev/null && echo "ACTIVE" || echo "INACTIVE"
+            systemctl is-enabled ${serviceName} 2>/dev/null && echo "ENABLED" || echo "DISABLED"
+          else
+            echo "NOT_INSTALLED"
+            echo "INACTIVE"
+            echo "DISABLED"
+          fi
+        elif command -v service &> /dev/null; then
+          if service ${serviceName} status &> /dev/null || [ -f /etc/init.d/${serviceName} ]; then
+            echo "INSTALLED"
+            service ${serviceName} status &> /dev/null && echo "ACTIVE" || echo "INACTIVE"
+            echo "UNKNOWN"
+          else
+            echo "NOT_INSTALLED"
+            echo "INACTIVE"
+            echo "UNKNOWN"
+          fi
+        else
+          echo "NO_MANAGER"
+          echo "INACTIVE"
+          echo "UNKNOWN"
+        fi
+      `;
+      
+      conn.exec(command, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        
+        let output = '';
+        stream.on('data', (data) => {
+          output += data.toString();
+        }).on('close', () => {
+          conn.end();
+          
+          const lines = output.trim().split('\n');
+          const installStatus = lines[0] || 'NOT_INSTALLED';
+          const activeStatus = lines[1] || 'INACTIVE';
+          const enabledStatus = lines[2] || 'DISABLED';
+          
+          resolve({
+            service: serviceName,
+            installed: installStatus === 'INSTALLED',
+            active: activeStatus === 'ACTIVE',
+            enabled: enabledStatus === 'ENABLED',
+            installStatus,
+            activeStatus,
+            enabledStatus
+          });
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    }).connect({
+      host,
+      port: 22,
+      username,
+      privateKey: require('fs').readFileSync(privateKeyPath),
+      readyTimeout: 10000
+    });
+  });
+}
+
+// Install service
+async function installService(host, username, privateKeyPath, serviceName, osInfo) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    
+    conn.on('ready', () => {
+      let installCommand = '';
+      
+      // Detect if we need sudo (check if running as root)
+      const sudoPrefix = `if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; else SUDO=""; fi && `;
+      
+      // Get installation command based on service and OS
+      if (serviceName === 'docker') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `
+            # Add Docker's official GPG key
+            $SUDO apt update && \
+            $SUDO apt install -y ca-certificates curl && \
+            $SUDO install -m 0755 -d /etc/apt/keyrings && \
+            $SUDO curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+            $SUDO chmod a+r /etc/apt/keyrings/docker.asc && \
+            # Add the repository to Apt sources
+            echo "Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: \$(. /etc/os-release && echo "\${UBUNTU_CODENAME:-\$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc" | $SUDO tee /etc/apt/sources.list.d/docker.sources > /dev/null && \
+            $SUDO apt update && \
+            $SUDO apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+            $SUDO systemctl start docker && \
+            $SUDO systemctl enable docker
+          `;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `
+            $SUDO yum install -y yum-utils && \
+            $SUDO yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
+            $SUDO yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+            $SUDO systemctl start docker && \
+            $SUDO systemctl enable docker
+          `;
+        }
+      } else if (serviceName === 'nginx') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `$SUDO apt update && $SUDO apt install -y nginx && $SUDO systemctl start nginx && $SUDO systemctl enable nginx`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `$SUDO yum install -y nginx && $SUDO systemctl start nginx && $SUDO systemctl enable nginx`;
+        }
+      } else if (serviceName === 'nodejs') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO bash - && $SUDO apt install -y nodejs`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `curl -fsSL https://rpm.nodesource.com/setup_20.x | $SUDO bash - && $SUDO yum install -y nodejs`;
+        }
+      } else if (serviceName === 'postgresql') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `$SUDO apt update && $SUDO apt install -y postgresql postgresql-contrib && $SUDO systemctl start postgresql && $SUDO systemctl enable postgresql`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `$SUDO yum install -y postgresql-server postgresql-contrib && $SUDO postgresql-setup initdb && $SUDO systemctl start postgresql && $SUDO systemctl enable postgresql`;
+        }
+      } else if (serviceName === 'redis') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `$SUDO apt update && $SUDO apt install -y redis-server && $SUDO systemctl start redis-server && $SUDO systemctl enable redis-server`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `$SUDO yum install -y redis && $SUDO systemctl start redis && $SUDO systemctl enable redis`;
+        }
+      }
+      
+      if (!installCommand) {
+        conn.end();
+        return reject(new Error(`Installation not supported for ${serviceName} on ${osInfo.packageManager}`));
+      }
+      
+      conn.exec(installCommand, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        
+        let output = '';
+        let errorOutput = '';
+        
+        stream.on('data', (data) => {
+          output += data.toString();
+        }).stderr.on('data', (data) => {
+          errorOutput += data.toString();
+        }).on('close', (code) => {
+          conn.end();
+          
+          if (code !== 0) {
+            return reject(new Error(`Installation failed with code ${code}: ${errorOutput}`));
+          }
+          
+          resolve({
+            service: serviceName,
+            installed: true,
+            output: output,
+            message: `${serviceName} installed successfully`
+          });
+        });
+      });
+    }).on('error', (err) => {
+      reject(err);
+    }).connect({
+      host,
+      port: 22,
+      username,
+      privateKey: require('fs').readFileSync(privateKeyPath),
+      readyTimeout: 10000
+    });
+  });
+}
+
+// Manage service (start, stop, restart, enable, disable)
+async function manageService(host, username, privateKeyPath, serviceName, action) {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+    
+    conn.on('ready', () => {
+      // Detect if we need sudo
+      const sudoCheck = `if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; else SUDO=""; fi && `;
+      let command = '';
+      
+      if (['start', 'stop', 'restart'].includes(action)) {
+        command = sudoCheck + `$SUDO systemctl ${action} ${serviceName}`;
+      } else if (action === 'enable') {
+        command = sudoCheck + `$SUDO systemctl enable ${serviceName}`;
+      } else if (action === 'disable') {
+        command = sudoCheck + `$SUDO systemctl disable ${serviceName}`;
+      } else {
+        conn.end();
+        return reject(new Error(`Invalid action: ${action}`));
+      }
+      
+      conn.exec(command, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+        
+        let output = '';
+        let errorOutput = '';
+        
+        stream.on('data', (data) => {
+          output += data.toString();
+        }).stderr.on('data', (data) => {
+          errorOutput += data.toString();
+        }).on('close', (code) => {
+          conn.end();
+          
+          if (code !== 0) {
+            return reject(new Error(`Action failed: ${errorOutput}`));
+          }
+          
+          resolve({
+            service: serviceName,
+            action: action,
+            success: true,
+            message: `${serviceName} ${action} completed successfully`
           });
         });
       });
@@ -1071,6 +1526,37 @@ app.get('/api/servers/:id/files/read', requireAuth, async (req, res) => {
   }
 });
 
+// Write file contents
+app.post('/api/servers/:id/files/write', requireAuth, async (req, res) => {
+  try {
+    const check = await checkServerOwnership(req.params.id, req.session.userId);
+    if (check.error) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    
+    const server = check.server;
+    const { path: filePath, content } = req.body;
+    
+    if (!filePath) {
+      return res.status(400).json({ error: 'File path is required' });
+    }
+    
+    if (content === undefined) {
+      return res.status(400).json({ error: 'File content is required' });
+    }
+    
+    const result = await writeFile(server.ip, server.username, server.privateKeyPath, filePath, content);
+    
+    res.json({
+      success: true,
+      path: filePath,
+      message: 'File saved successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get file stats
 app.get('/api/servers/:id/files/stats', requireAuth, async (req, res) => {
   try {
@@ -1088,6 +1574,34 @@ app.get('/api/servers/:id/files/stats', requireAuth, async (req, res) => {
     const stats = await getFileStats(server.ip, server.username, server.privateKeyPath, filePath);
     
     res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search files recursively
+app.get('/api/servers/:id/files/search', requireAuth, async (req, res) => {
+  try {
+    const check = await checkServerOwnership(req.params.id, req.session.userId);
+    if (check.error) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    
+    const server = check.server;
+    const query = req.query.q;
+    const searchPath = req.query.path || '/home';
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const results = await searchFiles(server.ip, server.username, server.privateKeyPath, searchPath, query);
+    
+    res.json({
+      query: query,
+      searchPath: searchPath,
+      results: results
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1427,6 +1941,119 @@ function parseMetrics(results) {
   return metrics;
 }
 
+// Service Management Endpoints
+
+// Get OS information
+app.get('/api/servers/:id/os-info', requireAuth, async (req, res) => {
+  try {
+    const check = await checkServerOwnership(req.params.id, req.session.userId);
+    if (check.error) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    
+    const server = check.server;
+    
+    if (server.status !== 'online') {
+      return res.status(400).json({ error: 'Server is not online' });
+    }
+    
+    const osInfo = await detectOS(server.ip, server.username, server.privateKeyPath);
+    res.json(osInfo);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get service status
+app.get('/api/servers/:id/services/:serviceName/status', requireAuth, async (req, res) => {
+  try {
+    const check = await checkServerOwnership(req.params.id, req.session.userId);
+    if (check.error) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    
+    const server = check.server;
+    
+    if (server.status !== 'online') {
+      return res.status(400).json({ error: 'Server is not online' });
+    }
+    
+    const status = await checkServiceStatus(
+      server.ip, 
+      server.username, 
+      server.privateKeyPath, 
+      req.params.serviceName
+    );
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Install service
+app.post('/api/servers/:id/services/:serviceName/install', requireAuth, async (req, res) => {
+  try {
+    const check = await checkServerOwnership(req.params.id, req.session.userId);
+    if (check.error) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    
+    const server = check.server;
+    
+    if (server.status !== 'online') {
+      return res.status(400).json({ error: 'Server is not online' });
+    }
+    
+    // Get OS info first
+    const osInfo = await detectOS(server.ip, server.username, server.privateKeyPath);
+    
+    const result = await installService(
+      server.ip,
+      server.username,
+      server.privateKeyPath,
+      req.params.serviceName,
+      osInfo
+    );
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manage service (start, stop, restart, enable, disable)
+app.post('/api/servers/:id/services/:serviceName/:action', requireAuth, async (req, res) => {
+  try {
+    const check = await checkServerOwnership(req.params.id, req.session.userId);
+    if (check.error) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    
+    const server = check.server;
+    const { action } = req.params;
+    
+    if (server.status !== 'online') {
+      return res.status(400).json({ error: 'Server is not online' });
+    }
+    
+    if (!['start', 'stop', 'restart', 'enable', 'disable'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+    
+    const result = await manageService(
+      server.ip,
+      server.username,
+      server.privateKeyPath,
+      req.params.serviceName,
+      action
+    );
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get server metrics endpoint - returns latest cached metrics
 app.get('/api/servers/:id/metrics', requireAuth, async (req, res) => {
   try {
@@ -1597,6 +2224,164 @@ io.on('connection', (socket) => {
     const session = activeSessions.get(socket.id);
     if (session && session.stream) {
       session.stream.setWindow(rows, cols);
+    }
+  });
+
+  // Real-time service installation
+  socket.on('install-service', async ({ serverId, serviceName, version }) => {
+    console.log(`[Install] Starting installation of ${serviceName}${version ? ` v${version}` : ''} on server ${serverId}`);
+    
+    try {
+      const server = await getServer(serverId);
+      
+      if (!server) {
+        console.log(`[Install] Server not found: ${serverId}`);
+        socket.emit('install-error', { message: 'Server not found' });
+        return;
+      }
+
+      console.log(`[Install] Found server: ${server.ip}, detecting OS...`);
+      socket.emit('install-output', { data: `\x1b[36m>>> Connecting to server ${server.ip}...\x1b[0m\n` });
+
+      // Get OS info first
+      let osInfo;
+      try {
+        osInfo = await detectOS(server.ip, server.username, server.privateKeyPath);
+        console.log(`[Install] OS detected: ${osInfo.prettyName}, package manager: ${osInfo.packageManager}`);
+      } catch (osErr) {
+        console.error(`[Install] OS detection failed:`, osErr);
+        socket.emit('install-error', { message: `Failed to detect OS: ${osErr.message}` });
+        return;
+      }
+      
+      socket.emit('install-output', { data: `\x1b[36m>>> Detected OS: ${osInfo.prettyName || osInfo.id}\x1b[0m\n` });
+      socket.emit('install-output', { data: `\x1b[36m>>> Package manager: ${osInfo.packageManager}\x1b[0m\n\n` });
+      
+      // Build installation command
+      const sudoPrefix = `if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; else SUDO=""; fi && `;
+      let installCommand = '';
+      
+      if (serviceName === 'docker') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `
+            echo ">>> Adding Docker's official GPG key..." && \
+            $SUDO apt update && \
+            $SUDO apt install -y ca-certificates curl && \
+            $SUDO install -m 0755 -d /etc/apt/keyrings && \
+            $SUDO curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+            $SUDO chmod a+r /etc/apt/keyrings/docker.asc && \
+            echo ">>> Adding Docker repository to Apt sources..." && \
+            echo "Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "\${UBUNTU_CODENAME:-\$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc" | $SUDO tee /etc/apt/sources.list.d/docker.sources > /dev/null && \
+            echo ">>> Updating package list..." && \
+            $SUDO apt update && \
+            echo ">>> Installing Docker packages..." && \
+            $SUDO apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+            echo ">>> Starting Docker service..." && \
+            $SUDO systemctl start docker && \
+            $SUDO systemctl enable docker && \
+            echo ">>> Docker installation complete!"
+          `;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `
+            echo ">>> Installing yum-utils..." && \
+            $SUDO yum install -y yum-utils && \
+            echo ">>> Adding Docker repository..." && \
+            $SUDO yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
+            echo ">>> Installing Docker packages..." && \
+            $SUDO yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+            echo ">>> Starting Docker service..." && \
+            $SUDO systemctl start docker && \
+            $SUDO systemctl enable docker && \
+            echo ">>> Docker installation complete!"
+          `;
+        }
+      } else if (serviceName === 'nginx') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `echo ">>> Updating package list..." && $SUDO apt update && echo ">>> Installing Nginx..." && $SUDO apt install -y nginx && echo ">>> Starting Nginx..." && $SUDO systemctl start nginx && $SUDO systemctl enable nginx && echo ">>> Nginx installation complete!"`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `echo ">>> Installing Nginx..." && $SUDO yum install -y nginx && echo ">>> Starting Nginx..." && $SUDO systemctl start nginx && $SUDO systemctl enable nginx && echo ">>> Nginx installation complete!"`;
+        }
+      } else if (serviceName === 'nodejs') {
+        const nodeVersion = version || '20'; // Default to v20 LTS if not specified
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `echo ">>> Adding NodeSource repository for Node.js v${nodeVersion}..." && curl -fsSL https://deb.nodesource.com/setup_${nodeVersion}.x | $SUDO bash - && echo ">>> Installing Node.js v${nodeVersion}..." && $SUDO apt install -y nodejs && echo ">>> Node.js installation complete!" && node --version`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `echo ">>> Adding NodeSource repository for Node.js v${nodeVersion}..." && curl -fsSL https://rpm.nodesource.com/setup_${nodeVersion}.x | $SUDO bash - && echo ">>> Installing Node.js v${nodeVersion}..." && $SUDO yum install -y nodejs && echo ">>> Node.js installation complete!" && node --version`;
+        }
+      } else if (serviceName === 'postgresql') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `echo ">>> Updating package list..." && $SUDO apt update && echo ">>> Installing PostgreSQL..." && $SUDO apt install -y postgresql postgresql-contrib && echo ">>> Starting PostgreSQL..." && $SUDO systemctl start postgresql && $SUDO systemctl enable postgresql && echo ">>> PostgreSQL installation complete!"`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `echo ">>> Installing PostgreSQL..." && $SUDO yum install -y postgresql-server postgresql-contrib && echo ">>> Initializing database..." && $SUDO postgresql-setup initdb && echo ">>> Starting PostgreSQL..." && $SUDO systemctl start postgresql && $SUDO systemctl enable postgresql && echo ">>> PostgreSQL installation complete!"`;
+        }
+      } else if (serviceName === 'redis') {
+        if (osInfo.packageManager === 'apt') {
+          installCommand = sudoPrefix + `echo ">>> Updating package list..." && $SUDO apt update && echo ">>> Installing Redis..." && $SUDO apt install -y redis-server && echo ">>> Starting Redis..." && $SUDO systemctl start redis-server && $SUDO systemctl enable redis-server && echo ">>> Redis installation complete!"`;
+        } else if (osInfo.packageManager === 'yum') {
+          installCommand = sudoPrefix + `echo ">>> Installing Redis..." && $SUDO yum install -y redis && echo ">>> Starting Redis..." && $SUDO systemctl start redis && $SUDO systemctl enable redis && echo ">>> Redis installation complete!"`;
+        }
+      }
+
+      if (!installCommand) {
+        socket.emit('install-error', { message: `Installation not supported for ${serviceName} on ${osInfo.packageManager}` });
+        return;
+      }
+
+      socket.emit('install-output', { data: `\x1b[36m>>> Starting installation...\x1b[0m\n\n` });
+      console.log(`[Install] Executing installation command for ${serviceName}`);
+
+      const conn = new Client();
+      
+      conn.on('ready', () => {
+        console.log(`[Install] SSH connection ready, executing command...`);
+        conn.exec(installCommand, { pty: true }, (err, stream) => {
+          if (err) {
+            socket.emit('install-error', { message: err.message });
+            conn.end();
+            return;
+          }
+
+          stream.on('data', (data) => {
+            socket.emit('install-output', { data: data.toString('utf-8') });
+          });
+
+          stream.stderr.on('data', (data) => {
+            socket.emit('install-output', { data: data.toString('utf-8') });
+          });
+
+          stream.on('close', (code) => {
+            conn.end();
+            if (code === 0) {
+              socket.emit('install-complete', { 
+                success: true, 
+                message: `${serviceName} installed successfully!` 
+              });
+            } else {
+              socket.emit('install-complete', { 
+                success: false, 
+                message: `Installation exited with code ${code}` 
+              });
+            }
+          });
+        });
+      }).on('error', (err) => {
+        console.error(`[Install] SSH connection error:`, err);
+        socket.emit('install-error', { message: err.message });
+      }).connect({
+        host: server.ip,
+        port: 22,
+        username: server.username,
+        privateKey: require('fs').readFileSync(server.privateKeyPath),
+        readyTimeout: 30000
+      });
+
+    } catch (error) {
+      console.error(`[Install] Installation error:`, error);
+      socket.emit('install-error', { message: error.message });
     }
   });
   

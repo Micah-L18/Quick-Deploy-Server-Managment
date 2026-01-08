@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Terminal from '../components/Terminal';
 import FileBrowser from '../components/FileBrowser';
+import ServicesManager from '../components/ServicesManager';
 import { serversService } from '../api/servers';
 import { getRegionFlag } from '../utils/formatters';
 import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon } from '../components/Icons';
@@ -168,6 +169,12 @@ const ServerDetail = () => {
           onClick={() => setActiveTab('files')}
         >
           Files
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'services' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('services')}
+        >
+          Services
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'settings' ? styles.activeTab : ''}`}
@@ -481,6 +488,21 @@ const ServerDetail = () => {
           <h3>Server Offline</h3>
           <p>
             File browsing is only available when the server is online. 
+            Click "Check Status" to update the server status.
+          </p>
+        </div>
+      )}
+
+      {activeTab === 'services' && server.status === 'online' && (
+        <ServicesManager serverId={id} />
+      )}
+
+      {activeTab === 'services' && server.status !== 'online' && (
+        <div className={styles.offlineNotice}>
+          <AlertIcon size={48} />
+          <h3>Server Offline</h3>
+          <p>
+            Service management is only available when the server is online. 
             Click "Check Status" to update the server status.
           </p>
         </div>

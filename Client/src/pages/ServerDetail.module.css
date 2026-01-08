@@ -132,6 +132,56 @@
   padding: 24px 0;
 }
 
+.servicesContent {
+  padding: 24px 0;
+}
+
+.comingSoonPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.placeholderIcon {
+  font-size: 72px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.comingSoonPlaceholder h3 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  font-weight: 600;
+}
+
+.comingSoonPlaceholder p {
+  color: var(--text-medium);
+  margin: 0 0 20px 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.comingSoonBadge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .settingsSection {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
