@@ -707,6 +707,59 @@
   font-size: 1rem;
 }
 
+/* Logs Section Styles */
+.logsRow {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  animation: slideDown 0.2s ease-out;
+}
+
+.logsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--card-bg);
+}
+
+.logsTitle {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.logsContent {
+  padding: 0;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.logsLoading,
+.logsError {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.logsError {
+  color: var(--error-color);
+}
+
+.logsOutput {
+  margin: 0;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  overflow-x: auto;
+}
+
 @media (max-width: 768px) {
   .pageHeader {
     flex-direction: column;

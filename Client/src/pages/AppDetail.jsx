@@ -28,6 +28,7 @@ const AppDetail = () => {
     restart_policy: 'unless-stopped',
     network_mode: '',
     command: '',
+    custom_args: '',
     registry_url: '',
     registry_username: '',
     registry_password: '',
@@ -94,6 +95,7 @@ const AppDetail = () => {
         restart_policy: app.restart_policy || 'unless-stopped',
         network_mode: app.network_mode || '',
         command: app.command || '',
+        custom_args: app.custom_args || '',
         registry_url: app.registry_url || '',
         registry_username: app.registry_username || '',
         registry_password: '',
@@ -621,6 +623,16 @@ const AppDetail = () => {
                 onChange={(e) => handleFormChange('command', e.target.value)}
                 placeholder="Optional command to run instead of image default"
               />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Custom Docker Arguments</label>
+              <input
+                type="text"
+                value={formData.custom_args}
+                onChange={(e) => handleFormChange('custom_args', e.target.value)}
+                placeholder="e.g., --memory=512m --cpus=1 --privileged"
+              />
+              <small className={styles.fieldHint}>Additional docker run arguments (added before image name)</small>
             </div>
           </div>
 

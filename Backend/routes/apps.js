@@ -77,6 +77,7 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     restart_policy, 
     network_mode, 
     command,
+    custom_args,
     registry_url,
     registry_username,
     registry_password
@@ -93,6 +94,7 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     restart_policy, 
     network_mode, 
     command,
+    custom_args,
     registry_url,
     registry_username,
     registry_password
@@ -190,7 +192,7 @@ router.delete('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(asy
   }
 
   // Stop and remove container via SSH
-  const stopCmd = `sudo docker stop ${deployment.container_name} && sudo docker rm ${deployment.container_name}`;
+  const stopCmd = `docker stop ${deployment.container_name} && docker rm ${deployment.container_name}`;
   
   try {
     const { stdout, stderr, code } = await connectionManager.executeCommand(
@@ -216,6 +218,86 @@ router.delete('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(asy
 }));
 
 /**
+ * POST /api/apps/:appId/deployments/:deploymentId/start
+ * Start a stopped container
+ */
+router.post('/:appId/deployments/:deploymentId/start', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  try {
+    const { stdout, stderr, code } = await connectionManager.executeCommand(
+      {
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      `docker start ${containerRef}`
+    );
+
+    if (code === 0) {
+      // Update deployment status in database
+      await AppModel.updateDeploymentStatus(deploymentId, 'running');
+      res.json({ success: true, message: 'Container started', output: stdout });
+    } else {
+      res.status(500).json({ error: stderr || 'Failed to start container' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}));
+
+/**
+ * POST /api/apps/:appId/deployments/:deploymentId/stop
+ * Stop a running container
+ */
+router.post('/:appId/deployments/:deploymentId/stop', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  try {
+    const { stdout, stderr, code } = await connectionManager.executeCommand(
+      {
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      `docker stop ${containerRef}`
+    );
+
+    if (code === 0) {
+      // Update deployment status in database
+      await AppModel.updateDeploymentStatus(deploymentId, 'stopped');
+      res.json({ success: true, message: 'Container stopped', output: stdout });
+    } else {
+      res.status(500).json({ error: stderr || 'Failed to stop container' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}));
+
+/**
  * GET /api/apps/:appId/deployments/:deploymentId/stats
  * Get deployment stats
  */
@@ -228,21 +310,38 @@ router.get('/:appId/deployments/:deploymentId/stats', requireAuth, asyncHandler(
     return res.status(404).json({ error: 'Deployment not found' });
   }
 
-  const statsCmd = `sudo docker stats ${deployment.container_name} --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}"`;
+  // Debug log
+  console.log('Stats for deployment:', {
+    id: deployment.id,
+    container_name: deployment.container_name,
+    container_id: deployment.container_id,
+    server_ip: deployment.ip
+  });
+
+  // Use container_id if container_name isn't available
+  const containerRef = deployment.container_name || deployment.container_id;
+  
+  if (!containerRef) {
+    return res.json({ error: 'No container reference found', status: 'unknown' });
+  }
+
+  const statsCmd = `docker stats ${containerRef} --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}|{{.NetIO}}|{{.BlockIO}}"`;
 
   try {
-    const { stdout, code } = await connectionManager.executeCommand(
+    const { stdout, stderr, code } = await connectionManager.executeCommand(
       {
         host: deployment.ip,
         username: deployment.username,
-        privateKeyPath: deployment.private_key_path
+        privateKeyPath: deployment.private_key_path  // Note: DB column is snake_case
       },
       statsCmd
     );
 
+    console.log('Stats command result:', { stdout, stderr, code });
+
     if (code !== 0 || !stdout.trim()) {
-      return res.status(500).json({
-        error: 'Failed to get container stats',
+      return res.json({
+        error: stderr || 'Container not running',
         status: 'stopped'
       });
     }
@@ -258,10 +357,52 @@ router.get('/:appId/deployments/:deploymentId/stats', requireAuth, asyncHandler(
         status: 'running'
       });
     } else {
-      res.status(500).json({ error: 'Invalid stats format' });
+      res.json({ error: 'Invalid stats format', status: 'unknown' });
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Stats error:', err);
+    res.json({ error: err.message, status: 'error' });
+  }
+}));
+
+/**
+ * GET /api/apps/:appId/deployments/:deploymentId/logs
+ * Get deployment container logs
+ */
+router.get('/:appId/deployments/:deploymentId/logs', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+  const { lines = 100 } = req.query;
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  
+  if (!containerRef) {
+    return res.json({ error: 'No container reference found', logs: '' });
+  }
+
+  const logsCmd = `docker logs ${containerRef} --tail ${lines} 2>&1`;
+
+  try {
+    const { stdout, stderr, code } = await connectionManager.executeCommand(
+      {
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      logsCmd
+    );
+
+    // Docker logs outputs to stderr for error logs, combine both
+    const logs = stdout || stderr || 'No logs available';
+    res.json({ logs, error: null });
+  } catch (err) {
+    console.error('Logs error:', err);
+    res.json({ error: err.message, logs: '' });
   }
 }));
 

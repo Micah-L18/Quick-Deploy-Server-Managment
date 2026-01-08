@@ -13,9 +13,11 @@ const activeSessions = new Map();
 function buildDockerCommand(app, portMappings) {
   let cmd = 'docker run -d';
   
-  // Container name based on app name
-  const containerName = app.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-  cmd += ` --name ${containerName}-${Date.now()}`;
+  // Container name based on app name with timestamp
+  const timestamp = Date.now();
+  const baseContainerName = app.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const containerName = `${baseContainerName}-${timestamp}`;
+  cmd += ` --name ${containerName}`;
   
   // Port mappings
   if (portMappings && portMappings.length > 0) {
@@ -60,6 +62,11 @@ function buildDockerCommand(app, portMappings) {
     cmd += ` --network ${app.network_mode}`;
   }
   
+  // Custom arguments (added before image)
+  if (app.custom_args && app.custom_args.trim()) {
+    cmd += ` ${app.custom_args.trim()}`;
+  }
+  
   // Image with tag
   const image = app.image;
   const tag = app.tag || 'latest';
@@ -70,7 +77,7 @@ function buildDockerCommand(app, portMappings) {
     cmd += ` ${app.command}`;
   }
   
-  return { cmd, containerName: `${containerName}-${Date.now()}` };
+  return { cmd, containerName };
 }
 
 /**
@@ -143,12 +150,12 @@ function initTerminalHandlers(io) {
         socket.emit('deploy-output', { data: `>>> Pulling image: ${fullImage}...\n` });
         
         try {
-          const pullOutput = await executeCommand({
+          const pullResult = await executeCommand({
             host: server.ip,
             username: server.username,
             privateKeyPath: server.private_key_path
           }, `docker pull ${fullImage}`);
-          socket.emit('deploy-output', { data: pullOutput + '\n' });
+          socket.emit('deploy-output', { data: pullResult.stdout + '\n' });
         } catch (pullErr) {
           socket.emit('deploy-output', { data: `>>> Warning: Pull failed (may use cached image): ${pullErr.message}\n` });
         }
@@ -158,24 +165,34 @@ function initTerminalHandlers(io) {
         socket.emit('deploy-output', { data: `>>> Running container...\n` });
         socket.emit('deploy-output', { data: `>>> Command: ${cmd}\n\n` });
         
-        const runOutput = await executeCommand({
+        const runResult = await executeCommand({
           host: server.ip,
           username: server.username,
           privateKeyPath: server.private_key_path
         }, cmd);
         
-        const containerId = runOutput.trim().substring(0, 12);
+        // Docker run returns the full container ID - extract it properly
+        const fullOutput = runResult.stdout.trim();
+        // The container ID is the last line (in case there's other output like pull progress)
+        const lines = fullOutput.split('\n').filter(line => line.trim());
+        const lastLine = lines[lines.length - 1] || '';
+        // Container ID is 64 hex chars, we use first 12
+        const containerId = lastLine.trim().substring(0, 12);
+        
+        console.log('Docker run output:', fullOutput);
+        console.log('Extracted container ID:', containerId);
+        
         socket.emit('deploy-output', { data: `>>> Container started: ${containerId}\n` });
         
         // Get the actual container name (docker may have modified it)
         let actualContainerName = containerName;
         try {
-          const inspectOutput = await executeCommand({
+          const inspectResult = await executeCommand({
             host: server.ip,
             username: server.username,
             privateKeyPath: server.private_key_path
           }, `docker inspect --format='{{.Name}}' ${containerId}`);
-          actualContainerName = inspectOutput.trim().replace(/^\//, '');
+          actualContainerName = inspectResult.stdout.trim().replace(/^\//, '');
         } catch (err) {
           // Use default name
         }

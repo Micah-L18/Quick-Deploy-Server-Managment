@@ -98,6 +98,10 @@ async function update(appId, updates) {
     fields.push('command = ?');
     values.push(updates.command);
   }
+  if (updates.custom_args !== undefined) {
+    fields.push('custom_args = ?');
+    values.push(updates.custom_args);
+  }
   
   // Registry fields
   if (updates.registry_url !== undefined) {

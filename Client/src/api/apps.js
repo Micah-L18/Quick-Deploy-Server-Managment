@@ -57,4 +57,19 @@ export const appsService = {
     const response = await api.get(`/apps/${appId}/deployments/${deploymentId}/stats`);
     return response.data;
   },
+
+  getDeploymentLogs: async (appId, deploymentId, lines = 100) => {
+    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}/logs`, { params: { lines } });
+    return response.data;
+  },
+
+  startDeployment: async (appId, deploymentId) => {
+    const response = await api.post(`/apps/${appId}/deployments/${deploymentId}/start`);
+    return response.data;
+  },
+
+  stopDeployment: async (appId, deploymentId) => {
+    const response = await api.post(`/apps/${appId}/deployments/${deploymentId}/stop`);
+    return response.data;
+  },
 };

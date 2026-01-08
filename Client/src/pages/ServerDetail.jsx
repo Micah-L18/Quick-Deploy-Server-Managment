@@ -21,6 +21,7 @@ const ServerDetail = () => {
   const [timeRange, setTimeRange] = useState(24); // hours
   const [ipVisible, setIpVisible] = useState(false);
   const [expandedDeployments, setExpandedDeployments] = useState({});
+  const [expandedLogs, setExpandedLogs] = useState({});
 
   const { data: server, isLoading: serverLoading } = useQuery({
     queryKey: ['server', id],
@@ -58,7 +59,18 @@ const ServerDetail = () => {
         const appDeployments = await appsService.getDeployments(app.id);
         const serverSpecificDeployments = appDeployments
           .filter(d => d.server_id === id)
-          .map(d => ({ ...d, app_name: app.name, app_id: app.id, app_image: app.image, app_tag: app.tag }));
+          .map(d => {
+            // Parse port_mappings if it's a string
+            let portMappings = d.port_mappings;
+            if (typeof portMappings === 'string') {
+              try {
+                portMappings = JSON.parse(portMappings);
+              } catch {
+                portMappings = [];
+              }
+            }
+            return { ...d, port_mappings: portMappings || [], app_name: app.name, app_id: app.id, app_image: app.image, app_tag: app.tag };
+          });
         serverDeployments.push(...serverSpecificDeployments);
       }
       
@@ -74,6 +86,20 @@ const ServerDetail = () => {
     },
   });
 
+  const startDeploymentMutation = useMutation({
+    mutationFn: ({ appId, deploymentId }) => appsService.startDeployment(appId, deploymentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['server-deployments', id]);
+    },
+  });
+
+  const stopDeploymentMutation = useMutation({
+    mutationFn: ({ appId, deploymentId }) => appsService.stopDeployment(appId, deploymentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['server-deployments', id]);
+    },
+  });
+
   const handleRemoveDeployment = (deployment) => {
     if (window.confirm(`Stop and remove container "${deployment.container_name}"?`)) {
       removeDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id });
@@ -82,6 +108,13 @@ const ServerDetail = () => {
 
   const toggleDeploymentStats = (deploymentId) => {
     setExpandedDeployments(prev => ({
+      ...prev,
+      [deploymentId]: !prev[deploymentId]
+    }));
+  };
+
+  const toggleDeploymentLogs = (deploymentId) => {
+    setExpandedLogs(prev => ({
       ...prev,
       [deploymentId]: !prev[deploymentId]
     }));
@@ -122,6 +155,35 @@ const ServerDetail = () => {
             </div>
           ) : (
             <div className={styles.statsError}>Failed to load stats</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Component for deployment logs section
+  const DeploymentLogsRow = ({ deployment }) => {
+    const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery({
+      queryKey: ['deployment-logs', deployment.app_id, deployment.id],
+      queryFn: () => appsService.getDeploymentLogs(deployment.app_id, deployment.id, 100),
+      enabled: true,
+    });
+
+    return (
+      <div className={styles.logsRow}>
+        <div className={styles.logsHeader}>
+          <span className={styles.logsTitle}>Container Logs</span>
+          <Button variant="outline" size="small" onClick={() => refetchLogs()}>
+            <RefreshIcon size={12} /> Refresh
+          </Button>
+        </div>
+        <div className={styles.logsContent}>
+          {logsLoading ? (
+            <div className={styles.logsLoading}>Loading container logs...</div>
+          ) : logsData?.error ? (
+            <div className={styles.logsError}>{logsData.error}</div>
+          ) : (
+            <pre className={styles.logsOutput}>{logsData?.logs || 'No logs available'}</pre>
           )}
         </div>
       </div>
@@ -635,6 +697,7 @@ const ServerDetail = () => {
               </div>
               {deployments.map((deployment) => {
                 const isExpanded = expandedDeployments[deployment.id];
+                const isLogsExpanded = expandedLogs[deployment.id];
                 return (
                   <React.Fragment key={deployment.id}>
                     <div className={styles.tableRow}>
@@ -674,6 +737,27 @@ const ServerDetail = () => {
                         {new Date(deployment.deployed_at).toLocaleString()}
                       </div>
                       <div className={styles.actionsCell}>
+                        {deployment.status === 'running' ? (
+                          <Button
+                            variant="outline"
+                            size="small"
+                            onClick={() => stopDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id })}
+                            disabled={stopDeploymentMutation.isPending}
+                            style={{ marginRight: '8px' }}
+                          >
+                            <StopCircleIcon size={14} /> Stop
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="small"
+                            onClick={() => startDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id })}
+                            disabled={startDeploymentMutation.isPending}
+                            style={{ marginRight: '8px' }}
+                          >
+                            <PlayIcon size={14} /> Start
+                          </Button>
+                        )}
                         {deployment.status === 'running' && (
                           <Button
                             variant="outline"
@@ -688,6 +772,15 @@ const ServerDetail = () => {
                         <Button
                           variant="outline"
                           size="small"
+                          onClick={() => toggleDeploymentLogs(deployment.id)}
+                          style={{ marginRight: '8px' }}
+                        >
+                          {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
+                          Logs
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="small"
                           onClick={() => handleRemoveDeployment(deployment)}
                           disabled={removeDeploymentMutation.isPending}
                         >
@@ -697,6 +790,9 @@ const ServerDetail = () => {
                     </div>
                     {isExpanded && deployment.status === 'running' && (
                       <DeploymentStatsRow deployment={deployment} />
+                    )}
+                    {isLogsExpanded && (
+                      <DeploymentLogsRow deployment={deployment} />
                     )}
                   </React.Fragment>
                 );

@@ -178,6 +178,7 @@ async function runMigrations() {
     { name: 'restart_policy', type: 'TEXT' },
     { name: 'network_mode', type: 'TEXT' },
     { name: 'command', type: 'TEXT' },
+    { name: 'custom_args', type: 'TEXT' },     // Custom docker run arguments
     { name: 'registry_url', type: 'TEXT' },
     { name: 'registry_username', type: 'TEXT' },
     { name: 'registry_password', type: 'TEXT' }
