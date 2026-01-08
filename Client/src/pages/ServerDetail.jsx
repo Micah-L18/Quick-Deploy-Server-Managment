@@ -8,8 +8,9 @@ import Terminal from '../components/Terminal';
 import FileBrowser from '../components/FileBrowser';
 import ServicesManager from '../components/ServicesManager';
 import { serversService } from '../api/servers';
+import { appsService } from '../api/apps';
 import { getRegionFlag } from '../utils/formatters';
-import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon } from '../components/Icons';
+import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '../components/Icons';
 import styles from './ServerDetail.module.css';
 
 const ServerDetail = () => {
@@ -19,6 +20,7 @@ const ServerDetail = () => {
   const [activeTab, setActiveTab] = useState('metrics');
   const [timeRange, setTimeRange] = useState(24); // hours
   const [ipVisible, setIpVisible] = useState(false);
+  const [expandedDeployments, setExpandedDeployments] = useState({});
 
   const { data: server, isLoading: serverLoading } = useQuery({
     queryKey: ['server', id],
@@ -44,6 +46,87 @@ const ServerDetail = () => {
     refetchInterval: 5000,
     retry: 1,
   });
+
+  const { data: deployments = [], isLoading: deploymentsLoading } = useQuery({
+    queryKey: ['server-deployments', id],
+    queryFn: async () => {
+      // Fetch all apps and filter their deployments for this server
+      const apps = await appsService.getApps();
+      const serverDeployments = [];
+      
+      for (const app of apps) {
+        const appDeployments = await appsService.getDeployments(app.id);
+        const serverSpecificDeployments = appDeployments
+          .filter(d => d.server_id === id)
+          .map(d => ({ ...d, app_name: app.name, app_id: app.id, app_image: app.image, app_tag: app.tag }));
+        serverDeployments.push(...serverSpecificDeployments);
+      }
+      
+      return serverDeployments;
+    },
+    refetchInterval: 10000,
+  });
+
+  const removeDeploymentMutation = useMutation({
+    mutationFn: ({ appId, deploymentId }) => appsService.removeDeployment(appId, deploymentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['server-deployments', id]);
+    },
+  });
+
+  const handleRemoveDeployment = (deployment) => {
+    if (window.confirm(`Stop and remove container "${deployment.container_name}"?`)) {
+      removeDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id });
+    }
+  };
+
+  const toggleDeploymentStats = (deploymentId) => {
+    setExpandedDeployments(prev => ({
+      ...prev,
+      [deploymentId]: !prev[deploymentId]
+    }));
+  };
+
+  // Component for deployment stats section
+  const DeploymentStatsRow = ({ deployment }) => {
+    const { data: stats, isLoading: statsLoading } = useQuery({
+      queryKey: ['deployment-stats', deployment.app_id, deployment.id],
+      queryFn: () => appsService.getDeploymentStats(deployment.app_id, deployment.id),
+      enabled: deployment.status === 'running',
+      refetchInterval: 5000,
+    });
+
+    return (
+      <div className={styles.statsRow}>
+        <div className={styles.statsContent}>
+          {statsLoading ? (
+            <div className={styles.statsLoading}>Loading container stats...</div>
+          ) : stats ? (
+            <div className={styles.statsGrid}>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>CPU Usage</span>
+                <span className={styles.statValue}>{stats.cpu}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Memory Usage</span>
+                <span className={styles.statValue}>{stats.memory}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Memory %</span>
+                <span className={styles.statValue}>{stats.memoryPercent}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Container Status</span>
+                <span className={styles.statValue}>{stats.status}</span>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.statsError}>Failed to load stats</div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const checkStatusMutation = useMutation({
     mutationFn: serversService.checkStatus,
@@ -175,6 +258,12 @@ const ServerDetail = () => {
           onClick={() => setActiveTab('services')}
         >
           Services
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'apps' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('apps')}
+        >
+          <AppsIcon size={16} /> Apps {deployments.length > 0 && `(${deployments.length})`}
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'settings' ? styles.activeTab : ''}`}
@@ -505,6 +594,115 @@ const ServerDetail = () => {
             Service management is only available when the server is online. 
             Click "Check Status" to update the server status.
           </p>
+        </div>
+      )}
+
+      {activeTab === 'apps' && (
+        <div className={styles.appsContent}>
+          <div className={styles.appsHeader}>
+            <h2 className={styles.sectionTitle}>
+              <AppsIcon size={24} /> Deployed Apps
+            </h2>
+            <Link to="/apps">
+              <Button variant="outline" size="small">
+                Browse All Apps
+              </Button>
+            </Link>
+          </div>
+
+          {deploymentsLoading ? (
+            <div className={styles.loading}>Loading deployments...</div>
+          ) : deployments.length === 0 ? (
+            <div className={styles.emptyState}>
+              <AppsIcon size={60} />
+              <h3>No Apps Deployed</h3>
+              <p>This server doesn't have any Docker containers running yet.</p>
+              <Link to="/apps">
+                <Button variant="primary">
+                  Deploy an App
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className={styles.deploymentsTable}>
+              <div className={styles.tableHeader}>
+                <div>App</div>
+                <div>Container</div>
+                <div>Status</div>
+                <div>Ports</div>
+                <div>Deployed</div>
+                <div>Actions</div>
+              </div>
+              {deployments.map((deployment) => {
+                const isExpanded = expandedDeployments[deployment.id];
+                return (
+                  <React.Fragment key={deployment.id}>
+                    <div className={styles.tableRow}>
+                      <div className={styles.appCell}>
+                        <Link to={`/apps/${deployment.app_id}`} className={styles.appLink}>
+                          <strong>{deployment.app_name}</strong>
+                          <span className={styles.appImage}>
+                            🐳 {deployment.app_image}:{deployment.app_tag || 'latest'}
+                          </span>
+                        </Link>
+                      </div>
+                      <div className={styles.containerCell}>
+                        <div className={styles.containerName}>{deployment.container_name}</div>
+                        <div className={styles.containerId}>{deployment.container_id}</div>
+                      </div>
+                      <div>
+                        <span className={`${styles.statusBadge} ${
+                          deployment.status === 'running' ? styles.statusRunning : styles.statusStopped
+                        }`}>
+                          {deployment.status === 'running' ? '● Running' : '○ Stopped'}
+                        </span>
+                      </div>
+                      <div className={styles.portsCell}>
+                        {deployment.port_mappings && deployment.port_mappings.length > 0 ? (
+                          <div className={styles.portBadges}>
+                            {deployment.port_mappings.map((port, idx) => (
+                              <span key={idx} className={styles.portBadge}>
+                                {port.host}→{port.container}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className={styles.noPorts}>No ports</span>
+                        )}
+                      </div>
+                      <div className={styles.dateCell}>
+                        {new Date(deployment.deployed_at).toLocaleString()}
+                      </div>
+                      <div className={styles.actionsCell}>
+                        {deployment.status === 'running' && (
+                          <Button
+                            variant="outline"
+                            size="small"
+                            onClick={() => toggleDeploymentStats(deployment.id)}
+                            style={{ marginRight: '8px' }}
+                          >
+                            {isExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
+                            Stats
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="small"
+                          onClick={() => handleRemoveDeployment(deployment)}
+                          disabled={removeDeploymentMutation.isPending}
+                        >
+                          <TrashIcon size={14} /> Remove
+                        </Button>
+                      </div>
+                    </div>
+                    {isExpanded && deployment.status === 'running' && (
+                      <DeploymentStatsRow deployment={deployment} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

@@ -24,6 +24,49 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
+.modalLarge {
+  max-width: 900px;
+  width: 95%;
+}
+
+.modalTerminal {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  padding: 0;
+  max-width: 95vw;
+  width: 95vw;
+  max-height: 90vh;
+  height: 90vh;
+  overflow: hidden;
+}
+
+.modalTerminal .modalHeader {
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  padding: 12px 20px;
+  margin: 0;
+}
+
+.modalTerminal .modalTitle {
+  color: #e6edf3;
+  font-size: 1rem;
+}
+
+.modalTerminal .closeBtn {
+  color: #8b949e;
+}
+
+.modalTerminal .closeBtn:hover {
+  color: #e6edf3;
+}
+
+.modalTerminal .modalBody {
+  margin: 0;
+  padding: 0;
+  height: calc(100% - 50px);
+  overflow: hidden;
+}
+
 .modal:has(.fileEditor) {
   max-width: 95vw;
   width: 95vw;

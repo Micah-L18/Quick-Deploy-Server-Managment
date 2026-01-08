@@ -472,6 +472,241 @@
   font-size: 1rem;
 }
 
+/* Apps Tab */
+.appsContent {
+  margin-top: 24px;
+}
+
+.appsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.deploymentsTable {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1.5fr 1.2fr 0.8fr 1fr 1fr 0.8fr;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  color: var(--text-medium);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1.2fr 0.8fr 1fr 1fr 0.8fr;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.tableRow:hover {
+  background: var(--bg-secondary);
+}
+
+.appCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.appLink {
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: color 0.2s;
+}
+
+.appLink:hover {
+  color: var(--primary-color);
+}
+
+.appLink strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.appImage {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.containerCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.containerName {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.containerId {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.statusRunning {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.statusStopped {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.portsCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.portBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.portBadge {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: 'Monaco', 'Menlo', monospace;
+  color: var(--text-medium);
+}
+
+.noPorts {
+  font-size: 0.85rem;
+  color: var(--text-medium);
+  font-style: italic;
+}
+
+.dateCell {
+  font-size: 0.85rem;
+  color: var(--text-medium);
+}
+
+.actionsCell {
+  display: flex;
+  gap: 8px;
+}
+
+.statsRow {
+  grid-column: 1 / -1;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 0;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+  }
+}
+
+.statsContent {
+  padding: 20px;
+}
+
+.statsLoading,
+.statsError {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.statsError {
+  color: var(--error-color);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-medium);
+  font-weight: 500;
+}
+
+.statValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-medium);
+}
+
+.emptyState h3 {
+  color: var(--text-primary);
+  margin: 16px 0 8px;
+  font-size: 1.3rem;
+}
+
+.emptyState p {
+  margin: 8px 0 24px;
+  font-size: 1rem;
+}
+
 @media (max-width: 768px) {
   .pageHeader {
     flex-direction: column;
