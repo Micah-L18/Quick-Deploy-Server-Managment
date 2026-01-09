@@ -11,7 +11,7 @@ const DB_FILE = path.join(__dirname, '..', 'servers.db');
 const SSH_KEYS_DIR = path.join(__dirname, '..', 'ssh_keys');
 
 // CORS configuration
-const CORS_ORIGINS = ['*'];
+const CORS_ORIGINS = ['*', 'http://localhost:3000', 'http://localhost:3044', 'https://neobase.micahtml.com', 'https://neo.micahtml.com'];
 
 // Session configuration
 const SESSION_CONFIG = {
