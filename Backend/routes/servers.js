@@ -204,4 +204,56 @@ router.get('/:id/os-info', requireAuth, asyncHandler(async (req, res) => {
   res.json(osInfo);
 }));
 
+/**
+ * GET /api/servers/:id/docker-status
+ * Check if Docker is installed and running on a server
+ */
+router.get('/:id/docker-status', requireAuth, asyncHandler(async (req, res) => {
+  const check = await checkServerOwnership(req.params.id, req.session.userId);
+  if (check.error) {
+    return res.status(check.status).json({ error: check.error });
+  }
+
+  const server = check.server;
+
+  try {
+    // Check if docker command exists and get version
+    const { stdout, stderr, code } = await connectionManager.executeCommand(
+      {
+        host: server.ip,
+        username: server.username,
+        privateKeyPath: server.privateKeyPath
+      },
+      'docker --version && docker info --format "{{.ServerVersion}}" 2>/dev/null'
+    );
+
+    if (code === 0 && stdout.includes('Docker')) {
+      // Extract version from output
+      const versionMatch = stdout.match(/Docker version ([\d.]+)/);
+      const version = versionMatch ? versionMatch[1] : 'unknown';
+      
+      res.json({
+        installed: true,
+        running: true,
+        version: version,
+        message: `Docker ${version} is installed and running`
+      });
+    } else {
+      res.json({
+        installed: false,
+        running: false,
+        version: null,
+        message: 'Docker is not installed or not running'
+      });
+    }
+  } catch (err) {
+    res.json({
+      installed: false,
+      running: false,
+      version: null,
+      message: err.message || 'Failed to check Docker status'
+    });
+  }
+}));
+
 module.exports = router;

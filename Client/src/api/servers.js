@@ -50,4 +50,9 @@ export const serversService = {
     const response = await api.get(`/servers/${id}/files?path=${encodeURIComponent(path)}`);
     return response.data;
   },
+
+  checkDockerStatus: async (id) => {
+    const response = await api.get(`/servers/${id}/docker-status`);
+    return response.data;
+  },
 };

@@ -43,6 +43,8 @@ const AppDetail = () => {
   const [deployOutput, setDeployOutput] = useState('');
   const [portConflicts, setPortConflicts] = useState(null);
   const [customPorts, setCustomPorts] = useState([]);
+  const [dockerStatus, setDockerStatus] = useState(null);
+  const [checkingDocker, setCheckingDocker] = useState(false);
   const deployOutputRef = useRef(null);
   const socketRef = useRef(null);
 
@@ -244,14 +246,30 @@ const AppDetail = () => {
     setPortConflicts(null);
     setSelectedServer('');
     setCustomPorts(formData.ports || []);
+    setDockerStatus(null);
   };
 
   // Check port availability when server is selected
   const handleServerSelect = async (serverId) => {
     setSelectedServer(serverId);
     setPortConflicts(null);
+    setDockerStatus(null);
     
-    if (serverId && customPorts.length > 0) {
+    if (!serverId) return;
+    
+    // Check Docker status first
+    setCheckingDocker(true);
+    try {
+      const dockerResult = await serversService.checkDockerStatus(serverId);
+      setDockerStatus(dockerResult);
+    } catch (error) {
+      console.error('Failed to check Docker status:', error);
+      setDockerStatus({ installed: false, message: 'Failed to check Docker status' });
+    }
+    setCheckingDocker(false);
+    
+    // Check port availability
+    if (customPorts.length > 0) {
       try {
         const result = await appsService.checkPorts(id, serverId, customPorts);
         
@@ -721,6 +739,38 @@ const AppDetail = () => {
                 )}
               </div>
 
+              {/* Docker Status Check */}
+              {selectedServer && checkingDocker && (
+                <div className={styles.dockerChecking}>
+                  <span className={styles.spinner}></span> Checking Docker installation...
+                </div>
+              )}
+
+              {selectedServer && !checkingDocker && dockerStatus && !dockerStatus.installed && (
+                <div className={styles.dockerError}>
+                  <strong>⚠️ Docker Not Available</strong>
+                  <p>{dockerStatus.message || 'Docker is not installed on this server.'}</p>
+                  <p>Please install Docker on the server before deploying.</p>
+                  <Link to={`/servers/${selectedServer}?tab=services`} className={styles.dockerInstallLink}>
+                    <Button variant="secondary" size="small">Go to Services Tab →</Button>
+                  </Link>
+                </div>
+              )}
+
+              {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && !dockerStatus.running && (
+                <div className={styles.dockerWarning}>
+                  <strong>⚠️ Docker Not Running</strong>
+                  <p>Docker is installed but the daemon is not running. Please start Docker on the server.</p>
+                </div>
+              )}
+
+              {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && dockerStatus.running && (
+                <div className={styles.dockerSuccess}>
+                  <strong>✓ Docker Ready</strong>
+                  <span>{dockerStatus.version}</span>
+                </div>
+              )}
+
               {selectedServer && formData.ports.length > 0 && (
                 <div className={styles.portSection}>
                   <label>Port Mappings</label>
@@ -770,7 +820,7 @@ const AppDetail = () => {
                 <Button
                   variant="primary"
                   onClick={() => handleDeploy(portConflicts && portConflicts.length > 0)}
-                  disabled={!selectedServer}
+                  disabled={!selectedServer || checkingDocker || !dockerStatus?.installed || !dockerStatus?.running}
                 >
                   {portConflicts && portConflicts.length > 0 ? 'Deploy Anyway' : 'Deploy'}
                 </Button>

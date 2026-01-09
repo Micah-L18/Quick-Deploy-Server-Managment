@@ -2,6 +2,31 @@ const { ServerModel, AppModel } = require('../models');
 const { createShell, executeCommand } = require('../services/ssh/connectionManager');
 
 /**
+ * Service installation commands (with version support for nodejs)
+ * DEBIAN_FRONTEND=noninteractive prevents interactive prompts
+ */
+const INSTALL_COMMANDS = {
+  nginx: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx',
+  // Manual Docker installation that works on older/EOL distributions
+  docker: `
+    sudo apt-get update && 
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg lsb-release &&
+    sudo install -m 0755 -d /etc/apt/keyrings &&
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes &&
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg &&
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null &&
+    sudo apt-get update &&
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin &&
+    sudo usermod -aG docker $USER &&
+    sudo systemctl enable docker &&
+    sudo systemctl start docker
+  `.replace(/\n\s+/g, ' ').trim(),
+  nodejs: (version) => `curl -fsSL https://deb.nodesource.com/setup_${version || '20'}.x | sudo -E bash - && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs`,
+  postgresql: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib',
+  redis: 'sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y redis-server',
+};
+
+/**
  * Active terminal sessions
  * Map of socketId -> { conn, stream }
  */
@@ -214,6 +239,100 @@ function initTerminalHandlers(io) {
         console.error('Deployment error:', error);
         socket.emit('deploy-output', { data: `\n>>> Deployment failed: ${error.message}\n` });
         socket.emit('deploy-error', { message: error.message });
+      }
+    });
+
+    // Handle service installation with streaming output
+    socket.on('install-service', async ({ serverId, serviceName, version }) => {
+      try {
+        console.log(`Installing ${serviceName} on server ${serverId}${version ? ` (version ${version})` : ''}`);
+        
+        const server = await ServerModel.findById(serverId);
+        if (!server) {
+          socket.emit('install-error', { message: 'Server not found' });
+          return;
+        }
+
+        // Get install command
+        let installCmd = INSTALL_COMMANDS[serviceName.toLowerCase()];
+        if (!installCmd) {
+          socket.emit('install-error', { message: `Unsupported service: ${serviceName}` });
+          return;
+        }
+
+        // Handle version-specific commands (like nodejs)
+        if (typeof installCmd === 'function') {
+          installCmd = installCmd(version);
+        }
+
+        socket.emit('install-output', { data: `>>> Installing ${serviceName}...\n` });
+        socket.emit('install-output', { data: `>>> Running: ${installCmd}\n\n` });
+
+        // Create SSH connection for exec with streaming
+        const { Client } = require('ssh2');
+        const fs = require('fs');
+        const conn = new Client();
+
+        conn.on('ready', () => {
+          // Use exec instead of shell for proper exit code handling
+          conn.exec(installCmd, { pty: true }, (err, stream) => {
+            if (err) {
+              socket.emit('install-error', { message: err.message });
+              conn.end();
+              return;
+            }
+
+            let hasError = false;
+
+            stream.on('data', (data) => {
+              const text = data.toString('utf-8');
+              socket.emit('install-output', { data: text });
+              
+              // Check for common sudo password prompts
+              if (text.includes('[sudo] password') || text.includes('password is required')) {
+                hasError = true;
+                socket.emit('install-error', { 
+                  message: 'Sudo password is required. Please configure passwordless sudo or use a root user.' 
+                });
+                stream.close();
+                conn.end();
+              }
+            });
+
+            stream.stderr.on('data', (data) => {
+              const text = data.toString('utf-8');
+              socket.emit('install-output', { data: text });
+            });
+
+            stream.on('close', (code) => {
+              if (!hasError) {
+                if (code === 0) {
+                  socket.emit('install-output', { data: `\n>>> ${serviceName} installation complete!\n` });
+                  socket.emit('install-complete', { success: true, message: `${serviceName} installed successfully` });
+                } else {
+                  socket.emit('install-output', { data: `\n>>> Installation failed with exit code ${code}\n` });
+                  socket.emit('install-complete', { success: false, message: `Installation failed with exit code ${code}` });
+                }
+              }
+              conn.end();
+            });
+          });
+        });
+
+        conn.on('error', (err) => {
+          socket.emit('install-error', { message: err.message });
+        });
+
+        conn.connect({
+          host: server.ip,
+          port: 22,
+          username: server.username,
+          privateKey: fs.readFileSync(server.privateKeyPath)
+        });
+
+      } catch (error) {
+        console.error('Install service error:', error);
+        socket.emit('install-error', { message: error.message });
       }
     });
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '../components/Layout';
@@ -15,9 +15,10 @@ import styles from './ServerDetail.module.css';
 
 const ServerDetail = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [metricsError, setMetricsError] = useState(null);
-  const [activeTab, setActiveTab] = useState('metrics');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'metrics');
   const [timeRange, setTimeRange] = useState(24); // hours
   const [ipVisible, setIpVisible] = useState(false);
   const [expandedDeployments, setExpandedDeployments] = useState({});
