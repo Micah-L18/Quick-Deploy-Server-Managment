@@ -10,6 +10,8 @@ import { serversService } from '../api/servers';
 import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon } from '../components/Icons';
 import styles from './AppDetail.module.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
+
 const AppDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -109,7 +111,7 @@ const AppDetail = () => {
 
   // Socket.IO for deployment
   useEffect(() => {
-    const socket = io('http://localhost:3044');
+    const socket = io(API_URL);
     socketRef.current = socket;
 
     socket.on('deploy-output', ({ data }) => {

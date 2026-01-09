@@ -5,6 +5,8 @@ import { servicesAPI } from '../api/services';
 import styles from './ServicesManager.module.css';
 import { ServerIcon, CheckCircleIcon, XCircleIcon, ClockIcon, DownloadIcon, PlayIcon, StopCircleIcon, RotateIcon } from './Icons';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
+
 const AVAILABLE_SERVICES = [
   { name: 'docker', displayName: 'Docker', description: 'Container platform for building and running applications' },
   { name: 'nginx', displayName: 'Nginx', description: 'High-performance web server and reverse proxy' },
@@ -51,7 +53,7 @@ const ServicesManager = ({ serverId }) => {
 
   // Socket.IO connection - only connect once on mount
   useEffect(() => {
-    const socket = io('http://localhost:3044');
+    const socket = io(API_URL);
     socketRef.current = socket;
 
     socket.on('connect', () => {
