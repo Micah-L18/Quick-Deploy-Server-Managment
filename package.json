@@ -5,9 +5,9 @@
   "scripts": {
     "start": "concurrently \"npm run start:backend\" \"npm run start:client\"",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:client\"",
-    "start:backend": "cd Backend && npm start",
+    "start:backend": "cd Backend && node server.js",
     "start:client": "cd Client && npm start",
-    "dev:backend": "cd Backend && npm run dev",
+    "dev:backend": "cd Backend && npx nodemon server.js",
     "dev:client": "cd Client && PORT=3000 npm start",
     "install:all": "npm install && cd Backend && npm install && cd ../Client && npm install"
   },

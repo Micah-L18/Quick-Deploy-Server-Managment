@@ -1,4 +1,19 @@
+const path = require('path');
 const { run, get, all } = require('../database/connection');
+const { SSH_KEYS_DIR } = require('../config');
+
+/**
+ * Resolve a key path - converts relative key filename to absolute path
+ * @param {string} keyPath - Key path (could be absolute or just filename)
+ * @returns {string} - Resolved absolute path
+ */
+function resolveKeyPath(keyPath) {
+  if (!keyPath) return null;
+  // If it's already an absolute path, extract just the filename
+  const filename = path.basename(keyPath);
+  // Return the path relative to SSH_KEYS_DIR
+  return path.join(SSH_KEYS_DIR, filename);
+}
 
 /**
  * Convert database row to camelCase object
@@ -14,7 +29,8 @@ function toCamelCase(row) {
     region: row.region,
     ip: row.ip,
     username: row.username,
-    privateKeyPath: row.private_key_path,
+    // Resolve key path at runtime so it works across machines
+    privateKeyPath: resolveKeyPath(row.private_key_path),
     publicKey: row.public_key,
     setupCommand: row.setup_command,
     status: row.status,
