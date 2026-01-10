@@ -25,7 +25,8 @@ const {
   appRoutes,
   fileRoutes,
   metricsRoutes,
-  serviceRoutes
+  serviceRoutes,
+  systemRoutes
 } = require('./routes');
 const templateRoutes = require('./routes/templates');
 
@@ -81,6 +82,10 @@ app.use('/api/servers', serviceRoutes);   // /api/servers/:id/services/*
 app.use('/api/activities', activityRoutes);
 app.use('/api/apps', appRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/system', systemRoutes);
+
+// Store io reference for access in routes (e.g., system update progress)
+app.set('io', { io });
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
