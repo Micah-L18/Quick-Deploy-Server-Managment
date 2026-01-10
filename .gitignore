@@ -22,3 +22,5 @@ Backend/servers.db
 # PM2 logs
 /logs/*.log
 !logs/.gitkeep
+
+/ssh
