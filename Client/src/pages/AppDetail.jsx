@@ -689,7 +689,6 @@ const AppDetail = () => {
                 variant="outline"
                 onClick={() => {
                   navigator.clipboard.writeText(generateYaml());
-                  alert('YAML copied to clipboard!');
                 }}
               >
                 📋 Copy YAML

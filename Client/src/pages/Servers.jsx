@@ -349,8 +349,7 @@ const Servers = () => {
           
           <Button 
             onClick={() => {
-              navigator.clipboard.writeText(newServerData?.setupCommand || '');
-              alert('Command copied to clipboard!');
+              navigator.clipboard.writeText((newServerData?.setupCommand || '').trim());
             }}
             style={{ marginTop: '1rem', width: '100%' }}
           >

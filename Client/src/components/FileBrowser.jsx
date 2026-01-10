@@ -53,6 +53,7 @@ const FileBrowser = ({ serverId }) => {
       if (item.isDirectory) {
         setCurrentPath(item.path);
         setSearchQuery(''); // Clear search when navigating
+        setSearchResults(null); // Clear search results
       } else {
         setSelectedFile(item.path);
       }

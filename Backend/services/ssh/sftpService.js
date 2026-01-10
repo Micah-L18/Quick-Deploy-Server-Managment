@@ -288,6 +288,84 @@ async function listFilesViaCommand(serverConfig, dirPath) {
   return files;
 }
 
+/**
+ * Search for files and folders using find command
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} query - Search query
+ * @param {string} searchPath - Path to search in
+ * @returns {Promise<Array>}
+ */
+async function searchFiles(serverConfig, query, searchPath = '/') {
+  const { executeCommand } = require('./connectionManager');
+  
+  // Use find command with case-insensitive name matching
+  // Search for both files and directories, limit results to 100 and timeout after 30 seconds
+  const escapedQuery = query.replace(/"/g, '\\"');
+  // Search both files and directories, use -printf to include type info
+  const command = `timeout 30 find "${searchPath}" -iname "*${escapedQuery}*" \\( -type f -o -type d \\) 2>/dev/null | head -100`;
+  
+  const { stdout } = await executeCommand(serverConfig, command);
+  
+  const results = [];
+  const lines = stdout.trim().split('\n').filter(line => line.trim());
+  
+  // Get file stats to determine if each result is a file or directory
+  for (const line of lines) {
+    const fullPath = line.trim();
+    if (!fullPath) continue;
+    
+    const parts = fullPath.split('/');
+    const name = parts[parts.length - 1];
+    const dir = parts.slice(0, -1).join('/') || '/';
+    
+    // Skip the search path itself if it matches
+    if (fullPath === searchPath) continue;
+    
+    results.push({
+      name,
+      path: fullPath,
+      directory: dir,
+      // We'll determine type via a second command
+      isDirectory: false,
+      isFile: true
+    });
+  }
+  
+  // If we have results, check which ones are directories
+  if (results.length > 0) {
+    const paths = results.map(r => `"${r.path}"`).join(' ');
+    const typeCheckCmd = `for f in ${paths}; do [ -d "$f" ] && echo "D:$f" || echo "F:$f"; done 2>/dev/null`;
+    
+    try {
+      const { stdout: typeOutput } = await executeCommand(serverConfig, typeCheckCmd);
+      const typeLines = typeOutput.trim().split('\n');
+      
+      for (const typeLine of typeLines) {
+        if (typeLine.startsWith('D:')) {
+          const dirPath = typeLine.substring(2);
+          const item = results.find(r => r.path === dirPath);
+          if (item) {
+            item.isDirectory = true;
+            item.isFile = false;
+          }
+        }
+      }
+    } catch (e) {
+      // If type check fails, assume all are files
+      console.error('Type check failed:', e.message);
+    }
+  }
+  
+  // Sort: directories first, then alphabetically by name
+  results.sort((a, b) => {
+    if (a.isDirectory && !b.isDirectory) return -1;
+    if (!a.isDirectory && b.isDirectory) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  
+  return results;
+}
+
 module.exports = {
   listDirectory,
   readFile,
@@ -297,5 +375,6 @@ module.exports = {
   deleteFile,
   deleteDirectory,
   rename,
-  listFilesViaCommand
+  listFilesViaCommand,
+  searchFiles
 };

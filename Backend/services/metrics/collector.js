@@ -58,27 +58,83 @@ async function getOsInfo(serverConfig) {
  * @returns {Promise<Object>}
  */
 async function getServiceStatus(serverConfig, serviceName) {
-  const command = `systemctl status ${serviceName} 2>/dev/null || echo "NOT_INSTALLED"`;
+  // Different detection strategies for different services
+  let checkCommand;
   
-  const { stdout, code } = await executeCommand(serverConfig, command);
-
-  if (stdout.includes('NOT_INSTALLED') || stdout.includes('could not be found')) {
+  switch (serviceName.toLowerCase()) {
+    case 'docker':
+      // Check both systemctl and docker command existence
+      checkCommand = `
+        DOCKER_BIN=$(command -v docker 2>/dev/null)
+        DOCKER_RUNNING=$(systemctl is-active docker 2>/dev/null || echo "inactive")
+        DOCKER_VERSION=$(docker --version 2>/dev/null || echo "")
+        echo "BIN:$DOCKER_BIN"
+        echo "STATUS:$DOCKER_RUNNING"
+        echo "VERSION:$DOCKER_VERSION"
+      `;
+      break;
+    case 'nginx':
+      // Check both systemctl and nginx command existence
+      checkCommand = `
+        NGINX_BIN=$(command -v nginx 2>/dev/null)
+        NGINX_RUNNING=$(systemctl is-active nginx 2>/dev/null || echo "inactive")
+        NGINX_VERSION=$(nginx -v 2>&1 || echo "")
+        echo "BIN:$NGINX_BIN"
+        echo "STATUS:$NGINX_RUNNING"
+        echo "VERSION:$NGINX_VERSION"
+      `;
+      break;
+    case 'nodejs':
+      // Node.js is not a service, just check binary
+      checkCommand = `
+        NODE_BIN=$(command -v node 2>/dev/null)
+        NODE_VERSION=$(node --version 2>/dev/null || echo "")
+        echo "BIN:$NODE_BIN"
+        echo "STATUS:installed"
+        echo "VERSION:$NODE_VERSION"
+      `;
+      break;
+    default:
+      // Generic systemctl check for other services
+      checkCommand = `
+        SERVICE_RUNNING=$(systemctl is-active ${serviceName} 2>/dev/null || echo "not_found")
+        SERVICE_ENABLED=$(systemctl is-enabled ${serviceName} 2>/dev/null || echo "not_found")
+        echo "BIN:"
+        echo "STATUS:$SERVICE_RUNNING"
+        echo "VERSION:"
+      `;
+  }
+  
+  const { stdout } = await executeCommand(serverConfig, checkCommand);
+  
+  const lines = stdout.split('\n');
+  let bin = '', status = '', version = '';
+  
+  for (const line of lines) {
+    if (line.startsWith('BIN:')) bin = line.substring(4).trim();
+    if (line.startsWith('STATUS:')) status = line.substring(7).trim();
+    if (line.startsWith('VERSION:')) version = line.substring(8).trim();
+  }
+  
+  // Determine installation and running status
+  const isInstalled = bin !== '' || (status !== 'not_found' && status !== '' && status !== 'inactive');
+  const isRunning = status === 'active' || status === 'running' || status === 'installed';
+  
+  // Special case for nodejs - it's "running" if installed (not a daemon)
+  if (serviceName.toLowerCase() === 'nodejs') {
     return {
-      installed: false,
-      running: false,
-      status: 'not_installed'
+      installed: bin !== '' || version !== '',
+      running: bin !== '' || version !== '',
+      status: (bin !== '' || version !== '') ? 'installed' : 'not_installed',
+      version: version
     };
   }
-
-  const isActive = stdout.includes('Active: active');
-  const isRunning = stdout.includes('running');
-  const isStopped = stdout.includes('inactive') || stdout.includes('dead');
-
+  
   return {
-    installed: true,
-    running: isActive && isRunning,
-    status: isActive && isRunning ? 'running' : (isStopped ? 'stopped' : 'unknown'),
-    output: stdout
+    installed: isInstalled || bin !== '',
+    running: isRunning,
+    status: !isInstalled && bin === '' ? 'not_installed' : (isRunning ? 'running' : 'stopped'),
+    version: version
   };
 }
 

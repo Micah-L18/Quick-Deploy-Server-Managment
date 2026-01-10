@@ -86,6 +86,41 @@ router.get('/:id/files/read', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/servers/:id/files/search
+ * Search for files
+ */
+router.get('/:id/files/search', requireAuth, asyncHandler(async (req, res) => {
+  const check = await checkServerOwnership(req.params.id, req.session.userId);
+  if (check.error) {
+    return res.status(check.status).json({ error: check.error });
+  }
+
+  const server = check.server;
+  const query = req.query.q;
+  const searchPath = req.query.path || '/';
+
+  if (!query) {
+    return res.status(400).json({ error: 'Search query is required' });
+  }
+
+  const results = await sftpService.searchFiles(
+    {
+      host: server.ip,
+      username: server.username,
+      privateKeyPath: server.privateKeyPath
+    },
+    query,
+    searchPath
+  );
+
+  res.json({
+    query,
+    path: searchPath,
+    results
+  });
+}));
+
+/**
  * PUT /api/servers/:id/files/write
  * Write file contents
  */

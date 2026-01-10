@@ -206,8 +206,7 @@ const ServerDetail = () => {
 
   const handleCopyCommand = () => {
     if (server?.setupCommand) {
-      navigator.clipboard.writeText(server.setupCommand);
-      alert('Setup command copied to clipboard!');
+      navigator.clipboard.writeText(server.setupCommand.trim());
     }
   };
 
