@@ -15,6 +15,15 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/apps/deployments/all
+ * Get all deployments across all apps for user
+ */
+router.get('/deployments/all', requireAuth, asyncHandler(async (req, res) => {
+  const deployments = await AppModel.findAllDeployments(req.session.userId);
+  res.json(deployments);
+}));
+
+/**
  * GET /api/apps/:id
  * Get single app
  */

@@ -5,8 +5,11 @@
 /Backend/node_modules
 /Client/node_modules
 
-.env
+/Backend/.env
 ./Backend/servers.db
 Backend/servers.db
 
 /Backend/ssh_keys/*
+/Backend/.env
+
+./client/build

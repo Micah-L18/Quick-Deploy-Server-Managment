@@ -6,6 +6,11 @@ export const appsService = {
     return response.data;
   },
 
+  getAllDeployments: async () => {
+    const response = await api.get('/apps/deployments/all');
+    return response.data;
+  },
+
   getApp: async (id) => {
     const response = await api.get(`/apps/${id}`);
     // Parse JSON fields if they're strings

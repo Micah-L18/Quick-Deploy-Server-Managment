@@ -2,7 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 20px;
 }
@@ -33,6 +33,262 @@
   border-color: #00a8cc;
 }
 
+/* Tab Navigation */
+.tabContainer {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-medium);
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: -2px;
+}
+
+.tab:hover {
+  color: var(--text-dark);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.tabActive {
+  color: #00a8cc;
+  border-bottom-color: #00a8cc;
+}
+
+/* Deployments Table */
+.deploymentsTable {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 100px 120px 140px 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #f8f9fa;
+  font-weight: 600;
+  color: var(--text-medium);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 100px 120px 140px 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.appCell {
+  min-width: 0;
+}
+
+.appLink {
+  text-decoration: none;
+  color: var(--text-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.appLink:hover {
+  color: #00a8cc;
+}
+
+.appImage {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+}
+
+.containerCell {
+  min-width: 0;
+}
+
+.containerName {
+  font-weight: 500;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.containerId {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-family: monospace;
+}
+
+.serverCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.serverLink {
+  text-decoration: none;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.serverLink:hover {
+  color: #00a8cc;
+}
+
+.serverIp {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-family: monospace;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.statusRunning {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.statusStopped {
+  background: rgba(156, 163, 175, 0.2);
+  color: #6b7280;
+}
+
+.portsCell {
+  min-width: 0;
+}
+
+.portBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.portBadge {
+  background: rgba(0, 212, 255, 0.1);
+  color: #00a8cc;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+.noPorts {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.dateCell {
+  font-size: 0.85rem;
+  color: var(--text-medium);
+}
+
+.actionsCell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Stats and Logs Rows */
+.statsRow,
+.logsRow {
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.statsContent {
+  padding: 8px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--text-medium);
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.statsLoading,
+.statsError,
+.logsLoading,
+.logsError {
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.logsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.logsTitle {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.logsContent {
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.logsOutput {
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.8rem;
+  color: #e0e0e0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Apps Grid */
 .appsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

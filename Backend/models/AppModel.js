@@ -236,6 +236,30 @@ async function removeDeployment(deploymentId) {
   return result.changes;
 }
 
+/**
+ * Get all deployments across all apps for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>}
+ */
+async function findAllDeployments(userId) {
+  const rows = await all(`
+    SELECT 
+      d.*,
+      s.name as server_name,
+      s.ip as server_ip,
+      a.name as app_name,
+      a.image as app_image,
+      a.tag as app_tag
+    FROM app_deployments d
+    LEFT JOIN servers s ON d.server_id = s.id
+    LEFT JOIN apps a ON d.app_id = a.id
+    WHERE a.user_id = ?
+    ORDER BY d.deployed_at DESC
+  `, [userId]);
+
+  return rows;
+}
+
 module.exports = {
   findAll,
   findById,
@@ -246,5 +270,6 @@ module.exports = {
   findDeploymentById,
   createDeployment,
   updateDeploymentStatus,
-  removeDeployment
+  removeDeployment,
+  findAllDeployments
 };

@@ -10,7 +10,7 @@ const Sidebar = () => {
   const navItems = [
     { path: '/', icon: DashboardIcon, label: 'Dashboard' },
     { path: '/servers', icon: ServersIcon, label: 'Servers' },
-    { path: '/apps', icon: AppsIcon, label: 'My Apps' },
+    { path: '/apps', icon: AppsIcon, label: 'Apps' },
     { path: '/connections', icon: ConnectionsIcon, label: 'Connections' },
   ];
 
