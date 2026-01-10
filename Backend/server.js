@@ -27,6 +27,7 @@ const {
   metricsRoutes,
   serviceRoutes
 } = require('./routes');
+const templateRoutes = require('./routes/templates');
 
 // Middleware
 const { errorHandler, notFoundHandler } = require('./middleware');
@@ -79,6 +80,7 @@ app.use('/api/servers', metricsRoutes);   // /api/servers/:id/metrics/*
 app.use('/api/servers', serviceRoutes);   // /api/servers/:id/services/*
 app.use('/api/activities', activityRoutes);
 app.use('/api/apps', appRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

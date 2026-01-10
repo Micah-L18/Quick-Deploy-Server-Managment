@@ -376,12 +376,29 @@
   padding: 16px 24px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .yamlHeader h3 {
   margin: 0;
   font-size: 1rem;
   color: var(--text-primary);
+}
+
+.yamlActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.yamlUnsaved {
+  color: #f59e0b;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 4px;
 }
 
 .yamlCode {
@@ -396,12 +413,186 @@
   margin: 0;
 }
 
+.yamlEditor {
+  width: 100%;
+  min-height: 400px;
+  background: #0d1117;
+  color: #e6edf3;
+  padding: 24px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border: none;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.yamlEditor:focus {
+  background: #161b22;
+}
+
+.yamlError {
+  padding: 12px 24px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .yamlHint {
   padding: 16px 24px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   color: var(--text-medium);
   font-size: 0.85rem;
+}
+
+.yamlHint p {
+  margin: 0;
+}
+
+/* Docker Run Section */
+.dockerRunSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.dockerRunCode {
+  background: #0d1117;
+  color: #e6edf3;
+  padding: 24px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+/* Import Section */
+.importSection {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 168, 204, 0.05) 100%);
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.importHeader {
+  margin-bottom: 16px;
+}
+
+.importHeader h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.importHeader p {
+  margin: 0;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.importActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Import Modal */
+.importModal {
+  padding: 8px 0;
+}
+
+.importTypeToggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.importTypeBtn {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-medium);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.importTypeBtn:hover {
+  color: var(--text-primary);
+}
+
+.importTypeBtn.active {
+  background: var(--card-bg);
+  color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.importInstructions {
+  margin-bottom: 16px;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.importInstructions code {
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.importTextarea {
+  width: 100%;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: #0d1117;
+  color: #e6edf3;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.importTextarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.importError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.importModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 /* Instances Tab */

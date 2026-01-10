@@ -8,6 +8,8 @@ import Modal from '../components/Modal';
 import { appsService } from '../api/apps';
 import { serversService } from '../api/servers';
 import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon } from '../components/Icons';
+import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
+import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
 import styles from './AppDetail.module.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
@@ -37,6 +39,17 @@ const AppDetail = () => {
     use_custom_registry: false
   });
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Import modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importType, setImportType] = useState('docker-run'); // 'docker-run' or 'yaml'
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState('');
+  
+  // YAML editing state
+  const [yamlText, setYamlText] = useState('');
+  const [yamlError, setYamlError] = useState('');
+  const [yamlHasChanges, setYamlHasChanges] = useState(false);
   
   // Deployment modal state
   const [showDeployModal, setShowDeployModal] = useState(false);
@@ -143,10 +156,153 @@ const AppDetail = () => {
   const handleFormChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
+    // Reset YAML changes indicator since form is the source of truth now
+    setYamlHasChanges(false);
   };
 
   const handleSaveConfig = () => {
     updateMutation.mutate(formData);
+  };
+
+  // Import handlers
+  const handleImport = () => {
+    setImportError('');
+    
+    if (!importText.trim()) {
+      setImportError('Please enter a command or YAML to import');
+      return;
+    }
+    
+    try {
+      if (importType === 'docker-run') {
+        const parsed = parseDockerRun(importText);
+        
+        // Apply parsed data to form
+        setFormData(prev => ({
+          ...prev,
+          name: parsed.name || prev.name,
+          image: parsed.image || prev.image,
+          tag: parsed.tag || prev.tag,
+          ports: parsed.ports.length > 0 ? parsed.ports : prev.ports,
+          env_vars: parsed.env_vars.length > 0 ? parsed.env_vars : prev.env_vars,
+          volumes: parsed.volumes.length > 0 ? parsed.volumes : prev.volumes,
+          restart_policy: parsed.restart_policy || prev.restart_policy,
+          network_mode: parsed.network_mode || prev.network_mode,
+          command: parsed.command || prev.command,
+          custom_args: parsed.custom_args || prev.custom_args,
+        }));
+        
+        setHasChanges(true);
+        setShowImportModal(false);
+        setImportText('');
+      } else {
+        // YAML import
+        const result = parseDockerComposeYaml(importText);
+        
+        if (!result.success) {
+          setImportError(result.error);
+          return;
+        }
+        
+        const parsed = result.config;
+        
+        // Apply parsed data to form
+        setFormData(prev => ({
+          ...prev,
+          name: parsed.name || prev.name,
+          image: parsed.image || prev.image,
+          tag: parsed.tag || prev.tag,
+          ports: parsed.ports.length > 0 ? parsed.ports : prev.ports,
+          env_vars: parsed.env_vars.length > 0 ? parsed.env_vars : prev.env_vars,
+          volumes: parsed.volumes.length > 0 ? parsed.volumes : prev.volumes,
+          restart_policy: parsed.restart_policy || prev.restart_policy,
+          network_mode: parsed.network_mode || prev.network_mode,
+          command: parsed.command || prev.command,
+        }));
+        
+        setHasChanges(true);
+        setShowImportModal(false);
+        setImportText('');
+      }
+    } catch (error) {
+      setImportError(`Failed to parse: ${error.message}`);
+    }
+  };
+
+  // YAML editing handlers
+  const handleYamlChange = (newYaml) => {
+    setYamlText(newYaml);
+    setYamlHasChanges(true);
+    setYamlError('');
+  };
+
+  const handleApplyYaml = () => {
+    setYamlError('');
+    
+    try {
+      const result = parseDockerComposeYaml(yamlText);
+      
+      if (!result.success) {
+        setYamlError(result.error);
+        return;
+      }
+      
+      const parsed = result.config;
+      
+      // Check if form has unsaved changes
+      if (hasChanges) {
+        if (!window.confirm('You have unsaved form changes. Applying YAML will overwrite them. Continue?')) {
+          return;
+        }
+      }
+      
+      // Apply parsed YAML to form
+      setFormData(prev => ({
+        ...prev,
+        name: parsed.name || prev.name,
+        image: parsed.image || '',
+        tag: parsed.tag || 'latest',
+        ports: parsed.ports || [],
+        env_vars: parsed.env_vars || [],
+        volumes: parsed.volumes || [],
+        restart_policy: parsed.restart_policy || 'unless-stopped',
+        network_mode: parsed.network_mode || '',
+        command: parsed.command || '',
+      }));
+      
+      setHasChanges(true);
+      setYamlHasChanges(false);
+    } catch (error) {
+      setYamlError(`Invalid YAML: ${error.message}`);
+    }
+  };
+
+  // Generate YAML when switching to YAML tab (regenerate from form data)
+  useEffect(() => {
+    if (activeTab === 'yaml') {
+      // Always regenerate YAML from form data when switching to YAML tab
+      // unless the user has made manual edits
+      if (!yamlHasChanges) {
+        const generatedYaml = generateDockerComposeYaml(formData);
+        setYamlText(generatedYaml);
+      }
+    }
+  }, [activeTab]); // Only trigger on tab change
+  
+  // Also update YAML when form data changes and we're on config tab
+  useEffect(() => {
+    // Reset YAML changes flag when form data changes from config tab
+    if (activeTab === 'config' && hasChanges) {
+      setYamlHasChanges(false);
+    }
+  }, [formData, activeTab, hasChanges]);
+
+  // Generate docker run command for display
+  const generateDockerRunCommand = () => {
+    return generateDockerRun({
+      ...formData,
+      name: formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    });
   };
 
   // Port management
@@ -192,53 +348,6 @@ const AppDetail = () => {
 
   const removeVolume = (index) => {
     handleFormChange('volumes', formData.volumes.filter((_, i) => i !== index));
-  };
-
-  // Generate docker-compose YAML
-  const generateYaml = () => {
-    if (!formData.image) return '# No Docker image configured\n# Go to Config tab to set up your container';
-    
-    let yaml = `version: '3.8'\n\nservices:\n  ${formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}:\n`;
-    yaml += `    image: ${formData.image}:${formData.tag || 'latest'}\n`;
-    yaml += `    container_name: ${formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}\n`;
-    yaml += `    restart: ${formData.restart_policy || 'unless-stopped'}\n`;
-    
-    if (formData.ports && formData.ports.length > 0) {
-      yaml += `    ports:\n`;
-      formData.ports.forEach(p => {
-        if (p.host && p.container) {
-          yaml += `      - "${p.host}:${p.container}"\n`;
-        }
-      });
-    }
-    
-    if (formData.env_vars && formData.env_vars.length > 0) {
-      yaml += `    environment:\n`;
-      formData.env_vars.forEach(env => {
-        if (env.key) {
-          yaml += `      - ${env.key}=${env.value || ''}\n`;
-        }
-      });
-    }
-    
-    if (formData.volumes && formData.volumes.length > 0) {
-      yaml += `    volumes:\n`;
-      formData.volumes.forEach(vol => {
-        if (vol.host && vol.container) {
-          yaml += `      - ${vol.host}:${vol.container}\n`;
-        }
-      });
-    }
-    
-    if (formData.network_mode) {
-      yaml += `    network_mode: ${formData.network_mode}\n`;
-    }
-    
-    if (formData.command) {
-      yaml += `    command: ${formData.command}\n`;
-    }
-    
-    return yaml;
   };
 
   // Check ports and open deploy modal
@@ -388,7 +497,15 @@ const AppDetail = () => {
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'yaml' ? styles.activeTab : ''}`}
-          onClick={() => setActiveTab('yaml')}
+          onClick={() => {
+            // Reset YAML changes so it regenerates from form
+            if (activeTab !== 'yaml') {
+              setYamlHasChanges(false);
+              const generatedYaml = generateDockerComposeYaml(formData);
+              setYamlText(generatedYaml);
+            }
+            setActiveTab('yaml');
+          }}
         >
           📄 YAML
         </button>
@@ -397,6 +514,38 @@ const AppDetail = () => {
       {/* Config Tab */}
       {activeTab === 'config' && (
         <div className={styles.tabContent}>
+          {/* Import Section */}
+          <div className={styles.importSection}>
+            <div className={styles.importHeader}>
+              <h3>📥 Quick Import</h3>
+              <p>Import configuration from a docker run command or docker-compose YAML</p>
+            </div>
+            <div className={styles.importActions}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportType('docker-run');
+                  setImportText('');
+                  setImportError('');
+                  setShowImportModal(true);
+                }}
+              >
+                Import from docker run
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportType('yaml');
+                  setImportText('');
+                  setImportError('');
+                  setShowImportModal(true);
+                }}
+              >
+                Import from YAML
+              </Button>
+            </div>
+          </div>
+
           <div className={styles.configSection}>
             <h3>Basic Information</h3>
             <div className={styles.formRow}>
@@ -685,19 +834,73 @@ const AppDetail = () => {
           <div className={styles.yamlSection}>
             <div className={styles.yamlHeader}>
               <h3>Docker Compose YAML</h3>
+              <div className={styles.yamlActions}>
+                {yamlHasChanges && (
+                  <span className={styles.yamlUnsaved}>Unsaved YAML changes</span>
+                )}
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={() => {
+                    const generatedYaml = generateDockerComposeYaml(formData);
+                    setYamlText(generatedYaml);
+                    setYamlHasChanges(false);
+                    setYamlError('');
+                  }}
+                  disabled={!yamlHasChanges}
+                >
+                  Reset to Form
+                </Button>
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleApplyYaml}
+                  disabled={!yamlHasChanges}
+                >
+                  Apply YAML to Form
+                </Button>
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={() => {
+                    navigator.clipboard.writeText(yamlText);
+                  }}
+                >
+                  📋 Copy
+                </Button>
+              </div>
+            </div>
+            {yamlError && (
+              <div className={styles.yamlError}>
+                <AlertIcon size={16} /> {yamlError}
+              </div>
+            )}
+            <textarea
+              className={styles.yamlEditor}
+              value={yamlText}
+              onChange={(e) => handleYamlChange(e.target.value)}
+              spellCheck={false}
+              placeholder="# Docker Compose YAML will appear here..."
+            />
+            <div className={styles.yamlHint}>
+              <p>Edit the YAML above and click "Apply YAML to Form" to update the configuration. Changes are bidirectional - form edits update YAML, YAML edits can update the form.</p>
+            </div>
+          </div>
+          
+          <div className={styles.dockerRunSection}>
+            <div className={styles.yamlHeader}>
+              <h3>Docker Run Command</h3>
               <Button
                 variant="outline"
+                size="small"
                 onClick={() => {
-                  navigator.clipboard.writeText(generateYaml());
+                  navigator.clipboard.writeText(generateDockerRunCommand());
                 }}
               >
-                📋 Copy YAML
+                📋 Copy
               </Button>
             </div>
-            <pre className={styles.yamlCode}>{generateYaml()}</pre>
-            <p className={styles.yamlHint}>
-              This YAML is auto-generated from your configuration. You can copy it to use with docker-compose directly.
-            </p>
+            <pre className={styles.dockerRunCode}>{generateDockerRunCommand()}</pre>
           </div>
         </div>
       )}
@@ -854,6 +1057,71 @@ const AppDetail = () => {
               )}
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        title={importType === 'docker-run' ? '📥 Import from Docker Run' : '📥 Import from YAML'}
+      >
+        <div className={styles.importModal}>
+          <div className={styles.importTypeToggle}>
+            <button
+              className={`${styles.importTypeBtn} ${importType === 'docker-run' ? styles.active : ''}`}
+              onClick={() => {
+                setImportType('docker-run');
+                setImportError('');
+              }}
+            >
+              docker run
+            </button>
+            <button
+              className={`${styles.importTypeBtn} ${importType === 'yaml' ? styles.active : ''}`}
+              onClick={() => {
+                setImportType('yaml');
+                setImportError('');
+              }}
+            >
+              YAML
+            </button>
+          </div>
+          
+          <div className={styles.importInstructions}>
+            {importType === 'docker-run' ? (
+              <p>Paste a <code>docker run</code> command below. Supported flags: <code>-p</code>, <code>-e</code>, <code>-v</code>, <code>--name</code>, <code>--restart</code>, <code>--network</code>. Other flags will be added to Custom Args.</p>
+            ) : (
+              <p>Paste docker-compose YAML below. The first service will be imported.</p>
+            )}
+          </div>
+          
+          <textarea
+            className={styles.importTextarea}
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder={importType === 'docker-run' 
+              ? 'docker run -d -p 8080:80 --name myapp -e ENV=prod nginx:latest'
+              : "version: '3.8'\nservices:\n  myapp:\n    image: nginx:latest\n    ports:\n      - \"8080:80\""
+            }
+            rows={importType === 'yaml' ? 12 : 6}
+            spellCheck={false}
+          />
+          
+          {importError && (
+            <div className={styles.importError}>
+              <AlertIcon size={16} /> {importError}
+            </div>
+          )}
+          
+          <div className={styles.importModalActions}>
+            <Button variant="outline" onClick={() => setShowImportModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleImport}>
+              Import Configuration
+            </Button>
+          </div>
         </div>
       </Modal>
     </Layout>

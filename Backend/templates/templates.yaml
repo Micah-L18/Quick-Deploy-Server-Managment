@@ -1,0 +1,669 @@
+# Templates Configuration
+# 
+# This file defines Docker app templates that users can quickly deploy.
+# Templates are organized by category and provide pre-configured Docker settings.
+#
+# Template Schema:
+#   id: unique identifier (required)
+#   name: display name (required)
+#   description: short description (required)
+#   category: one of [databases, web-servers, game-servers, development, monitoring, media, utilities] (required)
+#   icon: emoji icon for display (optional, defaults to 🐳)
+#   image: Docker image name (required)
+#   tag: Docker image tag (optional, defaults to 'latest')
+#   ports: array of {host, container} port mappings (optional)
+#   env_vars: array of {key, value, description, required} environment variables (optional)
+#   volumes: array of {host, container, description} volume mounts (optional)
+#   restart_policy: one of [no, always, unless-stopped, on-failure] (optional)
+#   network_mode: network mode string (optional)
+#   command: command override (optional)
+#   documentation_url: link to official docs (optional)
+#   notes: additional setup notes for users (optional)
+
+templates:
+
+  # ==================== DATABASES ====================
+  
+  - id: postgres
+    name: PostgreSQL
+    description: Powerful, open-source relational database
+    category: databases
+    icon: 🐘
+    image: postgres
+    tag: "16"
+    ports:
+      - host: "5432"
+        container: "5432"
+    env_vars:
+      - key: POSTGRES_PASSWORD
+        value: ""
+        description: Superuser password (required)
+        required: true
+      - key: POSTGRES_USER
+        value: postgres
+        description: Superuser username
+        required: false
+      - key: POSTGRES_DB
+        value: postgres
+        description: Default database name
+        required: false
+    volumes:
+      - host: postgres-data
+        container: /var/lib/postgresql/data
+        description: Database data persistence
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/postgres
+    notes: Remember to set a strong POSTGRES_PASSWORD before deploying.
+
+  - id: mysql
+    name: MySQL
+    description: Popular open-source relational database
+    category: databases
+    icon: 🐬
+    image: mysql
+    tag: "8"
+    ports:
+      - host: "3306"
+        container: "3306"
+    env_vars:
+      - key: MYSQL_ROOT_PASSWORD
+        value: ""
+        description: Root password (required)
+        required: true
+      - key: MYSQL_DATABASE
+        value: ""
+        description: Create database on startup
+        required: false
+      - key: MYSQL_USER
+        value: ""
+        description: Create user on startup
+        required: false
+      - key: MYSQL_PASSWORD
+        value: ""
+        description: Password for MYSQL_USER
+        required: false
+    volumes:
+      - host: mysql-data
+        container: /var/lib/mysql
+        description: Database data persistence
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/mysql
+
+  - id: mongodb
+    name: MongoDB
+    description: NoSQL document database
+    category: databases
+    icon: 🍃
+    image: mongo
+    tag: "7"
+    ports:
+      - host: "27017"
+        container: "27017"
+    env_vars:
+      - key: MONGO_INITDB_ROOT_USERNAME
+        value: admin
+        description: Root username
+        required: false
+      - key: MONGO_INITDB_ROOT_PASSWORD
+        value: ""
+        description: Root password
+        required: false
+    volumes:
+      - host: mongo-data
+        container: /data/db
+        description: Database data persistence
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/mongo
+
+  - id: redis
+    name: Redis
+    description: In-memory data structure store, cache, and message broker
+    category: databases
+    icon: 🔴
+    image: redis
+    tag: "7-alpine"
+    ports:
+      - host: "6379"
+        container: "6379"
+    volumes:
+      - host: redis-data
+        container: /data
+        description: Data persistence
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/redis
+
+  - id: mariadb
+    name: MariaDB
+    description: MySQL-compatible open-source database
+    category: databases
+    icon: 🦭
+    image: mariadb
+    tag: "11"
+    ports:
+      - host: "3306"
+        container: "3306"
+    env_vars:
+      - key: MARIADB_ROOT_PASSWORD
+        value: ""
+        description: Root password (required)
+        required: true
+      - key: MARIADB_DATABASE
+        value: ""
+        description: Create database on startup
+        required: false
+    volumes:
+      - host: mariadb-data
+        container: /var/lib/mysql
+        description: Database data persistence
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/mariadb
+
+  # ==================== WEB SERVERS ====================
+
+  - id: nginx
+    name: Nginx
+    description: High-performance web server and reverse proxy
+    category: web-servers
+    icon: 🌐
+    image: nginx
+    tag: alpine
+    ports:
+      - host: "80"
+        container: "80"
+      - host: "443"
+        container: "443"
+    volumes:
+      - host: ./nginx.conf
+        container: /etc/nginx/nginx.conf
+        description: Nginx configuration file
+      - host: ./html
+        container: /usr/share/nginx/html
+        description: Static files directory
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/nginx
+
+  - id: traefik
+    name: Traefik
+    description: Modern reverse proxy and load balancer
+    category: web-servers
+    icon: 🔀
+    image: traefik
+    tag: "v3.0"
+    ports:
+      - host: "80"
+        container: "80"
+      - host: "443"
+        container: "443"
+      - host: "8080"
+        container: "8080"
+    volumes:
+      - host: /var/run/docker.sock
+        container: /var/run/docker.sock
+        description: Docker socket for auto-discovery
+    restart_policy: unless-stopped
+    documentation_url: https://doc.traefik.io/traefik/
+    notes: Port 8080 is the Traefik dashboard. Consider securing it in production.
+
+  - id: caddy
+    name: Caddy
+    description: Web server with automatic HTTPS
+    category: web-servers
+    icon: 🔐
+    image: caddy
+    tag: "2-alpine"
+    ports:
+      - host: "80"
+        container: "80"
+      - host: "443"
+        container: "443"
+    volumes:
+      - host: ./Caddyfile
+        container: /etc/caddy/Caddyfile
+        description: Caddy configuration
+      - host: caddy-data
+        container: /data
+        description: Caddy data (certificates, etc.)
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/caddy
+
+  # ==================== GAME SERVERS ====================
+
+  - id: minecraft
+    name: Minecraft Server
+    description: Java Edition Minecraft server with auto-updates
+    category: game-servers
+    icon: ⛏️
+    image: itzg/minecraft-server
+    tag: latest
+    ports:
+      - host: "25565"
+        container: "25565"
+    env_vars:
+      - key: EULA
+        value: "TRUE"
+        description: Accept Minecraft EULA (required)
+        required: true
+      - key: TYPE
+        value: VANILLA
+        description: Server type (VANILLA, FORGE, PAPER, SPIGOT, etc.)
+        required: false
+      - key: VERSION
+        value: LATEST
+        description: Minecraft version
+        required: false
+      - key: MEMORY
+        value: 2G
+        description: Server memory allocation
+        required: false
+      - key: OPS
+        value: ""
+        description: Comma-separated list of operator usernames
+        required: false
+    volumes:
+      - host: mc-data
+        container: /data
+        description: World data and server files
+    restart_policy: unless-stopped
+    documentation_url: https://docker-minecraft-server.readthedocs.io/
+    notes: Set EULA=TRUE to accept the Minecraft EULA. Change MEMORY based on your server resources.
+
+  - id: valheim
+    name: Valheim Server
+    description: Dedicated Valheim game server
+    category: game-servers
+    icon: ⚔️
+    image: lloesche/valheim-server
+    tag: latest
+    ports:
+      - host: "2456"
+        container: "2456/udp"
+      - host: "2457"
+        container: "2457/udp"
+      - host: "2458"
+        container: "2458/udp"
+    env_vars:
+      - key: SERVER_NAME
+        value: My Valheim Server
+        description: Server display name
+        required: true
+      - key: WORLD_NAME
+        value: MyWorld
+        description: World name
+        required: true
+      - key: SERVER_PASS
+        value: ""
+        description: Server password (min 5 characters)
+        required: true
+    volumes:
+      - host: valheim-config
+        container: /config
+        description: Server configuration
+      - host: valheim-data
+        container: /opt/valheim
+        description: Game data
+    restart_policy: unless-stopped
+    documentation_url: https://github.com/lloesche/valheim-server-docker
+
+  - id: terraria
+    name: Terraria Server
+    description: TShock Terraria server
+    category: game-servers
+    icon: 🌳
+    image: ryshe/terraria
+    tag: latest
+    ports:
+      - host: "7777"
+        container: "7777"
+    env_vars:
+      - key: world
+        value: /root/.local/share/Terraria/Worlds/World.wld
+        description: World file path
+        required: false
+    volumes:
+      - host: terraria-data
+        container: /root/.local/share/Terraria/Worlds
+        description: World data
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/r/ryshe/terraria
+
+  # ==================== DEVELOPMENT ====================
+
+  - id: gitea
+    name: Gitea
+    description: Lightweight self-hosted Git service
+    category: development
+    icon: 🍵
+    image: gitea/gitea
+    tag: latest
+    ports:
+      - host: "3000"
+        container: "3000"
+      - host: "2222"
+        container: "22"
+    volumes:
+      - host: gitea-data
+        container: /data
+        description: Git repositories and config
+    restart_policy: unless-stopped
+    documentation_url: https://docs.gitea.io/
+
+  - id: jenkins
+    name: Jenkins
+    description: Open-source automation server for CI/CD
+    category: development
+    icon: 🤵
+    image: jenkins/jenkins
+    tag: lts
+    ports:
+      - host: "8080"
+        container: "8080"
+      - host: "50000"
+        container: "50000"
+    volumes:
+      - host: jenkins-data
+        container: /var/jenkins_home
+        description: Jenkins home directory
+    restart_policy: unless-stopped
+    documentation_url: https://www.jenkins.io/doc/book/installing/docker/
+    notes: Initial admin password can be found in the container logs.
+
+  - id: drone
+    name: Drone CI
+    description: Container-native continuous integration
+    category: development
+    icon: 🚀
+    image: drone/drone
+    tag: "2"
+    ports:
+      - host: "80"
+        container: "80"
+      - host: "443"
+        container: "443"
+    env_vars:
+      - key: DRONE_GITEA_SERVER
+        value: ""
+        description: Gitea server URL
+        required: false
+      - key: DRONE_GITEA_CLIENT_ID
+        value: ""
+        description: Gitea OAuth client ID
+        required: false
+      - key: DRONE_GITEA_CLIENT_SECRET
+        value: ""
+        description: Gitea OAuth client secret
+        required: false
+      - key: DRONE_RPC_SECRET
+        value: ""
+        description: Shared secret for runners
+        required: true
+      - key: DRONE_SERVER_HOST
+        value: ""
+        description: Public hostname
+        required: true
+      - key: DRONE_SERVER_PROTO
+        value: https
+        description: http or https
+        required: false
+    volumes:
+      - host: drone-data
+        container: /data
+        description: Drone data
+    restart_policy: unless-stopped
+    documentation_url: https://docs.drone.io/
+
+  # ==================== MONITORING ====================
+
+  - id: portainer
+    name: Portainer
+    description: Docker management UI
+    category: monitoring
+    icon: 🐋
+    image: portainer/portainer-ce
+    tag: latest
+    ports:
+      - host: "9000"
+        container: "9000"
+    volumes:
+      - host: /var/run/docker.sock
+        container: /var/run/docker.sock
+        description: Docker socket
+      - host: portainer-data
+        container: /data
+        description: Portainer data
+    restart_policy: unless-stopped
+    documentation_url: https://docs.portainer.io/
+
+  - id: grafana
+    name: Grafana
+    description: Analytics and monitoring dashboards
+    category: monitoring
+    icon: 📊
+    image: grafana/grafana
+    tag: latest
+    ports:
+      - host: "3000"
+        container: "3000"
+    env_vars:
+      - key: GF_SECURITY_ADMIN_PASSWORD
+        value: admin
+        description: Admin password
+        required: false
+    volumes:
+      - host: grafana-data
+        container: /var/lib/grafana
+        description: Grafana data
+    restart_policy: unless-stopped
+    documentation_url: https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
+
+  - id: prometheus
+    name: Prometheus
+    description: Monitoring and alerting toolkit
+    category: monitoring
+    icon: 🔥
+    image: prom/prometheus
+    tag: latest
+    ports:
+      - host: "9090"
+        container: "9090"
+    volumes:
+      - host: ./prometheus.yml
+        container: /etc/prometheus/prometheus.yml
+        description: Prometheus configuration
+      - host: prometheus-data
+        container: /prometheus
+        description: Metrics data
+    restart_policy: unless-stopped
+    documentation_url: https://prometheus.io/docs/prometheus/latest/installation/
+
+  - id: uptime-kuma
+    name: Uptime Kuma
+    description: Self-hosted monitoring tool like Uptime Robot
+    category: monitoring
+    icon: 📈
+    image: louislam/uptime-kuma
+    tag: "1"
+    ports:
+      - host: "3001"
+        container: "3001"
+    volumes:
+      - host: uptime-kuma-data
+        container: /app/data
+        description: Application data
+    restart_policy: unless-stopped
+    documentation_url: https://github.com/louislam/uptime-kuma
+
+  # ==================== MEDIA ====================
+
+  - id: plex
+    name: Plex Media Server
+    description: Organize and stream your media collection
+    category: media
+    icon: 🎬
+    image: plexinc/pms-docker
+    tag: latest
+    ports:
+      - host: "32400"
+        container: "32400"
+    env_vars:
+      - key: TZ
+        value: America/New_York
+        description: Timezone
+        required: false
+      - key: PLEX_CLAIM
+        value: ""
+        description: Claim token from plex.tv/claim
+        required: false
+    volumes:
+      - host: plex-config
+        container: /config
+        description: Plex configuration
+      - host: plex-transcode
+        container: /transcode
+        description: Transcode directory
+      - host: /media
+        container: /data
+        description: Media files
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/r/plexinc/pms-docker
+
+  - id: jellyfin
+    name: Jellyfin
+    description: Free software media system (Plex alternative)
+    category: media
+    icon: 🎵
+    image: jellyfin/jellyfin
+    tag: latest
+    ports:
+      - host: "8096"
+        container: "8096"
+    volumes:
+      - host: jellyfin-config
+        container: /config
+        description: Configuration
+      - host: jellyfin-cache
+        container: /cache
+        description: Cache directory
+      - host: /media
+        container: /media
+        description: Media files
+    restart_policy: unless-stopped
+    documentation_url: https://jellyfin.org/docs/general/installation/docker.html
+
+  - id: nextcloud
+    name: Nextcloud
+    description: Self-hosted file sync and share
+    category: media
+    icon: ☁️
+    image: nextcloud
+    tag: latest
+    ports:
+      - host: "8080"
+        container: "80"
+    volumes:
+      - host: nextcloud-data
+        container: /var/www/html
+        description: Nextcloud data
+    restart_policy: unless-stopped
+    documentation_url: https://hub.docker.com/_/nextcloud
+    notes: Consider pairing with a database container (MySQL/PostgreSQL) for production use.
+
+  # ==================== UTILITIES ====================
+
+  - id: watchtower
+    name: Watchtower
+    description: Automatically update Docker containers
+    category: utilities
+    icon: 🗼
+    image: containrrr/watchtower
+    tag: latest
+    env_vars:
+      - key: WATCHTOWER_CLEANUP
+        value: "true"
+        description: Remove old images after update
+        required: false
+      - key: WATCHTOWER_POLL_INTERVAL
+        value: "86400"
+        description: Check interval in seconds (default 24h)
+        required: false
+    volumes:
+      - host: /var/run/docker.sock
+        container: /var/run/docker.sock
+        description: Docker socket
+    restart_policy: unless-stopped
+    documentation_url: https://containrrr.dev/watchtower/
+
+  - id: pi-hole
+    name: Pi-hole
+    description: Network-wide ad blocking
+    category: utilities
+    icon: 🕳️
+    image: pihole/pihole
+    tag: latest
+    ports:
+      - host: "53"
+        container: "53"
+      - host: "53"
+        container: "53/udp"
+      - host: "8080"
+        container: "80"
+    env_vars:
+      - key: TZ
+        value: America/New_York
+        description: Timezone
+        required: false
+      - key: WEBPASSWORD
+        value: ""
+        description: Admin web interface password
+        required: true
+    volumes:
+      - host: pihole-etc
+        container: /etc/pihole
+        description: Pi-hole configuration
+      - host: pihole-dnsmasq
+        container: /etc/dnsmasq.d
+        description: DNS configuration
+    restart_policy: unless-stopped
+    documentation_url: https://docs.pi-hole.net/docker/install/
+
+  - id: homepage
+    name: Homepage
+    description: Modern application dashboard
+    category: utilities
+    icon: 🏠
+    image: ghcr.io/gethomepage/homepage
+    tag: latest
+    ports:
+      - host: "3000"
+        container: "3000"
+    volumes:
+      - host: homepage-config
+        container: /app/config
+        description: Configuration files
+      - host: /var/run/docker.sock
+        container: /var/run/docker.sock
+        description: Docker socket for container stats
+    restart_policy: unless-stopped
+    documentation_url: https://gethomepage.dev/
+
+  - id: vaultwarden
+    name: Vaultwarden
+    description: Bitwarden-compatible password manager
+    category: utilities
+    icon: 🔒
+    image: vaultwarden/server
+    tag: latest
+    ports:
+      - host: "8080"
+        container: "80"
+    env_vars:
+      - key: ADMIN_TOKEN
+        value: ""
+        description: Admin panel token (leave empty to disable)
+        required: false
+    volumes:
+      - host: vaultwarden-data
+        container: /data
+        description: Vault data
+    restart_policy: unless-stopped
+    documentation_url: https://github.com/dani-garcia/vaultwarden
+    notes: For security, use HTTPS in production. Consider setting ADMIN_TOKEN for the admin panel.

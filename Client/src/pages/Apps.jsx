@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { appsService } from '../api/apps';
+import { templatesService } from '../api/templates';
 import { 
   AppsIcon, 
   PlusIcon, 
@@ -20,11 +21,13 @@ import styles from './Apps.module.css';
 
 const Apps = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('deployed');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedDeployments, setExpandedDeployments] = useState({});
   const [expandedLogs, setExpandedLogs] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -57,6 +60,23 @@ const Apps = () => {
     refetchInterval: 10000,
   });
 
+  // Templates query
+  const { data: templatesData, isLoading: templatesLoading, isFetching: templatesFetching, error: templatesError } = useQuery({
+    queryKey: ['templates'],
+    queryFn: async () => {
+      console.log('Fetching templates...');
+      const result = await templatesService.getTemplates();
+      console.log('Templates result:', result);
+      return result;
+    },
+    enabled: activeTab === 'templates',
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1,
+  });
+
+  // Debug log
+  console.log('Templates state:', { templatesData, templatesLoading, templatesFetching, templatesError, activeTab });
+
   const createAppMutation = useMutation({
     mutationFn: appsService.createApp,
     onSuccess: () => {
@@ -65,6 +85,39 @@ const Apps = () => {
       setFormData({ name: '', description: '' });
     },
   });
+
+  // Create app from template and navigate to it
+  const createFromTemplateMutation = useMutation({
+    mutationFn: async (template) => {
+      // Create the app first
+      const app = await appsService.createApp({
+        name: template.name,
+        description: template.description,
+      });
+      
+      // Then update it with template config
+      await appsService.updateApp(app.id, {
+        image: template.image,
+        tag: template.tag || 'latest',
+        ports: template.ports || [],
+        env_vars: (template.env_vars || []).map(e => ({ key: e.key, value: e.value || '' })),
+        volumes: (template.volumes || []).map(v => ({ host: v.host, container: v.container })),
+        restart_policy: template.restart_policy || 'unless-stopped',
+        network_mode: template.network_mode || '',
+        command: template.command || '',
+      });
+      
+      return app;
+    },
+    onSuccess: (app) => {
+      queryClient.invalidateQueries(['apps']);
+      navigate(`/apps/${app.id}`);
+    },
+  });
+
+  const handleUseTemplate = (template) => {
+    createFromTemplateMutation.mutate(template);
+  };
 
   const deleteAppMutation = useMutation({
     mutationFn: appsService.deleteApp,
@@ -437,15 +490,119 @@ const Apps = () => {
       )}
 
       {activeTab === 'templates' && (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>
-            <AppsIcon size={80} />
-          </div>
-          <h3 className={styles.emptyTitle}>Templates Coming Soon</h3>
-          <p className={styles.emptyText}>
-            Pre-configured Docker app templates from Docker Hub will be available here
-          </p>
-        </div>
+        <>
+          {templatesError ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>
+                <AppsIcon size={80} />
+              </div>
+              <h3 className={styles.emptyTitle}>Error Loading Templates</h3>
+              <p className={styles.emptyText}>
+                {templatesError.message || 'Failed to load templates'}
+              </p>
+            </div>
+          ) : (templatesLoading || templatesFetching || !templatesData) ? (
+            <div className={styles.emptyState}>Loading templates...</div>
+          ) : templatesData?.templates?.length > 0 ? (
+            <div className={styles.templatesContainer}>
+              {/* Category Filter */}
+              <div className={styles.categoryFilter}>
+                <button
+                  className={`${styles.categoryBtn} ${selectedCategory === 'all' ? styles.categoryActive : ''}`}
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  All Templates
+                </button>
+                {templatesData.categories?.map(cat => (
+                  <button
+                    key={cat.id}
+                    className={`${styles.categoryBtn} ${selectedCategory === cat.id ? styles.categoryActive : ''}`}
+                    onClick={() => setSelectedCategory(cat.id)}
+                  >
+                    {cat.icon} {cat.name} ({cat.count})
+                  </button>
+                ))}
+              </div>
+
+              {/* Templates Grid */}
+              <div className={styles.templatesGrid}>
+                {templatesData.templates
+                  .filter(t => selectedCategory === 'all' || t.category === selectedCategory)
+                  .filter(t => 
+                    searchQuery === '' || 
+                    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    t.description.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map(template => (
+                    <div key={template.id} className={styles.templateCard}>
+                      <div className={styles.templateHeader}>
+                        <span className={styles.templateIcon}>{template.icon || '🐳'}</span>
+                        <div className={styles.templateInfo}>
+                          <h3 className={styles.templateName}>{template.name}</h3>
+                          <span className={styles.templateImage}>
+                            {template.image}:{template.tag || 'latest'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className={styles.templateDescription}>{template.description}</p>
+                      
+                      {/* Quick info badges */}
+                      <div className={styles.templateBadges}>
+                        {template.ports?.length > 0 && (
+                          <span className={styles.templateBadge}>
+                            🔌 {template.ports.length} port{template.ports.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {template.env_vars?.filter(e => e.required).length > 0 && (
+                          <span className={styles.templateBadge}>
+                            ⚠️ {template.env_vars.filter(e => e.required).length} required env
+                          </span>
+                        )}
+                        {template.volumes?.length > 0 && (
+                          <span className={styles.templateBadge}>
+                            💾 {template.volumes.length} volume{template.volumes.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+
+                      {template.notes && (
+                        <p className={styles.templateNotes}>{template.notes}</p>
+                      )}
+
+                      <div className={styles.templateActions}>
+                        {template.documentation_url && (
+                          <a 
+                            href={template.documentation_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={styles.templateDocLink}
+                          >
+                            📖 Docs
+                          </a>
+                        )}
+                        <Button
+                          onClick={() => handleUseTemplate(template)}
+                          disabled={createFromTemplateMutation.isPending}
+                        >
+                          {createFromTemplateMutation.isPending ? 'Creating...' : 'Use Template'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>
+                <AppsIcon size={80} />
+              </div>
+              <h3 className={styles.emptyTitle}>No Templates Available</h3>
+              <p className={styles.emptyText}>
+                Templates could not be loaded. Check backend configuration.
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <Modal

@@ -31,8 +31,7 @@ export function parseDockerRun(command) {
   // Remove 'docker run' prefix if present
   normalized = normalized.replace(/^docker\s+run\s+/i, '');
 
-  // Track which parts we've handled
-  const handledParts = new Set();
+  // Track unknown flags for custom_args
   const unknownFlags = [];
 
   // Tokenize while respecting quotes
