@@ -44,3 +44,16 @@
 2026-01-11 23:49:08 -07:00: Server running on http://localhost:3044
 2026-01-11 23:49:08 -07:00: Starting background metrics collection...
 2026-01-11 23:49:25 -07:00: Client connected: CKZXc0HGuaHDx_JnAAAB
+2026-01-11 23:59:45 -07:00: Shutting down gracefully...
+2026-01-11 23:59:45 -07:00: Stopped background metrics collection
+2026-01-11 23:59:56 -07:00: [dotenv@17.2.3] injecting env (2) from ../.env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+2026-01-11 23:59:56 -07:00: [Config] Loaded .env from: /Users/micahlloyd/Documents/Github Projects/Quick-Deploy-Server-Managment/.env
+2026-01-11 23:59:56 -07:00: [Config] FRONTEND_URL: http://tits:3000
+2026-01-11 23:59:56 -07:00: [Config] BACKEND_URL: http://booty:3044
+2026-01-11 23:59:56 -07:00: Database initialized successfully
+2026-01-11 23:59:56 -07:00: Database initialized
+2026-01-11 23:59:56 -07:00: Server running on http://localhost:3044
+2026-01-11 23:59:56 -07:00: Starting background metrics collection...
+2026-01-11 23:59:56 -07:00: Client connected: jKZQoIiaju5AQdIXAAAB
+2026-01-11 23:59:57 -07:00: Client disconnected: jKZQoIiaju5AQdIXAAAB
+2026-01-12 00:00:23 -07:00: Shutting down gracefully...
