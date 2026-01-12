@@ -65,6 +65,63 @@ npm run dev:backend   # Backend only (port 3044)
 npm run dev:client    # Frontend only (port 3000)
 ```
 
+## Production Deployment with PM2
+
+For production deployments with automatic restarts and self-updates, use PM2:
+
+### Setup
+
+1. Install PM2 globally:
+```bash
+npm install -g pm2
+```
+
+2. Build the frontend:
+```bash
+npm run build
+```
+
+3. Start with PM2:
+```bash
+npm run pm2:start
+# or directly: pm2 start ecosystem.config.js
+```
+
+4. Enable auto-start on system boot:
+```bash
+pm2 startup
+pm2 save
+```
+
+### PM2 Commands
+
+```bash
+npm run pm2:start     # Start services
+npm run pm2:stop      # Stop services
+npm run pm2:restart   # Restart services
+npm run pm2:logs      # View logs
+pm2 status            # Check status
+pm2 monit             # Real-time monitoring
+```
+
+### Self-Update Feature
+
+The Settings page includes a built-in update system that:
+1. Checks GitHub for newer commits
+2. Pulls the latest code via `git pull`
+3. Installs updated dependencies
+4. Rebuilds the frontend
+5. Restarts the server (requires PM2)
+
+Navigate to **Settings → System Update** to:
+- View current version and git commit
+- Check for available updates
+- View changelog of incoming changes
+- Trigger one-click updates
+- Restart the server after updates
+
+> **Note**: Self-updates require the server to be running under PM2 for automatic restart capability.
+
 ## API Endpoints
 
 ### Authentication
@@ -80,6 +137,13 @@ npm run dev:client    # Frontend only (port 3000)
 - `DELETE /api/servers/:id` - Delete a server
 - `GET /api/servers/:id/status` - Check connection status
 - `GET /api/servers/status/all` - Check all servers status
+
+### System (Self-Update)
+- `GET /api/system/version` - Get current version and check for updates
+- `GET /api/system/status` - Get system status (uptime, memory, PM2 status)
+- `GET /api/system/changelog` - Get list of commits available in update
+- `POST /api/system/update` - Trigger system update (git pull + npm install + build)
+- `POST /api/system/restart` - Restart the server (requires PM2)
 
 ### Metrics
 - `GET /api/servers/:id/metrics` - Get current server metrics
