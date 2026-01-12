@@ -1,7 +1,13 @@
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
-
 const path = require('path');
+const envPath = path.resolve(__dirname, '../../.env');
+require('dotenv').config({ path: envPath });
+
 const crypto = require('crypto');
+
+// Log loaded config (helpful for debugging)
+console.log(`[Config] Loaded .env from: ${envPath}`);
+console.log(`[Config] FRONTEND_URL: ${process.env.FRONTEND_URL || '(not set, using default)'}`);
+console.log(`[Config] BACKEND_URL: ${process.env.BACKEND_URL || '(not set, using default)'}`);
 
 // Server configuration
 const PORT = process.env.PORT || 3044;
