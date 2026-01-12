@@ -19,3 +19,15 @@
 2026-01-11 23:39:13 -07:00: Client connected: Hj2VprDT2eseOGMTAAAF
 2026-01-11 23:39:16 -07:00: Client disconnected: Hj2VprDT2eseOGMTAAAF
 2026-01-11 23:39:19 -07:00: Client connected: Yq0aWO3d6O3-M-8oAAAH
+2026-01-11 23:39:56 -07:00: Client disconnected: T_zm5hQmRUD-K6-5AAAD
+2026-01-11 23:42:58 -07:00: Client disconnected: Yq0aWO3d6O3-M-8oAAAH
+2026-01-11 23:42:58 -07:00: Client connected: jGzoV6FkdCQeNYyHAAAJ
+2026-01-11 23:47:17 -07:00: Shutting down gracefully...
+2026-01-11 23:47:17 -07:00: Stopped background metrics collection
+2026-01-11 23:47:27 -07:00: [dotenv@17.2.3] injecting env (2) from ../.env -- tip: ⚙️  suppress all logs with { quiet: true }
+2026-01-11 23:47:27 -07:00: Database initialized successfully
+2026-01-11 23:47:27 -07:00: Database initialized
+2026-01-11 23:47:27 -07:00: Server running on http://localhost:3044
+2026-01-11 23:47:27 -07:00: Starting background metrics collection...
+2026-01-11 23:47:28 -07:00: Client connected: ur0Bv7yjURxMYIpnAAAB
+2026-01-11 23:47:30 -07:00: Client disconnected: ur0Bv7yjURxMYIpnAAAB

@@ -1,26 +1,33 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Environment files
+.env
+/.env
+/Backend/.env
+/Client/.env
+
+# Database
+/Backend/servers.db
+/backend/servers.db
+
+# Dependencies
 /node_modules
 /Backend/node_modules
 /Client/node_modules
 /backend/node_modules
 /client/node_modules
 
-/Backend/.env
-./Backend/servers.db
-Backend/servers.db
-/backend/servers.db
-
+# SSH keys
 /Backend/ssh_keys/*
 /backend/ssh_keys/*
-/Backend/.env
 
+# Build output
 /Client/build
-/Client/.env
+
 # PM2 logs
 /logs/*.log
 !logs/.gitkeep
 
+# Other
 /ssh
-/Client/build
+.env
