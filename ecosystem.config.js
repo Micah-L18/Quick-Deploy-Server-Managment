@@ -23,7 +23,7 @@ module.exports = {
     {
       name: 'qdeploy-backend',
       script: 'server.js',
-      cwd: './backend',
+      cwd: './Backend',
       instances: 1,
       autorestart: true,
       watch: false,
