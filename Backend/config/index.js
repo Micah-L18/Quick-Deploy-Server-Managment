@@ -11,7 +11,11 @@ const DB_FILE = path.join(__dirname, '..', 'servers.db');
 const SSH_KEYS_DIR = path.join(__dirname, '..', 'ssh_keys');
 
 // CORS configuration
-const CORS_ORIGINS = ['*', 'http://localhost:3000', 'http://localhost:3044', 'https://neobase.micahtml.com', 'https://neo.micahtml.com'];
+// Can be set via environment variable as comma-separated list: CORS_ORIGINS=http://localhost:3000,http://example.com
+const DEFAULT_CORS_ORIGINS = ['http://localhost:3000', 'http://localhost:3044'];
+const CORS_ORIGINS = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : DEFAULT_CORS_ORIGINS;
 
 // Session configuration
 const SESSION_CONFIG = {

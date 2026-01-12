@@ -16,11 +16,10 @@ Backend/servers.db
 /backend/ssh_keys/*
 /Backend/.env
 
-./client/build
 /Client/build
-
 # PM2 logs
 /logs/*.log
 !logs/.gitkeep
 
 /ssh
+/Client/build
