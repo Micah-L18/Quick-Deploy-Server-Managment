@@ -5,3 +5,17 @@
 2026-01-11 23:32:57 -07:00: Starting background metrics collection...
 2026-01-11 23:32:58 -07:00: Client connected: Q6-tg19z04lCy_TsAAAB
 2026-01-11 23:33:42 -07:00: Client disconnected: Q6-tg19z04lCy_TsAAAB
+2026-01-11 23:38:14 -07:00: Client connected: YGuKHE8Zo3O4d8_QAAAD
+2026-01-11 23:38:48 -07:00: Shutting down gracefully...
+2026-01-11 23:38:48 -07:00: Stopped background metrics collection
+2026-01-11 23:38:58 -07:00: [dotenv@17.2.3] injecting env (2) from ../.env -- tip: ⚙️  enable debug logging with { debug: true }
+2026-01-11 23:38:58 -07:00: Database initialized successfully
+2026-01-11 23:38:58 -07:00: Database initialized
+2026-01-11 23:38:58 -07:00: Server running on http://localhost:3044
+2026-01-11 23:38:58 -07:00: Starting background metrics collection...
+2026-01-11 23:38:59 -07:00: Client connected: UHHE26qPaIWHsD0KAAAB
+2026-01-11 23:39:10 -07:00: Client disconnected: UHHE26qPaIWHsD0KAAAB
+2026-01-11 23:39:11 -07:00: Client connected: T_zm5hQmRUD-K6-5AAAD
+2026-01-11 23:39:13 -07:00: Client connected: Hj2VprDT2eseOGMTAAAF
+2026-01-11 23:39:16 -07:00: Client disconnected: Hj2VprDT2eseOGMTAAAF
+2026-01-11 23:39:19 -07:00: Client connected: Yq0aWO3d6O3-M-8oAAAH
