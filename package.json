@@ -1,13 +1,13 @@
 {
   "name": "quick-deploy-server-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-server SSH connection management application",
   "repository": {
     "type": "git",
     "url": "https://github.com/micah-l18/Quick-Deploy-Server-Managment.git"
   },
   "scripts": {
-    "start": "concurrently \"npm run start:backend\" \"npm run start:client\"",
+    "start": "npm run build && concurrently \"npm run start:backend\" \"npm run start:client\"",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:client\"",
     "start:backend": "cd Backend && node server.js",
     "start:client": "cd Client && npx serve -s build -l 3000",
