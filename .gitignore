@@ -24,8 +24,11 @@
 # Build output
 /Client/build
 
-# PM2 logs
+# PM2 and app logs
+/logs
 /logs/*.log
+/Backend/logs
+/Client/logs
 !logs/.gitkeep
 
 # Other
