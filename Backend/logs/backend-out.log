@@ -57,3 +57,33 @@
 2026-01-11 23:59:56 -07:00: Client connected: jKZQoIiaju5AQdIXAAAB
 2026-01-11 23:59:57 -07:00: Client disconnected: jKZQoIiaju5AQdIXAAAB
 2026-01-12 00:00:23 -07:00: Shutting down gracefully...
+2026-01-12 00:01:40 -07:00: [dotenv@17.2.3] injecting env (2) from ../.env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+2026-01-12 00:01:40 -07:00: [Config] Loaded .env from: /Users/micahlloyd/Documents/Github Projects/Quick-Deploy-Server-Managment/.env
+2026-01-12 00:01:40 -07:00: [Config] FRONTEND_URL: http://localhost:3000
+2026-01-12 00:01:40 -07:00: [Config] BACKEND_URL: http://localhost:3044
+2026-01-12 00:01:40 -07:00: Database initialized successfully
+2026-01-12 00:01:40 -07:00: Database initialized
+2026-01-12 00:01:40 -07:00: Server running on http://localhost:3044
+2026-01-12 00:01:40 -07:00: Starting background metrics collection...
+2026-01-12 00:02:07 -07:00: Client connected: uOTynIsX0SaB3c9mAAAB
+2026-01-12 00:21:40 -07:00: Shutting down gracefully...
+2026-01-12 00:21:40 -07:00: Stopped background metrics collection
+2026-01-12 00:21:50 -07:00: [dotenv@17.2.3] injecting env (2) from ../.env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+2026-01-12 00:21:50 -07:00: [Config] Loaded .env from: /Users/micahlloyd/Documents/Github Projects/Quick-Deploy-Server-Managment/.env
+2026-01-12 00:21:50 -07:00: [Config] FRONTEND_URL: http://localhost:3000
+2026-01-12 00:21:50 -07:00: [Config] BACKEND_URL: http://booty:3044
+2026-01-12 00:21:50 -07:00: Database initialized successfully
+2026-01-12 00:21:50 -07:00: Database initialized
+2026-01-12 00:21:50 -07:00: Server running on http://localhost:3044
+2026-01-12 00:21:50 -07:00: Starting background metrics collection...
+2026-01-12 00:21:51 -07:00: Client connected: iqd7hMyVcRXi2DtxAAAB
+2026-01-12 00:22:00 -07:00: Client disconnected: iqd7hMyVcRXi2DtxAAAB
+2026-01-12 00:22:28 -07:00: Shutting down gracefully...
+2026-01-12 00:22:52 -07:00: [dotenv@17.2.3] injecting env (2) from ../.env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+2026-01-12 00:22:52 -07:00: [Config] Loaded .env from: /Users/micahlloyd/Documents/Github Projects/Quick-Deploy-Server-Managment/.env
+2026-01-12 00:22:52 -07:00: [Config] FRONTEND_URL: http://localhost:3000
+2026-01-12 00:22:52 -07:00: [Config] BACKEND_URL: http://booty:3044
+2026-01-12 00:22:52 -07:00: Database initialized successfully
+2026-01-12 00:22:52 -07:00: Database initialized
+2026-01-12 00:22:52 -07:00: Server running on http://localhost:3044
+2026-01-12 00:22:52 -07:00: Starting background metrics collection...
