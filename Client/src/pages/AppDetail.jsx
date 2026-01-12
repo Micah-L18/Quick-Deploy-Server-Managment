@@ -12,7 +12,7 @@ import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
 import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
 import styles from './AppDetail.module.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
 
 const AppDetail = () => {
   const { id } = useParams();

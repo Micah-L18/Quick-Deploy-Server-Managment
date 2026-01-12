@@ -9,7 +9,7 @@ import { SettingsIcon, RefreshIcon, ServerIcon, CheckCircleIcon, AlertIcon } fro
 import { systemService } from '../api/system';
 import styles from './Settings.module.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
 
 const Settings = () => {
   const { user, logout } = useAuth();

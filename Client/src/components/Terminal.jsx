@@ -5,7 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import io from 'socket.io-client';
 import styles from './Terminal.module.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
 
 const Terminal = ({ serverId, isVisible }) => {
   const terminalRef = useRef(null);

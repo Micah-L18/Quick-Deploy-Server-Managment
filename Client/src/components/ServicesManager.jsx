@@ -5,7 +5,7 @@ import { servicesAPI } from '../api/services';
 import styles from './ServicesManager.module.css';
 import { ServerIcon, CheckCircleIcon, XCircleIcon, ClockIcon, DownloadIcon, PlayIcon, StopCircleIcon, RotateIcon } from './Icons';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3044';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
 
 const AVAILABLE_SERVICES = [
   { name: 'docker', displayName: 'Docker', description: 'Container platform for building and running applications' },

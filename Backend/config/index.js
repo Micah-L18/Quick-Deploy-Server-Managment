@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
 const path = require('path');
 const crypto = require('crypto');
@@ -13,11 +13,10 @@ const DB_FILE = path.join(__dirname, '..', 'servers.db');
 const SSH_KEYS_DIR = path.join(__dirname, '..', 'ssh_keys');
 
 // CORS configuration
-// Can be set via environment variable as comma-separated list: CORS_ORIGINS=http://localhost:3000,http://example.com
-const DEFAULT_CORS_ORIGINS = ['http://localhost:3000', 'http://localhost:3044'];
-const CORS_ORIGINS = process.env.CORS_ORIGINS 
-  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : DEFAULT_CORS_ORIGINS;
+// Uses FRONTEND_URL from .env, defaults to localhost:3000
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3044';
+const CORS_ORIGINS = [FRONTEND_URL, BACKEND_URL];
 
 // Session configuration
 const SESSION_CONFIG = {
