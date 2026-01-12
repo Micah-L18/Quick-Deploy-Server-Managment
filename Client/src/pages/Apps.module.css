@@ -532,6 +532,14 @@
   line-height: 1;
 }
 
+.templateLogo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
 .templateInfo {
   flex: 1;
   min-width: 0;

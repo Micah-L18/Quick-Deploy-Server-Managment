@@ -9,6 +9,7 @@
 #   description: short description (required)
 #   category: one of [databases, web-servers, game-servers, development, monitoring, media, utilities] (required)
 #   icon: emoji icon for display (optional, defaults to 🐳)
+#   logo_url: URL to Docker image logo (optional, falls back to icon)
 #   image: Docker image name (required)
 #   tag: Docker image tag (optional, defaults to 'latest')
 #   ports: array of {host, container} port mappings (optional)
@@ -29,6 +30,7 @@ templates:
     description: Powerful, open-source relational database
     category: databases
     icon: 🐘
+    logo_url: https://wiki.postgresql.org/images/a/a4/PostgreSQL_logo.3colors.svg
     image: postgres
     tag: "16"
     ports:
@@ -60,6 +62,7 @@ templates:
     description: Popular open-source relational database
     category: databases
     icon: 🐬
+    logo_url: https://labs.mysql.com/common/logos/mysql-logo.svg
     image: mysql
     tag: "8"
     ports:
@@ -94,6 +97,7 @@ templates:
     description: NoSQL document database
     category: databases
     icon: 🍃
+    logo_url: https://www.mongodb.com/assets/images/global/favicon.ico
     image: mongo
     tag: "7"
     ports:
@@ -120,6 +124,7 @@ templates:
     description: In-memory data structure store, cache, and message broker
     category: databases
     icon: 🔴
+    logo_url: https://redis.io/
     image: redis
     tag: "7-alpine"
     ports:
@@ -137,6 +142,7 @@ templates:
     description: MySQL-compatible open-source database
     category: databases
     icon: 🦭
+    logo_url: https://mariadb.com/wp-content/uploads/2019/11/mariadb-logo-vert_blue-transparent.png
     image: mariadb
     tag: "11"
     ports:
@@ -165,6 +171,7 @@ templates:
     description: High-performance web server and reverse proxy
     category: web-servers
     icon: 🌐
+    logo_url: https://nginx.org/nginx.png
     image: nginx
     tag: alpine
     ports:
@@ -187,6 +194,7 @@ templates:
     description: Modern reverse proxy and load balancer
     category: web-servers
     icon: 🔀
+    logo_url: https://doc.traefik.io/traefik/assets/img/traefik.logo.png
     image: traefik
     tag: "v3.0"
     ports:
@@ -209,6 +217,7 @@ templates:
     description: Web server with automatic HTTPS
     category: web-servers
     icon: 🔐
+    logo_url: https://caddyserver.com/resources/images/caddy-logo.svg
     image: caddy
     tag: "2-alpine"
     ports:
@@ -233,6 +242,7 @@ templates:
     description: Java Edition Minecraft server with auto-updates
     category: game-servers
     icon: ⛏️
+    logo_url: https://www.minecraft.net/etc.clientlibs/minecraft/clientlibs/main/resources/favicon-96x96.png
     image: itzg/minecraft-server
     tag: latest
     ports:
@@ -272,6 +282,7 @@ templates:
     description: Dedicated Valheim game server
     category: game-servers
     icon: ⚔️
+    logo_url: https://cdn.cloudflare.steamstatic.com/steam/apps/892970/capsule_231x87.jpg
     image: lloesche/valheim-server
     tag: latest
     ports:
@@ -309,6 +320,7 @@ templates:
     description: TShock Terraria server
     category: game-servers
     icon: 🌳
+    logo_url: https://cdn.cloudflare.steamstatic.com/steam/apps/105600/capsule_231x87.jpg
     image: ryshe/terraria
     tag: latest
     ports:
@@ -333,6 +345,7 @@ templates:
     description: Lightweight self-hosted Git service
     category: development
     icon: 🍵
+    logo_url: https://gitea.io/images/gitea.png
     image: gitea/gitea
     tag: latest
     ports:
@@ -352,6 +365,7 @@ templates:
     description: Open-source automation server for CI/CD
     category: development
     icon: 🤵
+    logo_url: https://www.jenkins.io/images/logos/jenkins/jenkins.png
     image: jenkins/jenkins
     tag: lts
     ports:
@@ -372,6 +386,7 @@ templates:
     description: Container-native continuous integration
     category: development
     icon: 🚀
+    logo_url: https://www.drone.io/images/logo.svg
     image: drone/drone
     tag: "2"
     ports:
@@ -418,6 +433,7 @@ templates:
     description: Docker management UI
     category: monitoring
     icon: 🐋
+    logo_url: https://www.portainer.io/hubfs/portainer-logo-black.svg
     image: portainer/portainer-ce
     tag: latest
     ports:
@@ -438,6 +454,7 @@ templates:
     description: Analytics and monitoring dashboards
     category: monitoring
     icon: 📊
+    logo_url: https://grafana.com/static/assets/img/fav32.png
     image: grafana/grafana
     tag: latest
     ports:
@@ -460,6 +477,7 @@ templates:
     description: Monitoring and alerting toolkit
     category: monitoring
     icon: 🔥
+    logo_url: https://prometheus.io/assets/favicons/favicon.ico
     image: prom/prometheus
     tag: latest
     ports:
@@ -480,6 +498,7 @@ templates:
     description: Self-hosted monitoring tool like Uptime Robot
     category: monitoring
     icon: 📈
+    logo_url: https://raw.githubusercontent.com/louislam/uptime-kuma/master/public/icon.png
     image: louislam/uptime-kuma
     tag: "1"
     ports:
@@ -499,6 +518,7 @@ templates:
     description: Organize and stream your media collection
     category: media
     icon: 🎬
+    logo_url: https://www.plex.tv/wp-content/themes/flavor-flavor/assets/img/plex-logo.svg
     image: plexinc/pms-docker
     tag: latest
     ports:
@@ -531,6 +551,7 @@ templates:
     description: Free software media system (Plex alternative)
     category: media
     icon: 🎵
+    logo_url: https://jellyfin.org/images/logo.svg
     image: jellyfin/jellyfin
     tag: latest
     ports:
@@ -554,6 +575,7 @@ templates:
     description: Self-hosted file sync and share
     category: media
     icon: ☁️
+    logo_url: https://nextcloud.com/wp-content/uploads/2022/03/favicon.png
     image: nextcloud
     tag: latest
     ports:
@@ -574,6 +596,7 @@ templates:
     description: Automatically update Docker containers
     category: utilities
     icon: 🗼
+    logo_url: https://containrrr.dev/watchtower/images/logo-450px.png
     image: containrrr/watchtower
     tag: latest
     env_vars:
@@ -597,6 +620,7 @@ templates:
     description: Network-wide ad blocking
     category: utilities
     icon: 🕳️
+    logo_url: https://pi-hole.net/wp-content/uploads/2016/12/Vortex-R.png
     image: pihole/pihole
     tag: latest
     ports:
@@ -630,6 +654,7 @@ templates:
     description: Modern application dashboard
     category: utilities
     icon: 🏠
+    logo_url: https://gethomepage.dev/favicon.ico
     image: ghcr.io/gethomepage/homepage
     tag: latest
     ports:
@@ -650,6 +675,7 @@ templates:
     description: Bitwarden-compatible password manager
     category: utilities
     icon: 🔒
+    logo_url: https://raw.githubusercontent.com/dani-garcia/vaultwarden/main/resources/vaultwarden-icon.svg
     image: vaultwarden/server
     tag: latest
     ports:

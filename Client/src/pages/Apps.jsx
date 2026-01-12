@@ -536,7 +536,23 @@ const Apps = () => {
                   .map(template => (
                     <div key={template.id} className={styles.templateCard}>
                       <div className={styles.templateHeader}>
-                        <span className={styles.templateIcon}>{template.icon || '🐳'}</span>
+                        {template.logo_url ? (
+                          <img 
+                            src={template.logo_url} 
+                            alt={template.name}
+                            className={styles.templateLogo}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                        ) : null}
+                        <span 
+                          className={styles.templateIcon}
+                          style={{ display: template.logo_url ? 'none' : 'block' }}
+                        >
+                          {template.icon || '🐳'}
+                        </span>
                         <div className={styles.templateInfo}>
                           <h3 className={styles.templateName}>{template.name}</h3>
                           <span className={styles.templateImage}>
