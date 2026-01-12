@@ -212,7 +212,7 @@ router.post('/update', requireAuth, asyncHandler(async (req, res) => {
 
     // Step 4: Install backend dependencies
     emitProgress('Installing backend dependencies...', 'info');
-    const backendPath = path.join(PROJECT_ROOT, 'backend');
+    const backendPath = path.join(PROJECT_ROOT, 'Backend');
     await execAsync('npm install', { cwd: backendPath });
     emitProgress('Backend dependencies installed', 'success');
 
