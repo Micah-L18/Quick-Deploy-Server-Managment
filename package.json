@@ -15,7 +15,7 @@
     "dev:client": "cd Client && PORT=3000 npm start",
     "install:all": "npm install && cd Backend && npm install && cd ../Client && npm install",
     "build": "cd Client && npm run build",
-    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:start": "npm run build && pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop ecosystem.config.js",
     "pm2:restart": "pm2 restart ecosystem.config.js",
     "pm2:logs": "pm2 logs"
@@ -29,5 +29,8 @@
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "pm2": "^6.0.14"
   }
 }

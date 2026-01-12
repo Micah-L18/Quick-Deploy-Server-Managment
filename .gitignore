@@ -17,6 +17,7 @@ Backend/servers.db
 /Backend/.env
 
 /Client/build
+/Client/.env
 # PM2 logs
 /logs/*.log
 !logs/.gitkeep

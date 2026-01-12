@@ -1,0 +1,7 @@
+2026-01-11 23:32:57 -07:00: [dotenv@17.2.3] injecting env (1) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+2026-01-11 23:32:57 -07:00: Database initialized successfully
+2026-01-11 23:32:57 -07:00: Database initialized
+2026-01-11 23:32:57 -07:00: Server running on http://localhost:3044
+2026-01-11 23:32:57 -07:00: Starting background metrics collection...
+2026-01-11 23:32:58 -07:00: Client connected: Q6-tg19z04lCy_TsAAAB
+2026-01-11 23:33:42 -07:00: Client disconnected: Q6-tg19z04lCy_TsAAAB
