@@ -17,7 +17,7 @@ const Sidebar = () => {
   return (
     <div className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
-        <div className={styles.logo}>NeoBase yes</div>
+        <div className={styles.logo}>NeoBase no</div>
       </div>
 
       <nav className={styles.sidebarNav}>
