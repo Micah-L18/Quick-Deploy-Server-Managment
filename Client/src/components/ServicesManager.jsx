@@ -23,8 +23,8 @@ const AVAILABLE_SERVICES = [
     ],
     defaultVersion: '20'
   },
-  { name: 'postgresql', displayName: 'PostgreSQL', description: 'Advanced open source relational database' },
-  { name: 'redis', displayName: 'Redis', description: 'In-memory data structure store and cache' },
+  { name: 'npm', displayName: 'npm', description: 'Node.js package manager (installed with Node.js)' },
+  { name: 'git', displayName: 'Git', description: 'Distributed version control system' },
 ];
 
 const ServicesManager = ({ serverId }) => {

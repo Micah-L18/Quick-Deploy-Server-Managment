@@ -11,8 +11,8 @@ const INSTALL_COMMANDS = {
   nginx: 'sudo apt-get update && sudo apt-get install -y nginx',
   docker: 'curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh && sudo usermod -aG docker $USER',
   nodejs: 'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs',
-  postgresql: 'sudo apt-get update && sudo apt-get install -y postgresql postgresql-contrib',
-  redis: 'sudo apt-get update && sudo apt-get install -y redis-server',
+  npm: 'sudo apt-get update && sudo apt-get install -y npm',
+  git: 'sudo apt-get update && sudo apt-get install -y git',
   mysql: 'sudo apt-get update && sudo apt-get install -y mysql-server'
 };
 
@@ -141,7 +141,7 @@ router.get('/:id/services', requireAuth, asyncHandler(async (req, res) => {
   }
 
   const server = check.server;
-  const services = ['nginx', 'docker', 'postgresql', 'redis', 'mysql'];
+  const services = ['nginx', 'docker', 'nodejs', 'npm', 'git'];
   
   const serverConfig = {
     host: server.ip,

@@ -94,6 +94,26 @@ async function getServiceStatus(serverConfig, serviceName) {
         echo "VERSION:$NODE_VERSION"
       `;
       break;
+    case 'npm':
+      // npm is not a service, just check binary
+      checkCommand = `
+        NPM_BIN=$(command -v npm 2>/dev/null)
+        NPM_VERSION=$(npm --version 2>/dev/null || echo "")
+        echo "BIN:$NPM_BIN"
+        echo "STATUS:installed"
+        echo "VERSION:$NPM_VERSION"
+      `;
+      break;
+    case 'git':
+      // git is not a service, just check binary
+      checkCommand = `
+        GIT_BIN=$(command -v git 2>/dev/null)
+        GIT_VERSION=$(git --version 2>/dev/null | sed 's/git version //' || echo "")
+        echo "BIN:$GIT_BIN"
+        echo "STATUS:installed"
+        echo "VERSION:$GIT_VERSION"
+      `;
+      break;
     default:
       // Generic systemctl check for other services
       checkCommand = `
@@ -120,8 +140,8 @@ async function getServiceStatus(serverConfig, serviceName) {
   const isInstalled = bin !== '' || (status !== 'not_found' && status !== '' && status !== 'inactive');
   const isRunning = status === 'active' || status === 'running' || status === 'installed';
   
-  // Special case for nodejs - it's "running" if installed (not a daemon)
-  if (serviceName.toLowerCase() === 'nodejs') {
+  // Special case for nodejs/npm/git - they're "running" if installed (not a daemon)
+  if (serviceName.toLowerCase() === 'nodejs' || serviceName.toLowerCase() === 'npm' || serviceName.toLowerCase() === 'git') {
     return {
       installed: bin !== '' || version !== '',
       running: bin !== '' || version !== '',
