@@ -1,16 +1,16 @@
 #!/bin/bash
-# Build script that properly loads .env and builds the React client
+# Build script that properly loads url.env and builds the React client
 
-# Load environment variables from .env file at project root
-if [ -f .env ]; then
-    echo "Loading environment from .env..."
-    # Export all variables from .env (ignoring comments and empty lines)
+# Load environment variables from url.env file at project root
+if [ -f url.env ]; then
+    echo "Loading environment from url.env..."
+    # Export all variables from url.env (ignoring comments and empty lines)
     set -a
-    source .env
+    source url.env
     set +a
     echo "BACKEND_URL is: $BACKEND_URL"
 else
-    echo "No .env file found, using defaults"
+    echo "No url.env file found, using defaults"
 fi
 
 # Build the React client with the backend URL
