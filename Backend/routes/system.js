@@ -222,10 +222,11 @@ router.post('/update', requireAuth, asyncHandler(async (req, res) => {
     await execAsync('npm install', { cwd: clientPath });
     emitProgress('Client dependencies installed', 'success');
 
-    // Step 6: Build client (for production)
+    // Step 6: Build client (for production) - use root build script to preserve .env
     emitProgress('Building client application...', 'info');
     try {
-      await execAsync('npm run build', { cwd: clientPath, timeout: 300000 }); // 5 min timeout
+      // Use the root npm run build which uses scripts/build.sh to load .env
+      await execAsync('npm run build', { cwd: PROJECT_ROOT, timeout: 300000 }); // 5 min timeout
       emitProgress('Client build completed', 'success');
     } catch (buildError) {
       emitProgress('Client build failed (may not be needed for dev mode)', 'warning');
