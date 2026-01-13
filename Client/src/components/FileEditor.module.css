@@ -3,7 +3,7 @@
   flex-direction: column;
   height: 100%;
   background: var(--background);
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
   border: 1px solid var(--border, #2a3150);
 }
@@ -66,7 +66,7 @@
   padding: 2px 8px;
   background: var(--primary-dark, #0099cc);
   color: var(--text, #ffffff);
-  border-radius: 4px;
+  border-radius: 2px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -106,7 +106,7 @@
   background: var(--primary, #00d4ff);
   color: var(--background, #0a0e27);
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -132,7 +132,7 @@
   background: transparent;
   color: var(--text-secondary, #8b92b0);
   border: 1px solid var(--border, #2a3150);
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -195,7 +195,7 @@
   background: var(--primary, #00d4ff);
   color: var(--background, #0a0e27);
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;

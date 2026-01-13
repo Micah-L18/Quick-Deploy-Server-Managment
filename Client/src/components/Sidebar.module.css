@@ -46,7 +46,7 @@
   text-decoration: none;
   transition: all 0.3s;
   margin: 4px 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-weight: 500;
 }
 
@@ -88,7 +88,7 @@
   border: none;
   background: rgba(0, 212, 255, 0.1);
   color: #00a8cc;
-  border-radius: 8px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;

@@ -10,7 +10,7 @@
 .fileBrowser {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
   /* flex: 0 0 350px; */
   /* min-width: 300px; */
@@ -25,7 +25,7 @@
   min-width: 0;
   /* display: flex; */
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 2px;
 }
 
 .editorPlaceholder {
@@ -35,7 +35,7 @@
   height: 100%;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 2px;
 }
 
 .placeholderContent {
@@ -83,7 +83,7 @@
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 2px;
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s;
@@ -107,7 +107,7 @@
   font-size: 0.85rem;
   padding: 6px 10px;
   background: var(--input-bg);
-  border-radius: 6px;
+  border-radius: 2px;
   border: 1px solid var(--border-color);
   white-space: nowrap;
   overflow: hidden;
@@ -127,7 +127,7 @@
   padding: 8px 12px;
   background: var(--input-bg);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 2px;
   color: var(--text-primary);
   font-size: 0.85rem;
   outline: none;
@@ -153,7 +153,7 @@
   font-size: 14px;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 2px;
   transition: all 0.2s;
 }
 
@@ -172,7 +172,7 @@
   cursor: pointer;
   white-space: nowrap;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   transition: all 0.2s;
@@ -208,7 +208,7 @@
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 2px;
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s;
@@ -232,7 +232,7 @@
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 2px;
   cursor: pointer;
 }
 

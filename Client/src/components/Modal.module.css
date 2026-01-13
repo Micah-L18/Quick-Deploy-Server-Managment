@@ -14,7 +14,7 @@
 
 .modal {
   background: var(--bg-secondary);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 30px;
   max-width: 500px;
   width: 90%;

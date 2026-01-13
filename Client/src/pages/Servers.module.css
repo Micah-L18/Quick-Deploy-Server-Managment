@@ -22,7 +22,7 @@
 .searchBox {
   padding: 10px 16px;
   border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.95rem;
   transition: all 0.3s;
   min-width: 250px;
@@ -42,11 +42,14 @@
 
 .serverCard {
   background: var(--bg-secondary);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 24px;
   box-shadow: var(--shadow-md);
   transition: all 0.3s;
   position: relative;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
 }
 
 .serverCard:hover {
@@ -73,6 +76,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .statusBadge {
@@ -80,7 +86,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 2px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -117,13 +123,15 @@
   padding: 4px 10px;
   background: rgba(102, 126, 234, 0.1);
   color: #667eea;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .serverDetails {
   margin: 16px 0;
+  min-height: 80px;
+  flex: 1;
 }
 
 .serverDetail {
@@ -143,7 +151,7 @@
   font-family: Monaco, 'Courier New', monospace;
   background: rgba(0, 0, 0, 0.05);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .ipToggleBtn {
@@ -155,7 +163,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 2px;
   transition: all 0.2s;
 }
 
@@ -172,7 +180,7 @@
   margin: 16px 0;
   padding: 16px;
   background: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
+  border-radius: 2px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -196,14 +204,14 @@
 .metricBar {
   height: 8px;
   background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
 }
 
 .metricFill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 2px;
   transition: width 0.3s ease, background-color 0.3s ease;
 }
 
@@ -226,7 +234,7 @@
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-dark);
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -304,7 +312,7 @@
 .formSelect {
   padding: 12px 16px;
   border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 1rem;
   transition: all 0.3s;
   font-family: inherit;
@@ -371,7 +379,7 @@
 .setupInstructions code {
   background: rgba(0, 212, 255, 0.1);
   padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 2px;
   font-family: 'Monaco', 'Consolas', monospace;
   font-size: 0.875rem;
   color: var(--primary);
@@ -381,7 +389,7 @@
   background: #1a1a2e;
   color: #00d4ff;
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   font-family: 'Monaco', 'Consolas', monospace;
   font-size: 0.75rem;
   overflow-x: auto;

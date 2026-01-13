@@ -9,7 +9,7 @@
 
 .authBox {
   background: var(--bg-secondary);
-  border-radius: 16px;
+  border-radius: 2px;
   box-shadow: var(--shadow-lg);
   padding: 40px;
   width: 100%;
@@ -68,7 +68,7 @@
 .formInput {
   padding: 14px 16px;
   border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 1rem;
   transition: all 0.3s;
   font-family: inherit;
@@ -88,7 +88,7 @@
   background: rgba(239, 68, 68, 0.1);
   color: var(--error-color);
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9rem;
   border-left: 4px solid var(--error-color);
 }

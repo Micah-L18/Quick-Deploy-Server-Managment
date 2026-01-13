@@ -124,7 +124,7 @@ templates:
     description: In-memory data structure store, cache, and message broker
     category: databases
     icon: 🔴
-    logo_url: https://redis.io/
+    logo_url: https://miro.medium.com/1*aSWvbI0F5K5pQmhWCP0Frw.png
     image: redis
     tag: "7-alpine"
     ports:
@@ -217,7 +217,7 @@ templates:
     description: Web server with automatic HTTPS
     category: web-servers
     icon: 🔐
-    logo_url: https://caddyserver.com/resources/images/caddy-logo.svg
+    logo_url: https://hub.docker.com/api/media/repos_logo/v1/library%2Fcaddy?type=logo
     image: caddy
     tag: "2-alpine"
     ports:

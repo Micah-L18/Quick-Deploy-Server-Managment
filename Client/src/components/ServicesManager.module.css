@@ -31,7 +31,7 @@
   padding: 1.5rem;
   background: var(--card-background);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 2px;
   margin-bottom: 2rem;
 }
 
@@ -66,7 +66,7 @@
 .serviceCard {
   background: var(--card-background);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 2px;
   margin-bottom: 1rem;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -115,7 +115,7 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.375rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
@@ -203,7 +203,7 @@
   padding: 0.75rem 1rem;
   background: rgba(0, 212, 255, 0.05);
   border: 1px solid rgba(0, 212, 255, 0.15);
-  border-radius: 10px;
+  border-radius: 2px;
 }
 
 .versionSelector label {
@@ -216,7 +216,7 @@
 .versionDropdown {
   flex: 1;
   padding: 0.625rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 2px solid var(--border);
   background: var(--card-background);
   color: var(--text-primary);
@@ -258,7 +258,7 @@
 
 .actionButton {
   padding: 0.75rem 1.5rem;
-  border-radius: 10px;
+  border-radius: 2px;
   font-size: 0.875rem;
   font-weight: 600;
   border: none;
@@ -426,7 +426,7 @@
 /* Output Display */
 .output {
   margin-top: 1.5rem;
-  border-radius: 10px;
+  border-radius: 2px;
   overflow: hidden;
   border: 1px solid;
 }
@@ -460,7 +460,7 @@
 
 .terminalOutput {
   background: #1a1d2e;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -490,7 +490,7 @@
 /* Live Terminal */
 .liveTerminal {
   margin-top: 1.5rem;
-  border-radius: 10px;
+  border-radius: 2px;
   overflow: hidden;
   border: 2px solid #3b82f6;
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
@@ -507,7 +507,7 @@
   margin-left: 1rem;
   padding: 0.25rem 0.625rem;
   background: rgba(239, 68, 68, 0.2);
-  border-radius: 4px;
+  border-radius: 2px;
   font-size: 0.6875rem;
   font-weight: 700;
   color: #ef4444;
@@ -552,7 +552,7 @@
 
 .liveOutput::-webkit-scrollbar-thumb {
   background: rgba(59, 130, 246, 0.5);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .liveOutput::-webkit-scrollbar-thumb:hover {
@@ -583,7 +583,7 @@
 
 .outputDetails::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .outputDetails::-webkit-scrollbar-thumb:hover {
@@ -616,7 +616,7 @@
   background: rgba(0, 212, 255, 0.15);
   color: var(--primary);
   padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  border-radius: 2px;
   font-family: 'SF Mono', 'Monaco', monospace;
   font-size: 0.8125rem;
 }
@@ -625,7 +625,7 @@
   margin: 0;
   padding: 1rem;
   background: #1a1d2e;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.8125rem;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
   color: #a9b1d6;
@@ -641,7 +641,7 @@
   margin-top: 1rem;
   padding: 1rem;
   background: rgba(59, 130, 246, 0.1);
-  border-radius: 8px;
+  border-radius: 2px;
   color: #3b82f6;
   font-size: 0.875rem;
 }

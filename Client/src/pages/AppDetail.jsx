@@ -820,9 +820,7 @@ const AppDetail = () => {
             )}
           </div>
 
-          <div className={styles.dangerZone}>
-            <h3>Danger Zone</h3>
-            <p>Deleting this app will also remove all associated deployments.</p>
+          <div className={styles.deleteSection}>
             <Button variant="danger" onClick={handleDeleteApp}>
               <TrashIcon size={16} /> Delete App
             </Button>

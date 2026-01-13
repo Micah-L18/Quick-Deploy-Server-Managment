@@ -408,9 +408,8 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Danger Zone */}
-      <div className={`${styles.settingsSection} ${styles.dangerZone}`}>
-        <h2 className={styles.sectionTitle}>Danger Zone</h2>
+      <div className={styles.settingsSection}>
+        <h2 className={styles.sectionTitle}>Account Actions</h2>
         <div className={styles.settingsGrid}>
           <div className={styles.settingItem}>
             <div className={styles.settingLabel}>Logout</div>

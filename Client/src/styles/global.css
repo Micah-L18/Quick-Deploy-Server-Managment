@@ -118,7 +118,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--text-light);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
