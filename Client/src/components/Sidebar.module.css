@@ -26,6 +26,10 @@
   background-clip: text;
   text-align: center;
   letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .sidebarNav {

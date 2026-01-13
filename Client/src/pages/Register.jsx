@@ -64,7 +64,27 @@ const Register = () => {
     <div className={styles.authContainer}>
       <div className={styles.authBox}>
         <div className={styles.authHeader}>
-          <div className={styles.authLogo}>NeoBase</div>
+          <div className={styles.authLogo}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="40" height="40">
+              <defs>
+                <linearGradient id="authGradientRegister" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{stopColor:'#00d4ff',stopOpacity:1}} />
+                  <stop offset="100%" style={{stopColor:'#00a8cc',stopOpacity:1}} />
+                </linearGradient>
+              </defs>
+              <circle cx="32" cy="32" r="30" fill="url(#authGradientRegister)"/>
+              <ellipse cx="32" cy="20" rx="16" ry="5" fill="#ffffff" opacity="0.9"/>
+              <ellipse cx="32" cy="32" rx="16" ry="5" fill="#ffffff" opacity="0.9"/>
+              <ellipse cx="32" cy="44" rx="16" ry="5" fill="#ffffff" opacity="0.9"/>
+              <rect x="16" y="20" width="2" height="24" fill="#ffffff" opacity="0.9"/>
+              <rect x="46" y="20" width="2" height="24" fill="#ffffff" opacity="0.9"/>
+              <circle cx="32" cy="20" r="2.5" fill="#ffffff"/>
+              <circle cx="32" cy="32" r="2.5" fill="#ffffff"/>
+              <circle cx="32" cy="44" r="2.5" fill="#ffffff"/>
+              <path d="M 40 28 L 44 32 L 40 36 L 36 32 Z" fill="#ffffff" opacity="0.6"/>
+            </svg>
+            <span>NeoBase</span>
+          </div>
           <h1 className={styles.authTitle}>Create Account</h1>
           <p className={styles.authSubtitle}>Start managing your servers</p>
         </div>
