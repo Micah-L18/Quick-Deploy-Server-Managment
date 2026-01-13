@@ -22,17 +22,17 @@
 }
 
 .statCard {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s;
   animation: slideUp 0.4s ease;
 }
 
 .statCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 .statHeader {
@@ -88,20 +88,20 @@
 }
 
 .actionCard {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   text-decoration: none;
   color: inherit;
 }
 
 .actionCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .actionIcon {
@@ -140,9 +140,9 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .activityIcon {

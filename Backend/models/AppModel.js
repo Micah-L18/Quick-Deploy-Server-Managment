@@ -14,6 +14,21 @@ async function findAll(userId) {
 }
 
 /**
+ * Get orphaned apps (apps with no active deployments)
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>}
+ */
+async function findOrphaned(userId) {
+  return all(
+    `SELECT a.* FROM apps a
+     LEFT JOIN app_deployments ad ON a.id = ad.app_id
+     WHERE a.user_id = ? AND ad.id IS NULL
+     ORDER BY a.created_at DESC`,
+    [userId]
+  );
+}
+
+/**
  * Get app by ID
  * @param {string} appId - App ID
  * @param {string} userId - User ID (for ownership verification)
@@ -263,6 +278,7 @@ async function findAllDeployments(userId) {
 module.exports = {
   findAll,
   findById,
+  findOrphaned,
   create,
   update,
   remove,

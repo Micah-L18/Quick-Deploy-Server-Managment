@@ -21,8 +21,9 @@ export const serversService = {
     return response.data;
   },
 
-  deleteServer: async (id) => {
-    const response = await api.delete(`/servers/${id}`);
+  deleteServer: async (id, force = false) => {
+    const url = force ? `/servers/${id}?force=true` : `/servers/${id}`;
+    const response = await api.delete(url);
     return response.data;
   },
 

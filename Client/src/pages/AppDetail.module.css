@@ -113,35 +113,47 @@
 }
 
 .tabContent {
-  padding: 24px 0;
+  padding: 16px 0;
 }
 
 /* Config Tab */
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .configGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .configSection {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 0;
 }
 
 .configSection h3 {
-  margin: 0 0 16px 0;
-  font-size: 1.1rem;
+  margin: 0 0 12px 0;
+  font-size: 1rem;
   color: var(--text-primary);
   font-weight: 600;
 }
 
 .hint {
   color: var(--text-medium);
-  font-size: 0.85rem;
-  margin: 0 0 16px 0;
+  font-size: 0.8rem;
+  margin: 0 0 12px 0;
 }
 
 .formRow {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .formRow:last-child {
@@ -152,23 +164,23 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .formGroup label {
   font-weight: 600;
-  color: #6b7280;
-  font-size: 0.9rem;
+  color: var(--text-dark);
+  font-size: 0.85rem;
 }
 
 .formGroup input,
 .formGroup select,
 .formGroup textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.95rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
   font-family: inherit;
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -197,7 +209,7 @@
 }
 
 .formGroup textarea {
-  min-height: 80px;
+  min-height: 60px;
   resize: vertical;
 }
 
@@ -211,10 +223,10 @@
 
 /* Registry Configuration */
 .registryToggle {
-  margin: 16px 0;
-  padding: 12px;
+  margin: 12px 0;
+  padding: 10px;
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .checkboxLabel {
@@ -238,10 +250,10 @@
 }
 
 .registryConfig {
-  margin-top: 16px;
-  padding: 20px;
+  margin-top: 12px;
+  padding: 16px;
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
 }
 
@@ -478,6 +490,7 @@
 
 /* Import Section */
 .importSection {
+  display: flex;
   background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 168, 204, 0.05) 100%);
   border: 2px dashed var(--border-color);
   border-radius: 12px;
@@ -696,8 +709,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
+  background: rgba(107, 114, 128, 0.15);
+  color: var(--text-medium);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -798,7 +811,7 @@
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
-  color: #e6edf3;
+  /* color: #e6edf3; */
 }
 
 .formGroup select {

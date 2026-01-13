@@ -24,6 +24,15 @@ router.get('/deployments/all', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/apps/orphaned
+ * Get all apps with no active deployments
+ */
+router.get('/orphaned', requireAuth, asyncHandler(async (req, res) => {
+  const orphanedApps = await AppModel.findOrphaned(req.session.userId);
+  res.json(orphanedApps);
+}));
+
+/**
  * GET /api/apps/:id
  * Get single app
  */

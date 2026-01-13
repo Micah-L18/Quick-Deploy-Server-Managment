@@ -546,31 +546,32 @@ const AppDetail = () => {
             </div>
           </div>
 
-          <div className={styles.configSection}>
-            <h3>Basic Information</h3>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label>App Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleFormChange('name', e.target.value)}
-                  placeholder="my-app"
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => handleFormChange('description', e.target.value)}
-                  placeholder="Optional description"
-                />
+          <div className={styles.configGrid}>
+            <div className={styles.configSection}>
+              <h3>Basic Information</h3>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>App Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleFormChange('name', e.target.value)}
+                    placeholder="my-app"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    value={formData.description}
+                    onChange={(e) => handleFormChange('description', e.target.value)}
+                    placeholder="Optional description"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.configSection}>
+            <div className={styles.configSection}>
             <h3>Docker Image</h3>
             <div className={styles.formRow}>
               <div className={styles.formGroup} style={{ flex: 2 }}>
@@ -803,6 +804,7 @@ const AppDetail = () => {
               />
               <small className={styles.fieldHint}>Additional docker run arguments (added before image name)</small>
             </div>
+          </div>
           </div>
 
           <div className={styles.configActions}>

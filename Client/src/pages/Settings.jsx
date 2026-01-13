@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
+import Modal from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
-import { SettingsIcon, RefreshIcon, ServerIcon, CheckCircleIcon, AlertIcon } from '../components/Icons';
+import { useTheme } from '../contexts/ThemeContext';
+import { SettingsIcon, RefreshIcon, ServerIcon, CheckCircleIcon, AlertIcon, MoonIcon, SunIcon } from '../components/Icons';
 import { systemService } from '../api/system';
 import styles from './Settings.module.css';
 
@@ -13,8 +15,11 @@ const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
 
 const Settings = () => {
   const { user, logout } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [infoMessage, setInfoMessage] = useState({ title: '', content: '' });
   const [preferences, setPreferences] = useState({
     autoRefresh: true,
     notifications: true,
@@ -329,7 +334,10 @@ const Settings = () => {
               <Button
                 variant="outline"
                 size="small"
-                onClick={() => alert('Password change feature coming soon!')}
+                onClick={() => {
+                  setInfoMessage({ title: 'Coming Soon', content: 'Password change feature coming soon!' });
+                  setShowInfoModal(true);
+                }}
               >
                 Change Password
               </Button>
@@ -342,6 +350,28 @@ const Settings = () => {
       <div className={styles.settingsSection}>
         <h2 className={styles.sectionTitle}>Preferences</h2>
         <div className={styles.settingsGrid}>
+          <div className={styles.settingItem}>
+            <div className={styles.settingLabel}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isDarkMode ? <MoonIcon size={20} /> : <SunIcon size={20} />}
+                <span>Dark Mode</span>
+              </div>
+            </div>
+            <p className={styles.settingDescription}>
+              Toggle between light and dark theme
+            </p>
+            <div className={styles.settingActions}>
+              <label className={styles.toggleSwitch}>
+                <input
+                  type="checkbox"
+                  checked={isDarkMode}
+                  onChange={toggleDarkMode}
+                />
+                <span className={styles.toggleSlider}></span>
+              </label>
+            </div>
+          </div>
+
           <div className={styles.settingItem}>
             <label className={styles.checkboxLabel}>
               <input
@@ -403,9 +433,10 @@ const Settings = () => {
               <Button
                 variant="danger"
                 size="small"
-                onClick={() =>
-                  alert('Account deletion feature coming soon!')
-                }
+                onClick={() => {
+                  setInfoMessage({ title: 'Coming Soon', content: 'Account deletion feature coming soon!' });
+                  setShowInfoModal(true);
+                }}
               >
                 Delete Account
               </Button>
@@ -413,6 +444,24 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Info Modal */}
+      <Modal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        title={infoMessage.title}
+      >
+        <div style={{ padding: '1rem 0' }}>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
+            {infoMessage.content}
+          </p>
+          <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={() => setShowInfoModal(false)}>
+              OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Layout>
   );
 };

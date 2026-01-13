@@ -14,6 +14,12 @@ const Servers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState({ title: '', content: '' });
+  const [serverToDelete, setServerToDelete] = useState(null);
+  const [deleteWarning, setDeleteWarning] = useState(null);
   const [newServerData, setNewServerData] = useState(null);
   const [hiddenIPs, setHiddenIPs] = useState({});
   const [formData, setFormData] = useState({
@@ -59,12 +65,39 @@ const Servers = () => {
       setNewServerData(data);
       setShowSetupModal(true);
     },
+    onError: (error) => {
+      if (error.response?.status === 409) {
+        const errorData = error.response.data;
+        setModalMessage({
+          title: '⚠️ Duplicate Server',
+          content: `${errorData.error}\n\nExisting server: ${errorData.existingServer?.name || 'Unnamed'} (${errorData.existingServer?.ip})`
+        });
+        setShowErrorModal(true);
+      }
+    },
   });
 
   const deleteServerMutation = useMutation({
-    mutationFn: serversService.deleteServer,
-    onSuccess: () => {
+    mutationFn: ({ id, force }) => serversService.deleteServer(id, force),
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['servers']);
+      setShowDeleteModal(false);
+      setServerToDelete(null);
+      setDeleteWarning(null);
+      if (data.containersRemoved > 0) {
+        setModalMessage({
+          title: '✅ Server Deleted',
+          content: `Server deleted successfully. ${data.containersRemoved} container(s) stopped and removed.`
+        });
+        setShowSuccessModal(true);
+      }
+    },
+    onError: (error) => {
+      if (error.response?.status === 409) {
+        // Server has active deployments
+        const errorData = error.response.data;
+        setDeleteWarning(errorData);
+      }
     },
   });
 
@@ -81,8 +114,14 @@ const Servers = () => {
   };
 
   const handleDeleteServer = (id, name) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      deleteServerMutation.mutate(id);
+    setServerToDelete({ id, name });
+    setDeleteWarning(null);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = (force = false) => {
+    if (serverToDelete) {
+      deleteServerMutation.mutate({ id: serverToDelete.id, force });
     }
   };
 
@@ -363,6 +402,111 @@ const Servers = () => {
           <div className={styles.modalFooter}>
             <Button onClick={() => setShowSetupModal(false)} variant="outline">
               Done
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setServerToDelete(null);
+          setDeleteWarning(null);
+        }}
+        title={deleteWarning ? '⚠️ Warning: Active Deployments' : '🗑️ Delete Server'}
+      >
+        <div className={styles.deleteModal}>
+          {!deleteWarning ? (
+            <>
+              <p>Are you sure you want to delete <strong>{serverToDelete?.name}</strong>?</p>
+              <p className={styles.deleteNote}>This will check for active deployments before deletion.</p>
+              <div className={styles.modalFooter}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setServerToDelete(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => confirmDelete(false)}
+                  disabled={deleteServerMutation.isPending}
+                >
+                  {deleteServerMutation.isPending ? 'Checking...' : 'Delete Server'}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className={styles.warningText}>
+                This server has <strong>{deleteWarning.deployments?.length || 0}</strong> active deployment(s):
+              </p>
+              <ul className={styles.deploymentList}>
+                {deleteWarning.deployments?.map((deployment, idx) => (
+                  <li key={idx}>
+                    <strong>{deployment.appName}</strong> - Container: {deployment.containerName} ({deployment.status})
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.warningText}>
+                Deleting this server will stop and remove all Docker containers listed above.
+              </p>
+              <div className={styles.modalFooter}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setServerToDelete(null);
+                    setDeleteWarning(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => confirmDelete(true)}
+                  disabled={deleteServerMutation.isPending}
+                >
+                  {deleteServerMutation.isPending ? 'Deleting...' : 'Force Delete & Stop Containers'}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title={modalMessage.title}
+      >
+        <div className={styles.messageModal}>
+          <p style={{ whiteSpace: 'pre-line', lineHeight: '1.6' }}>{modalMessage.content}</p>
+          <div className={styles.modalFooter}>
+            <Button onClick={() => setShowErrorModal(false)}>
+              OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={modalMessage.title}
+      >
+        <div className={styles.messageModal}>
+          <p style={{ whiteSpace: 'pre-line', lineHeight: '1.6' }}>{modalMessage.content}</p>
+          <div className={styles.modalFooter}>
+            <Button onClick={() => setShowSuccessModal(false)}>
+              OK
             </Button>
           </div>
         </div>

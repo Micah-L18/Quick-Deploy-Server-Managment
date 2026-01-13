@@ -93,6 +93,20 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'IP address and username are required' });
   }
 
+  // Check if server with this IP already exists for this user
+  const existingServer = await ServerModel.findByUserAndIp(req.session.userId, ip);
+  if (existingServer) {
+    return res.status(409).json({ 
+      error: 'A server with this IP address already exists',
+      existingServer: {
+        id: existingServer.id,
+        name: existingServer.name,
+        ip: existingServer.ip,
+        status: existingServer.status
+      }
+    });
+  }
+
   const serverId = Date.now().toString();
 
   // Generate SSH key for this server
@@ -159,6 +173,55 @@ router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
   }
 
   const server = check.server;
+  const force = req.query.force === 'true';
+
+  // Check for active deployments
+  const { all } = require('../database/connection');
+  const deployments = await all(
+    'SELECT ad.*, a.name as app_name FROM app_deployments ad JOIN apps a ON ad.app_id = a.id WHERE ad.server_id = ?',
+    [req.params.id]
+  );
+
+  if (deployments.length > 0 && !force) {
+    return res.status(409).json({ 
+      error: 'Server has active deployments',
+      deployments: deployments.map(d => ({
+        id: d.id,
+        appName: d.app_name,
+        containerName: d.container_name,
+        status: d.status
+      })),
+      message: 'Use ?force=true to delete server and stop all containers'
+    });
+  }
+
+  // If force delete or no deployments, stop and remove all Docker containers
+  if (deployments.length > 0) {
+    for (const deployment of deployments) {
+      if (deployment.container_name) {
+        try {
+          // Stop the container
+          await connectionManager.executeCommand(
+            server.ip,
+            server.username,
+            server.privateKeyPath,
+            `docker stop ${deployment.container_name} 2>/dev/null || true`
+          );
+          // Remove the container
+          await connectionManager.executeCommand(
+            server.ip,
+            server.username,
+            server.privateKeyPath,
+            `docker rm ${deployment.container_name} 2>/dev/null || true`
+          );
+          console.log(`Stopped and removed container ${deployment.container_name}`);
+        } catch (err) {
+          console.error(`Failed to remove container ${deployment.container_name}:`, err.message);
+          // Continue with deletion even if container cleanup fails
+        }
+      }
+    }
+  }
 
   // Remove SSH keys
   await keyManager.deleteKeyPair(server.privateKeyPath);
@@ -173,13 +236,16 @@ router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
     await ActivityModel.create(
       req.session.userId,
       'error',
-      `Server ${server.name || server.ip} removed`
+      `Server ${server.name || server.ip} removed${deployments.length > 0 ? ` (${deployments.length} container(s) stopped)` : ''}`
     );
   } catch (err) {
     console.error('Failed to log activity:', err);
   }
 
-  res.json({ success: true });
+  res.json({ 
+    success: true,
+    containersRemoved: deployments.length
+  });
 }));
 
 /**

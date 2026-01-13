@@ -582,8 +582,8 @@
 }
 
 .statusStopped {
-  background: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
+  background: rgba(107, 114, 128, 0.15);
+  color: var(--text-medium);
 }
 
 .portsCell {

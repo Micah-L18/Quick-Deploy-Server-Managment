@@ -11,6 +11,11 @@ export const appsService = {
     return response.data;
   },
 
+  getOrphanedApps: async () => {
+    const response = await api.get('/apps/orphaned');
+    return response.data;
+  },
+
   getApp: async (id) => {
     const response = await api.get(`/apps/${id}`);
     // Parse JSON fields if they're strings

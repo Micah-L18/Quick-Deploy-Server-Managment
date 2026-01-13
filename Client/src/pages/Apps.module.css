@@ -67,10 +67,10 @@
 
 /* Deployments Table */
 .deploymentsTable {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
 }
 
 .tableHeader {
@@ -78,7 +78,7 @@
   grid-template-columns: 1.5fr 1fr 1fr 100px 120px 140px 1fr;
   gap: 16px;
   padding: 16px 20px;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   font-weight: 600;
   color: var(--text-medium);
   font-size: 0.85rem;
@@ -177,7 +177,7 @@
 
 .statusStopped {
   background: rgba(156, 163, 175, 0.2);
-  color: #6b7280;
+  color: var(--text-medium);
 }
 
 .portsCell {
@@ -297,17 +297,17 @@
 }
 
 .appCard {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
 }
 
 .appCard:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
@@ -358,7 +358,7 @@
   flex: 1;
   padding: 10px 16px;
   border: 1px solid var(--border-color);
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
@@ -470,7 +470,7 @@
 
 .categoryBtn {
   padding: 8px 16px;
-  background: white;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   font-size: 0.85rem;
@@ -504,10 +504,10 @@
 }
 
 .templateCard {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
@@ -515,7 +515,7 @@
 }
 
 .templateCard:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
   border-color: #00a8cc;
 }

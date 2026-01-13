@@ -41,10 +41,10 @@
 }
 
 .serverCard {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s;
   position: relative;
 }
@@ -224,7 +224,8 @@
 .actionBtn {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  background: white;
+  background: var(--bg-secondary);
+  color: var(--text-dark);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
@@ -396,4 +397,59 @@
   color: var(--text-muted);
   font-style: italic;
   margin-top: 0.5rem;
+}
+
+/* Delete Modal Styles */
+.deleteModal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.deleteNote {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+.warningText {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.warningText strong {
+  color: #ef4444;
+}
+
+.deploymentList {
+  background: rgba(239, 68, 68, 0.05);
+  border-left: 3px solid #ef4444;
+  padding: 1rem 1rem 1rem 1.5rem;
+  margin: 1rem 0;
+  list-style-type: disc;
+  color: var(--text-secondary);
+}
+
+.deploymentList li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.deploymentList li:last-child {
+  margin-bottom: 0;
+}
+
+/* Message Modal Styles */
+.messageModal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.messageModal p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
 }

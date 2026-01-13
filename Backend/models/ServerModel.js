@@ -76,6 +76,17 @@ async function findByStatus(status) {
 }
 
 /**
+ * Find server by user ID and IP address
+ * @param {string} userId - User ID
+ * @param {string} ip - Server IP address
+ * @returns {Promise<Object|null>}
+ */
+async function findByUserAndIp(userId, ip) {
+  const row = await get('SELECT * FROM servers WHERE user_id = ? AND ip = ?', [userId, ip]);
+  return toCamelCase(row);
+}
+
+/**
  * Create a new server
  * @param {Object} server - Server data
  * @returns {Promise<Object>}
@@ -168,6 +179,7 @@ module.exports = {
   findAll,
   findById,
   findByStatus,
+  findByUserAndIp,
   create,
   update,
   remove,

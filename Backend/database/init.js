@@ -1,5 +1,5 @@
 const fs = require('fs').promises;
-const { run } = require('./connection');
+const { run, all } = require('./connection');
 const { SSH_KEYS_DIR } = require('../config');
 
 /**
@@ -190,6 +190,44 @@ async function runMigrations() {
       console.log(`Added column ${column.name} to apps`);
     } catch (err) {
       // Ignore duplicate column errors
+    }
+  }
+
+  // Create unique index on (user_id, ip) to prevent duplicate servers
+  // First, check if there are duplicates and handle them
+  try {
+    const duplicates = await all(`
+      SELECT user_id, ip, COUNT(*) as count 
+      FROM servers 
+      GROUP BY user_id, ip 
+      HAVING COUNT(*) > 1
+    `);
+    
+    if (duplicates.length > 0) {
+      console.log(`Found ${duplicates.length} duplicate server IP(s). Keeping only the most recent for each.`);
+      
+      // For each duplicate, keep only the most recent one
+      for (const dup of duplicates) {
+        const servers = await all(
+          'SELECT id, added_at FROM servers WHERE user_id = ? AND ip = ? ORDER BY added_at DESC',
+          [dup.user_id, dup.ip]
+        );
+        
+        // Delete all but the first (most recent)
+        for (let i = 1; i < servers.length; i++) {
+          await run('DELETE FROM servers WHERE id = ?', [servers[i].id]);
+          console.log(`Removed duplicate server: ${dup.ip} (ID: ${servers[i].id})`);
+        }
+      }
+    }
+    
+    // Now create the unique index
+    await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_servers_user_ip ON servers(user_id, ip)');
+    console.log('Created unique index on servers(user_id, ip)');
+  } catch (err) {
+    // Ignore if index already exists
+    if (!err.message.includes('already exists')) {
+      console.error('Error creating unique index:', err.message);
     }
   }
 }
