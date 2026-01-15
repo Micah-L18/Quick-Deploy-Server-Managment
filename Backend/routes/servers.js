@@ -14,6 +14,23 @@ router.get('/', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/servers/tags
+ * Get all unique tags across user's servers
+ */
+router.get('/tags', requireAuth, asyncHandler(async (req, res) => {
+  const servers = await ServerModel.findAll(req.session.userId);
+  const allTags = new Set();
+  
+  servers.forEach(server => {
+    if (server.tags && Array.isArray(server.tags)) {
+      server.tags.forEach(tag => allTags.add(tag));
+    }
+  });
+  
+  res.json(Array.from(allTags).sort());
+}));
+
+/**
  * GET /api/servers/status/all
  * Check status of all servers
  */
@@ -70,11 +87,15 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     return res.status(check.status).json({ error: check.error });
   }
 
-  const { name, region } = req.body;
+  const { name, region, displayName, color, icon, tags } = req.body;
   const updates = {};
   
   if (name !== undefined) updates.name = name || null;
   if (region !== undefined) updates.region = region || null;
+  if (displayName !== undefined) updates.displayName = displayName || null;
+  if (color !== undefined) updates.color = color || null;
+  if (icon !== undefined) updates.icon = icon || null;
+  if (tags !== undefined) updates.tags = tags || [];
 
   await ServerModel.update(req.params.id, updates);
   
@@ -228,6 +249,10 @@ router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
 
   // Close any pooled connections
   connectionManager.pool.closeConnection(server.ip, server.username);
+
+  // Delete deployment records for this server
+  const { run: dbRun } = require('../database/connection');
+  await dbRun('DELETE FROM app_deployments WHERE server_id = ?', [req.params.id]);
 
   await ServerModel.remove(req.params.id);
 

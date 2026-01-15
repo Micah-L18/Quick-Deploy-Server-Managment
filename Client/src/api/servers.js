@@ -56,4 +56,9 @@ export const serversService = {
     const response = await api.get(`/servers/${id}/docker-status`);
     return response.data;
   },
+
+  getAllTags: async () => {
+    const response = await api.get('/servers/tags');
+    return response.data;
+  },
 };

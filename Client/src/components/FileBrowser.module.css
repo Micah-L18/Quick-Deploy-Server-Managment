@@ -360,6 +360,23 @@
 }
 
 @media (max-width: 768px) {
+  .fileBrowserContainer {
+    flex-direction: column;
+    height: auto;
+    min-height: auto;
+  }
+
+  .fileBrowser {
+    width: 100%;
+    max-height: none;
+    min-height: 400px;
+  }
+
+  /* Hide the side panel on mobile - we use modal instead */
+  .editorPanel {
+    display: none;
+  }
+
   .tableHeader,
   .fileRow {
     grid-template-columns: 1fr 80px;
@@ -369,6 +386,48 @@
   .permColumn {
     display: none;
   }
+
+  .pathBar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .currentPath {
+    width: 100%;
+    font-size: 0.8rem;
+    order: 3;
+    word-break: break-all;
+  }
+
+  .navButton,
+  .refreshButton {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .fileName {
+    font-size: 0.85rem;
+  }
+
+  .searchBar {
+    flex-wrap: wrap;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+
+  .searchToggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* Mobile Editor Modal */
+.mobileEditorModal {
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 1200px) {

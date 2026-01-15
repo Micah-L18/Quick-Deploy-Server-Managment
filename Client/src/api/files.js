@@ -16,7 +16,7 @@ export const filesService = {
   },
 
   writeFile: async (serverId, path, content) => {
-    const response = await api.post(`/servers/${serverId}/files/write`, {
+    const response = await api.put(`/servers/${serverId}/files/write`, {
       path,
       content,
     });

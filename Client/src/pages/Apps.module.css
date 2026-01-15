@@ -75,8 +75,8 @@
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 100px 120px 140px 1fr;
-  gap: 16px;
+  grid-template-columns: 1.5fr 1fr 0.8fr 90px 100px 120px 1.2fr;
+  gap: 12px;
   padding: 16px 20px;
   background: var(--bg-tertiary);
   font-weight: 600;
@@ -88,8 +88,8 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 100px 120px 140px 1fr;
-  gap: 16px;
+  grid-template-columns: 1.5fr 1fr 0.8fr 90px 100px 120px 1.2fr;
+  gap: 12px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   align-items: center;
@@ -180,6 +180,35 @@
   color: var(--text-medium);
 }
 
+.statusOrphaned {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+/* Orphaned deployment styles */
+.orphanedRow {
+  background: rgba(245, 158, 11, 0.05);
+  border-left: 3px solid #f59e0b;
+}
+
+.orphanedCard {
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.03);
+}
+
+.orphanedServer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #d97706;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.orphanedServer svg {
+  flex-shrink: 0;
+}
+
 .portsCell {
   min-width: 0;
 }
@@ -219,7 +248,7 @@
 .statsRow,
 .logsRow {
   padding: 16px 20px;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -489,6 +518,9 @@
   cursor: pointer;
   transition: all 0.2s;
   color: var(--text-medium);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .categoryBtn:hover {
@@ -540,8 +572,15 @@
 }
 
 .templateIcon {
-  font-size: 2.2rem;
-  line-height: 1;
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 212, 255, 0.1);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00a8cc;
+  flex-shrink: 0;
 }
 
 .templateLogo {
@@ -608,6 +647,9 @@
   color: #00a8cc;
   border-radius: 2px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .templateNotes {
@@ -640,6 +682,9 @@
   text-decoration: none;
   color: var(--text-medium);
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .templateDocLink:hover {
@@ -648,11 +693,303 @@
 }
 
 @media (max-width: 768px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .pageTitle {
+    font-size: 1.5rem;
+  }
+
+  .headerActions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .searchBox {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .tabContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
   .appsGrid {
     grid-template-columns: 1fr;
   }
   
   .templatesGrid {
     grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .categoryFilter {
+    display: none;
+  }
+}
+
+/* Mobile Deployment Cards */
+.deploymentsCards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deploymentCard {
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+.deploymentCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.deploymentCardTitle {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-dark);
+  text-decoration: none;
+}
+
+.deploymentCardTitle:hover {
+  color: #00a8cc;
+}
+
+.deploymentCardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.deploymentCardRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.deploymentCardLabel {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.deploymentCardValue {
+  font-size: 0.85rem;
+  color: var(--text-dark);
+  word-break: break-all;
+}
+
+.deploymentCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.deploymentCardActions button {
+  flex: 1;
+  min-width: calc(50% - 4px);
+}
+
+/* Add App Card */
+.addAppCard {
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-color);
+  border-radius: 2px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  cursor: pointer;
+  transition: all 0.3s;
+  gap: 16px;
+}
+
+.addAppCard:hover {
+  border-color: #00a8cc;
+  background: rgba(0, 212, 255, 0.02);
+}
+
+.addAppIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 212, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00a8cc;
+  transition: all 0.3s;
+}
+
+.addAppCard:hover .addAppIcon {
+  background: rgba(0, 212, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.addAppText {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-medium);
+}
+
+.addAppCard:hover .addAppText {
+  color: #00a8cc;
+}
+
+/* Category Dropdown (Mobile) */
+.categoryDropdownWrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.categoryDropdownTrigger {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.categoryDropdownTrigger:hover {
+  border-color: #00a8cc;
+}
+
+.categoryDropdownMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 2px 2px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.categoryDropdownItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--text-medium);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.categoryDropdownItem:hover {
+  background: rgba(0, 212, 255, 0.05);
+  color: #00a8cc;
+}
+
+.categoryDropdownLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryDropdownActive {
+  background: rgba(0, 212, 255, 0.1);
+  color: #00a8cc;
+  font-weight: 500;
+}
+
+/* Mobile template card adjustments */
+@media (max-width: 768px) {
+  .templateCard {
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .templateHeader {
+    gap: 12px;
+  }
+
+  .templateLogo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .templateName {
+    font-size: 1rem;
+  }
+
+  .templateDescription {
+    font-size: 0.85rem;
+    min-height: auto;
+  }
+
+  .templateBadges {
+    min-height: auto;
+  }
+
+  .templateActions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .templateDocLink {
+    text-align: center;
+  }
+
+  .appCard {
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .addAppCard {
+    min-height: 160px;
+    padding: 16px;
+  }
+
+  .addAppIcon {
+    width: 48px;
+    height: 48px;
   }
 }

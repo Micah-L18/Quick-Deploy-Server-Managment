@@ -18,7 +18,15 @@
 
 @media (max-width: 768px) {
   .mainContent {
-    margin-left: 70px;
-    padding: 20px;
+    margin-left: 0;
+    padding: 70px 16px 20px 16px;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .container {
+    overflow-x: hidden;
+    width: 100%;
   }
 }

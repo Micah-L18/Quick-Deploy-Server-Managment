@@ -199,14 +199,26 @@ router.get('/:appId/deployments', requireAuth, asyncHandler(async (req, res) => 
 /**
  * DELETE /api/apps/:appId/deployments/:deploymentId
  * Remove a deployment
+ * Query param: force=true to skip SSH and just remove from database (for orphaned deployments)
  */
 router.delete('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async (req, res) => {
   const { appId, deploymentId } = req.params;
+  const forceRemove = req.query.force === 'true';
 
   const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
   
   if (!deployment) {
     return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  // If force remove or server doesn't exist (orphaned), just remove from database
+  if (forceRemove || !deployment.ip) {
+    await AppModel.removeDeployment(deploymentId);
+    return res.json({
+      success: true,
+      message: 'Deployment record removed from database',
+      orphaned: true
+    });
   }
 
   // Stop and remove container via SSH

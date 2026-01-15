@@ -142,7 +142,12 @@ async function runMigrations() {
   const serverColumns = [
     { name: 'name', type: 'TEXT' },
     { name: 'region', type: 'TEXT' },
-    { name: 'user_id', type: 'TEXT' }
+    { name: 'user_id', type: 'TEXT' },
+    { name: 'display_name', type: 'TEXT' },
+    { name: 'color', type: 'TEXT' },
+    { name: 'icon', type: 'TEXT' },
+    { name: 'tags', type: 'TEXT' },  // JSON array of tags
+    { name: 'first_connected_at', type: 'TEXT' }  // Timestamp of first successful connection
   ];
 
   for (const column of serverColumns) {

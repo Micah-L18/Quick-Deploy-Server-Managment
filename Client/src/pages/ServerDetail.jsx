@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '../components/Layout';
@@ -7,6 +7,8 @@ import Button from '../components/Button';
 import Terminal from '../components/Terminal';
 import FileBrowser from '../components/FileBrowser';
 import ServicesManager from '../components/ServicesManager';
+import ColorPicker from '../components/ColorPicker';
+import IconSelector, { SERVER_ICONS } from '../components/IconSelector';
 import { serversService } from '../api/servers';
 import { appsService } from '../api/apps';
 import { getRegionFlag } from '../utils/formatters';
@@ -23,6 +25,29 @@ const ServerDetail = () => {
   const [ipVisible, setIpVisible] = useState(false);
   const [expandedDeployments, setExpandedDeployments] = useState({});
   const [expandedLogs, setExpandedLogs] = useState({});
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      // If on terminal tab and switching to mobile, go to metrics
+      if (mobile && activeTab === 'terminal') {
+        setActiveTab('metrics');
+      }
+      // Force 1 hour time range on mobile
+      if (mobile && timeRange !== 1) {
+        setTimeRange(1);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    // Also set on initial load
+    if (isMobile && timeRange !== 1) {
+      setTimeRange(1);
+    }
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeTab, isMobile, timeRange]);
 
   const { data: server, isLoading: serverLoading } = useQuery({
     queryKey: ['server', id],
@@ -98,6 +123,23 @@ const ServerDetail = () => {
     mutationFn: ({ appId, deploymentId }) => appsService.stopDeployment(appId, deploymentId),
     onSuccess: () => {
       queryClient.invalidateQueries(['server-deployments', id]);
+    },
+  });
+
+  const navigate = useNavigate();
+  const [deleteWarning, setDeleteWarning] = useState(null);
+  
+  const deleteServerMutation = useMutation({
+    mutationFn: ({ serverId, force }) => serversService.deleteServer(serverId, force),
+    onSuccess: () => {
+      navigate('/servers');
+    },
+    onError: (error) => {
+      if (error.response?.status === 409) {
+        // Server has active deployments
+        const errorData = error.response.data;
+        setDeleteWarning(`This server has ${errorData.deployments?.length || 0} active deployment(s). Deleting will stop and remove all containers.`);
+      }
     },
   });
 
@@ -303,12 +345,14 @@ const ServerDetail = () => {
         >
           System Metrics
         </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'terminal' ? styles.activeTab : ''}`}
-          onClick={() => setActiveTab('terminal')}
-        >
-          Terminal
-        </button>
+        {!isMobile && (
+          <button
+            className={`${styles.tab} ${activeTab === 'terminal' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('terminal')}
+          >
+            Terminal
+          </button>
+        )}
         <button
           className={`${styles.tab} ${activeTab === 'files' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('files')}
@@ -348,11 +392,16 @@ const ServerDetail = () => {
                     className={styles.timeRangeSelect}
                     value={timeRange}
                     onChange={(e) => setTimeRange(Number(e.target.value))}
+                    disabled={isMobile}
                   >
                     <option value={1}>Last Hour</option>
-                    <option value={6}>Last 6 Hours</option>
-                    <option value={24}>Last 24 Hours</option>
-                    <option value={168}>Last Week</option>
+                    {!isMobile && (
+                      <>
+                        <option value={6}>Last 6 Hours</option>
+                        <option value={24}>Last 24 Hours</option>
+                        <option value={168}>Last Week</option>
+                      </>
+                    )}
                   </select>
                   <Button
                     onClick={handleRefreshMetrics}
@@ -611,14 +660,14 @@ const ServerDetail = () => {
         </>
       )}
 
-      {/* Keep terminal mounted but hidden to maintain connection */}
-      {server.status === 'online' && (
+      {/* Keep terminal mounted but hidden to maintain connection - desktop only */}
+      {server.status === 'online' && !isMobile && (
         <div style={{ display: activeTab === 'terminal' ? 'block' : 'none', width: '100%', height: 'calc(100vh - 300px)', marginTop: '16px' }}>
           <Terminal serverId={id} isVisible={activeTab === 'terminal'} />
         </div>
       )}
 
-      {activeTab === 'terminal' && server.status !== 'online' && (
+      {activeTab === 'terminal' && server.status !== 'online' && !isMobile && (
         <div className={styles.offlineNotice}>
           <AlertIcon size={48} />
           <h3>Server Offline</h3>
@@ -803,22 +852,310 @@ const ServerDetail = () => {
       )}
 
       {activeTab === 'settings' && (
-        <div className={styles.settingsContent}>
-          <div className={styles.settingsSection}>
-            <h3 className={styles.settingsTitle}>SSH Setup Command</h3>
-            <p className={styles.settingsDescription}>
-              Run this command on your server <strong>{server.ip}</strong> to set up SSH access:
-            </p>
-            <div className={styles.codeBlock}>
-              {server.setupCommand || 'No setup command available'}
-            </div>
-            <Button onClick={handleCopyCommand} disabled={!server.setupCommand}>
-              Copy Command
-            </Button>
-          </div>
-        </div>
+        <ServerSettingsTab 
+          server={server}
+          onUpdate={() => queryClient.invalidateQueries(['server', id])}
+          onDelete={(serverId, force) => deleteServerMutation.mutate({ serverId, force })}
+          isDeleting={deleteServerMutation.isPending}
+          deleteWarning={deleteWarning}
+        />
       )}
     </Layout>
+  );
+};
+
+// Server Settings Tab Component
+const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarning }) => {
+  const [formData, setFormData] = useState({
+    displayName: '',
+    name: '',
+    region: '',
+    color: null,
+    icon: null,
+    tags: []
+  });
+  const [tagInput, setTagInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleteConfirmIp, setDeleteConfirmIp] = useState('');
+
+  useEffect(() => {
+    if (server) {
+      setFormData({
+        displayName: server.displayName || '',
+        name: server.name || '',
+        region: server.region || '',
+        color: server.color || null,
+        icon: server.icon || null,
+        tags: server.tags || []
+      });
+    }
+  }, [server]);
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setSaveSuccess(false);
+  };
+
+  const handleAddTag = (e) => {
+    e?.preventDefault();
+    const tag = tagInput.trim().toLowerCase();
+    if (tag && !formData.tags.includes(tag) && formData.tags.length < 10) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tag]
+      }));
+      setTagInput('');
+      setSaveSuccess(false);
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+    setSaveSuccess(false);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await serversService.updateServer(server.id, {
+        displayName: formData.displayName || null,
+        name: formData.name || null,
+        region: formData.region || null,
+        color: formData.color,
+        icon: formData.icon,
+        tags: formData.tags
+      });
+      setSaveSuccess(true);
+      onUpdate();
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCopyCommand = () => {
+    if (server.setupCommand) {
+      navigator.clipboard.writeText(server.setupCommand.trim());
+    }
+  };
+
+  const regions = [
+    { value: 'us-east', label: '🇺🇸 US East' },
+    { value: 'us-west', label: '🇺🇸 US West' },
+    { value: 'us-central', label: '🇺🇸 US Central' },
+    { value: 'eu-west', label: '🇪🇺 EU West' },
+    { value: 'eu-central', label: '🇪🇺 EU Central' },
+    { value: 'ap-east', label: '🇯🇵 Asia Pacific East' },
+    { value: 'ap-south', label: '🇮🇳 Asia Pacific South' },
+    { value: 'sa-east', label: '🇧🇷 South America' },
+    { value: 'af-south', label: '🇿🇦 Africa South' },
+    { value: 'au-east', label: '🇦🇺 Australia' },
+  ];
+
+  return (
+    <div className={styles.settingsContent}>
+      {/* Customization Section */}
+      <div className={styles.settingsSection}>
+        <h3 className={styles.settingsTitle}>Server Customization</h3>
+        <p className={styles.settingsDescription}>
+          Personalize how this server appears in the dashboard.
+        </p>
+
+        <div className={styles.settingsForm}>
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsField}>
+              <label className={styles.fieldLabel}>Display Name</label>
+              <input
+                type="text"
+                className={styles.fieldInput}
+                placeholder="Custom display name..."
+                value={formData.displayName}
+                onChange={(e) => handleInputChange('displayName', e.target.value)}
+                maxLength={50}
+              />
+              <span className={styles.fieldHint}>Overrides the server name in the UI</span>
+            </div>
+
+            <div className={styles.settingsField}>
+              <label className={styles.fieldLabel}>Server Name</label>
+              <input
+                type="text"
+                className={styles.fieldInput}
+                placeholder="Server name..."
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                maxLength={100}
+              />
+            </div>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsField}>
+              <label className={styles.fieldLabel}>Region</label>
+              <select
+                className={styles.fieldSelect}
+                value={formData.region}
+                onChange={(e) => handleInputChange('region', e.target.value)}
+              >
+                <option value="">Select region...</option>
+                {regions.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.settingsRow}>
+            <div className={styles.settingsField}>
+              <ColorPicker
+                value={formData.color}
+                onChange={(color) => handleInputChange('color', color)}
+                label="Accent Color"
+              />
+            </div>
+
+            <div className={styles.settingsField}>
+              <IconSelector
+                value={formData.icon}
+                onChange={(icon) => handleInputChange('icon', icon)}
+                label="Server Icon"
+              />
+            </div>
+          </div>
+
+          <div className={styles.settingsField}>
+            <label className={styles.fieldLabel}>Tags</label>
+            <div className={styles.tagsInput}>
+              {formData.tags.map(tag => (
+                <span key={tag} className={styles.tagChip}>
+                  {tag}
+                  <button 
+                    className={styles.tagRemove}
+                    onClick={() => handleRemoveTag(tag)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {formData.tags.length < 10 && (
+                <input
+                  type="text"
+                  className={styles.tagInputField}
+                  placeholder="Add tag..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddTag(e)}
+                  maxLength={20}
+                />
+              )}
+            </div>
+            <span className={styles.fieldHint}>Press Enter to add. Max 10 tags.</span>
+          </div>
+
+          <div className={styles.settingsActions}>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+            {saveSuccess && (
+              <span className={styles.saveSuccess}>✓ Settings saved!</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* SSH Setup Section */}
+      <div className={styles.settingsSection}>
+        <h3 className={styles.settingsTitle}>SSH Setup Command</h3>
+        <p className={styles.settingsDescription}>
+          Run this command on your server <strong>{server.ip}</strong> to set up SSH access:
+        </p>
+        <div className={styles.codeBlock}>
+          {server.setupCommand || 'No setup command available'}
+        </div>
+        <Button onClick={handleCopyCommand} disabled={!server.setupCommand}>
+          Copy Command
+        </Button>
+      </div>
+
+      {/* Delete Server Section */}
+      <div className={`${styles.settingsSection} ${styles.deleteServerSection}`}>
+        <h3 className={styles.settingsTitle}>Delete Server</h3>
+        <p className={styles.settingsDescription}>
+          This action cannot be undone. This will permanently delete the server 
+          and all associated data from the management system.
+        </p>
+        
+        {deleteWarning && (
+          <div className={styles.deleteWarningBox}>
+            <AlertIcon size={18} />
+            <span>{deleteWarning}</span>
+          </div>
+        )}
+        
+        <p className={styles.settingsDescription}>
+          To confirm, type <strong>{server.displayName || server.name || server.ip}</strong> and <strong>{server.ip}</strong> below:
+        </p>
+        
+        <div className={styles.deleteForm}>
+          <div className={styles.settingsField}>
+            <label className={styles.fieldLabel}>Server Name</label>
+            <input
+              type="text"
+              className={styles.fieldInput}
+              placeholder={`Type "${server.displayName || server.name || server.ip}" to confirm`}
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              onPaste={(e) => e.preventDefault()}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+            />
+          </div>
+          
+          <div className={styles.settingsField}>
+            <label className={styles.fieldLabel}>Server IP</label>
+            <input
+              type="text"
+              className={styles.fieldInput}
+              placeholder={`Type "${server.ip}" to confirm`}
+              value={deleteConfirmIp}
+              onChange={(e) => setDeleteConfirmIp(e.target.value)}
+              onPaste={(e) => e.preventDefault()}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+            />
+          </div>
+          
+          <Button
+            variant="danger"
+            onClick={() => {
+              const serverDisplayName = server.displayName || server.name || server.ip;
+              if (deleteConfirmName === serverDisplayName && deleteConfirmIp === server.ip && onDelete) {
+                onDelete(server.id, !!deleteWarning);
+              }
+            }}
+            disabled={
+              deleteConfirmName !== (server.displayName || server.name || server.ip) || 
+              deleteConfirmIp !== server.ip || 
+              isDeleting
+            }
+          >
+            <TrashIcon size={16} />
+            {isDeleting ? 'Deleting...' : deleteWarning ? 'Force Delete Server' : 'Delete Server'}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 };
 

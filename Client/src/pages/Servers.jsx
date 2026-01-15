@@ -4,9 +4,11 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import ServerSettingsModal from '../components/ServerSettingsModal';
+import { SERVER_ICONS } from '../components/IconSelector';
 import { serversService } from '../api/servers';
 import { getRegionFlag } from '../utils/formatters';
-import { RefreshIcon, PlusIcon, ServersIcon, TrashIcon, EyeIcon, EyeOffIcon } from '../components/Icons';
+import { RefreshIcon, PlusIcon, ServersIcon, EyeIcon, EyeOffIcon, SettingsIcon } from '../components/Icons';
 import styles from './Servers.module.css';
 
 const Servers = () => {
@@ -14,14 +16,17 @@ const Servers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedServer, setSelectedServer] = useState(null);
   const [modalMessage, setModalMessage] = useState({ title: '', content: '' });
-  const [serverToDelete, setServerToDelete] = useState(null);
-  const [deleteWarning, setDeleteWarning] = useState(null);
   const [newServerData, setNewServerData] = useState(null);
   const [hiddenIPs, setHiddenIPs] = useState({});
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedColors, setSelectedColors] = useState([]);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     region: 'us-east',
@@ -77,30 +82,6 @@ const Servers = () => {
     },
   });
 
-  const deleteServerMutation = useMutation({
-    mutationFn: ({ id, force }) => serversService.deleteServer(id, force),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['servers']);
-      setShowDeleteModal(false);
-      setServerToDelete(null);
-      setDeleteWarning(null);
-      if (data.containersRemoved > 0) {
-        setModalMessage({
-          title: '✅ Server Deleted',
-          content: `Server deleted successfully. ${data.containersRemoved} container(s) stopped and removed.`
-        });
-        setShowSuccessModal(true);
-      }
-    },
-    onError: (error) => {
-      if (error.response?.status === 409) {
-        // Server has active deployments
-        const errorData = error.response.data;
-        setDeleteWarning(errorData);
-      }
-    },
-  });
-
   const checkAllMutation = useMutation({
     mutationFn: serversService.checkAllStatus,
     onSuccess: () => {
@@ -108,21 +89,18 @@ const Servers = () => {
     },
   });
 
+  const updateServerMutation = useMutation({
+    mutationFn: ({ id, data }) => serversService.updateServer(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['servers']);
+      setShowSettingsModal(false);
+      setSelectedServer(null);
+    },
+  });
+
   const handleAddServer = (e) => {
     e.preventDefault();
     addServerMutation.mutate({ ...formData, username: 'root' });
-  };
-
-  const handleDeleteServer = (id, name) => {
-    setServerToDelete({ id, name });
-    setDeleteWarning(null);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = (force = false) => {
-    if (serverToDelete) {
-      deleteServerMutation.mutate({ id: serverToDelete.id, force });
-    }
   };
 
   const toggleIPVisibility = (serverId) => {
@@ -136,11 +114,81 @@ const Servers = () => {
     checkAllMutation.mutate();
   };
 
-  const filteredServers = servers?.filter(
-    (server) =>
+  const handleOpenSettings = (server) => {
+    setSelectedServer(server);
+    setShowSettingsModal(true);
+  };
+
+  const handleSaveSettings = (updates) => {
+    if (selectedServer) {
+      updateServerMutation.mutate({ id: selectedServer.id, data: updates });
+    }
+  };
+
+  // Helper to get server display name
+  const getServerDisplayName = (server) => {
+    return server.displayName || server.name || server.ip;
+  };
+
+  // Helper to render server icon
+  const renderServerIcon = (server) => {
+    if (server.icon && SERVER_ICONS[server.icon]) {
+      return (
+        <div 
+          className={styles.serverIcon}
+          style={{ color: server.color || 'var(--primary-gradient)' }}
+          dangerouslySetInnerHTML={{ __html: SERVER_ICONS[server.icon].svg }}
+        />
+      );
+    }
+    return null;
+  };
+
+  // Extract available tags and colors from all servers
+  const availableTags = [...new Set(servers?.flatMap(s => s.tags || []) || [])].sort();
+  const availableColors = [...new Set(servers?.map(s => s.color).filter(Boolean) || [])];
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedTags.length > 0 || selectedColors.length > 0 || selectedStatus !== 'all';
+
+  const filteredServers = servers?.filter((server) => {
+    // Search filter
+    const matchesSearch = 
       server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      server.ip.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      server.ip.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (server.displayName && server.displayName.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Tag filter - server must have ALL selected tags
+    const matchesTags = selectedTags.length === 0 || 
+      selectedTags.every(tag => server.tags?.includes(tag));
+    
+    // Color filter - server must have ONE of the selected colors
+    const matchesColors = selectedColors.length === 0 || 
+      selectedColors.includes(server.color);
+    
+    // Status filter
+    const matchesStatus = selectedStatus === 'all' || server.status === selectedStatus;
+    
+    return matchesSearch && matchesTags && matchesColors && matchesStatus;
+  });
+
+  const handleToggleTag = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleToggleColor = (color) => {
+    setSelectedColors(prev => 
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedTags([]);
+    setSelectedColors([]);
+    setSelectedStatus('all');
+  };
 
   return (
     <Layout>
@@ -157,32 +205,155 @@ const Servers = () => {
           <Button onClick={handleRefreshAll} variant="outline">
             <RefreshIcon size={18} /> Refresh All
           </Button>
+          {(availableTags.length > 0 || availableColors.length > 0) && (
+            <Button 
+              variant={showFilters ? 'primary' : 'outline'} 
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              Filters {hasActiveFilters && `(${selectedTags.length + selectedColors.length + (selectedStatus !== 'all' ? 1 : 0)})`}
+            </Button>
+          )}
           <Button onClick={() => setShowAddModal(true)}>
             <PlusIcon size={18} /> Add Server
           </Button>
         </div>
       </div>
 
+      {/* Filter Bar */}
+      {showFilters && (
+        <div className={styles.filterBar}>
+          <div className={styles.filterSection}>
+            <span className={styles.filterLabel}>Status:</span>
+            <div className={styles.filterOptions}>
+              <button
+                className={`${styles.statusFilterBtn} ${selectedStatus === 'all' ? styles.selected : ''}`}
+                onClick={() => setSelectedStatus('all')}
+              >
+                All
+              </button>
+              <button
+                className={`${styles.statusFilterBtn} ${styles.online} ${selectedStatus === 'online' ? styles.selected : ''}`}
+                onClick={() => setSelectedStatus('online')}
+              >
+                Online
+              </button>
+              <button
+                className={`${styles.statusFilterBtn} ${styles.offline} ${selectedStatus === 'offline' ? styles.selected : ''}`}
+                onClick={() => setSelectedStatus('offline')}
+              >
+                Offline
+              </button>
+              <button
+                className={`${styles.statusFilterBtn} ${styles.pending} ${selectedStatus === 'pending' ? styles.selected : ''}`}
+                onClick={() => setSelectedStatus('pending')}
+              >
+                Pending
+              </button>
+            </div>
+          </div>
+          {availableColors.length > 0 && (
+            <div className={styles.filterSection}>
+              <span className={styles.filterLabel}>Colors:</span>
+              <div className={styles.filterOptions}>
+                {availableColors.map(color => (
+                  <button
+                    key={color}
+                    className={`${styles.colorFilterBtn} ${selectedColors.includes(color) ? styles.selected : ''}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => handleToggleColor(color)}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {availableTags.length > 0 && (
+            <div className={styles.filterSection}>
+              <span className={styles.filterLabel}>Tags:</span>
+              <div className={styles.filterOptions}>
+                {availableTags.map(tag => (
+                  <button
+                    key={tag}
+                    className={`${styles.tagFilterBtn} ${selectedTags.includes(tag) ? styles.selected : ''}`}
+                    onClick={() => handleToggleTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {hasActiveFilters && (
+            <button className={styles.clearFiltersBtn} onClick={clearAllFilters}>
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
         <div className={styles.emptyState}>Loading servers...</div>
-      ) : filteredServers && filteredServers.length > 0 ? (
+      ) : (
         <div className={styles.serversGrid}>
-          {filteredServers.map((server) => (
-            <div key={server.id} className={styles.serverCard}>
+          {/* Add Server Card */}
+          <button 
+            className={styles.addServerCard}
+            onClick={() => setShowAddModal(true)}
+          >
+            <div className={styles.addServerIcon}>
+              <PlusIcon size={48} />
+            </div>
+            <span className={styles.addServerText}>Add Server</span>
+          </button>
+
+          {filteredServers?.map((server) => (
+            <div 
+              key={server.id} 
+              className={styles.serverCard}
+              style={{ 
+                borderLeftColor: server.color || 'transparent',
+                borderLeftWidth: server.color ? '4px' : '0'
+              }}
+            >
               <div className={styles.serverHeader}>
                 <div className={styles.serverInfo}>
-                  <div className={styles.serverName}>
-                    {server.name}
-                    <span className={styles.regionBadge}>
-                      {getRegionFlag(server.region)} {server.region}
-                    </span>
+                  <div className={styles.serverNameRow}>
+                    {renderServerIcon(server)}
+                    <div className={styles.serverName}>
+                      {getServerDisplayName(server)}
+                      <span className={styles.regionBadge}>
+                        {getRegionFlag(server.region)} {server.region}
+                      </span>
+                    </div>
                   </div>
                   <span className={`${styles.statusBadge} ${styles[server.status || 'pending']}`}>
                     <span className={styles.statusDot}></span>
                     {server.status || 'pending'}
                   </span>
                 </div>
+                <button
+                  className={styles.settingsBtn}
+                  onClick={() => handleOpenSettings(server)}
+                  title="Server Settings"
+                >
+                  <SettingsIcon size={18} />
+                </button>
               </div>
+
+              {/* Tags Display */}
+              {server.tags && server.tags.length > 0 && (
+                <div className={styles.tagsRow}>
+                  {server.tags.slice(0, 3).map(tag => (
+                    <span key={tag} className={styles.serverTag}>{tag}</span>
+                  ))}
+                  {server.tags.length > 3 && (
+                    <span className={styles.tagMore}>+{server.tags.length - 3}</span>
+                  )}
+                </div>
+              )}
 
               <div className={styles.serverDetails}>
                 <div className={styles.serverDetail}>
@@ -209,54 +380,75 @@ const Servers = () => {
                 )}
               </div>
 
-              {/* Metrics Section */}
-              {server.status === 'online' && serverMetrics[server.id] && (
+              {/* Metrics Section - Always show for online servers */}
+              {server.status === 'online' && (
                 <div className={styles.metricsSection}>
-                  {serverMetrics[server.id].cpu?.usage !== undefined && serverMetrics[server.id].cpu?.usage !== null && (
-                    <div className={styles.metricItem}>
-                      <span className={styles.metricLabel}>CPU</span>
-                      <div className={styles.metricBar}>
-                        <div 
-                          className={styles.metricFill} 
-                          style={{ 
-                            width: `${serverMetrics[server.id].cpu.usage}%`,
-                            backgroundColor: serverMetrics[server.id].cpu.usage > 80 ? '#ef4444' : serverMetrics[server.id].cpu.usage > 60 ? '#f59e0b' : '#10b981'
-                          }}
-                        ></div>
-                      </div>
-                      <span className={styles.metricValue}>{serverMetrics[server.id].cpu.usage}%</span>
-                    </div>
-                  )}
-                  {serverMetrics[server.id].memory?.percentage !== undefined && serverMetrics[server.id].memory?.percentage !== null && (
-                    <div className={styles.metricItem}>
-                      <span className={styles.metricLabel}>Memory</span>
-                      <div className={styles.metricBar}>
-                        <div 
-                          className={styles.metricFill} 
-                          style={{ 
-                            width: `${serverMetrics[server.id].memory.percentage}%`,
-                            backgroundColor: serverMetrics[server.id].memory.percentage > 80 ? '#ef4444' : serverMetrics[server.id].memory.percentage > 60 ? '#f59e0b' : '#10b981'
-                          }}
-                        ></div>
-                      </div>
-                      <span className={styles.metricValue}>{serverMetrics[server.id].memory.percentage}%</span>
-                    </div>
-                  )}
-                  {serverMetrics[server.id].disk?.percentage !== undefined && serverMetrics[server.id].disk?.percentage !== null && (
-                    <div className={styles.metricItem}>
-                      <span className={styles.metricLabel}>Disk</span>
-                      <div className={styles.metricBar}>
-                        <div 
-                          className={styles.metricFill} 
-                          style={{ 
-                            width: `${serverMetrics[server.id].disk.percentage}%`,
-                            backgroundColor: serverMetrics[server.id].disk.percentage > 80 ? '#ef4444' : serverMetrics[server.id].disk.percentage > 60 ? '#f59e0b' : '#10b981'
-                          }}
-                        ></div>
-                      </div>
-                      <span className={styles.metricValue}>{serverMetrics[server.id].disk.percentage}%</span>
-                    </div>
-                  )}
+                  <div className={styles.metricItem}>
+                    <span className={styles.metricLabel}>CPU</span>
+                    {serverMetrics[server.id]?.cpu?.usage !== undefined && serverMetrics[server.id]?.cpu?.usage !== null ? (
+                      <>
+                        <div className={styles.metricBar}>
+                          <div 
+                            className={styles.metricFill} 
+                            style={{ 
+                              width: `${serverMetrics[server.id].cpu.usage}%`,
+                              backgroundColor: serverMetrics[server.id].cpu.usage > 80 ? '#ef4444' : serverMetrics[server.id].cpu.usage > 60 ? '#f59e0b' : '#10b981'
+                            }}
+                          ></div>
+                        </div>
+                        <span className={styles.metricValue}>{serverMetrics[server.id].cpu.usage}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.metricBar}></div>
+                        <span className={styles.metricValue}>N/A</span>
+                      </>
+                    )}
+                  </div>
+                  <div className={styles.metricItem}>
+                    <span className={styles.metricLabel}>Memory</span>
+                    {serverMetrics[server.id]?.memory?.percentage !== undefined && serverMetrics[server.id]?.memory?.percentage !== null ? (
+                      <>
+                        <div className={styles.metricBar}>
+                          <div 
+                            className={styles.metricFill} 
+                            style={{ 
+                              width: `${serverMetrics[server.id].memory.percentage}%`,
+                              backgroundColor: serverMetrics[server.id].memory.percentage > 80 ? '#ef4444' : serverMetrics[server.id].memory.percentage > 60 ? '#f59e0b' : '#10b981'
+                            }}
+                          ></div>
+                        </div>
+                        <span className={styles.metricValue}>{serverMetrics[server.id].memory.percentage}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.metricBar}></div>
+                        <span className={styles.metricValue}>N/A</span>
+                      </>
+                    )}
+                  </div>
+                  <div className={styles.metricItem}>
+                    <span className={styles.metricLabel}>Disk</span>
+                    {serverMetrics[server.id]?.disk?.percentage !== undefined && serverMetrics[server.id]?.disk?.percentage !== null ? (
+                      <>
+                        <div className={styles.metricBar}>
+                          <div 
+                            className={styles.metricFill} 
+                            style={{ 
+                              width: `${serverMetrics[server.id].disk.percentage}%`,
+                              backgroundColor: serverMetrics[server.id].disk.percentage > 80 ? '#ef4444' : serverMetrics[server.id].disk.percentage > 60 ? '#f59e0b' : '#10b981'
+                            }}
+                          ></div>
+                        </div>
+                        <span className={styles.metricValue}>{serverMetrics[server.id].disk.percentage}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.metricBar}></div>
+                        <span className={styles.metricValue}>N/A</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -264,29 +456,9 @@ const Servers = () => {
                 <Link to={`/servers/${server.id}`} className={styles.actionBtn}>
                   <ServersIcon size={16} /> View Details
                 </Link>
-                <button
-                  className={`${styles.actionBtn} ${styles.danger}`}
-                  onClick={() => handleDeleteServer(server.id, server.name)}
-                  disabled={deleteServerMutation.isPending}
-                >
-                  <TrashIcon size={16} /> Delete
-                </button>
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>
-            <ServersIcon size={80} />
-          </span>
-          <h3 className={styles.emptyTitle}>No servers yet</h3>
-          <p className={styles.emptyText}>
-            Get started by adding your first server
-          </p>
-          <Button onClick={() => setShowAddModal(true)}>
-            <PlusIcon size={18} /> Add Server
-          </Button>
         </div>
       )}
 
@@ -407,79 +579,6 @@ const Servers = () => {
         </div>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setServerToDelete(null);
-          setDeleteWarning(null);
-        }}
-        title={deleteWarning ? '⚠️ Warning: Active Deployments' : '🗑️ Delete Server'}
-      >
-        <div className={styles.deleteModal}>
-          {!deleteWarning ? (
-            <>
-              <p>Are you sure you want to delete <strong>{serverToDelete?.name}</strong>?</p>
-              <p className={styles.deleteNote}>This will check for active deployments before deletion.</p>
-              <div className={styles.modalFooter}>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setServerToDelete(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => confirmDelete(false)}
-                  disabled={deleteServerMutation.isPending}
-                >
-                  {deleteServerMutation.isPending ? 'Checking...' : 'Delete Server'}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className={styles.warningText}>
-                This server has <strong>{deleteWarning.deployments?.length || 0}</strong> active deployment(s):
-              </p>
-              <ul className={styles.deploymentList}>
-                {deleteWarning.deployments?.map((deployment, idx) => (
-                  <li key={idx}>
-                    <strong>{deployment.appName}</strong> - Container: {deployment.containerName} ({deployment.status})
-                  </li>
-                ))}
-              </ul>
-              <p className={styles.warningText}>
-                Deleting this server will stop and remove all Docker containers listed above.
-              </p>
-              <div className={styles.modalFooter}>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setServerToDelete(null);
-                    setDeleteWarning(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => confirmDelete(true)}
-                  disabled={deleteServerMutation.isPending}
-                >
-                  {deleteServerMutation.isPending ? 'Deleting...' : 'Force Delete & Stop Containers'}
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
-
       {/* Error Modal */}
       <Modal
         isOpen={showErrorModal}
@@ -511,6 +610,18 @@ const Servers = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Server Settings Modal */}
+      <ServerSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => {
+          setShowSettingsModal(false);
+          setSelectedServer(null);
+        }}
+        server={selectedServer}
+        onSave={handleSaveSettings}
+        isLoading={updateServerMutation.isPending}
+      />
     </Layout>
   );
 };

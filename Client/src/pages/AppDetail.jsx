@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { appsService } from '../api/apps';
 import { serversService } from '../api/servers';
-import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon } from '../components/Icons';
+import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon } from '../components/Icons';
 import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
 import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
 import styles from './AppDetail.module.css';
@@ -915,7 +915,7 @@ const AppDetail = () => {
             setSelectedServer('');
           }
         }}
-        title="🚀 Deploy Application"
+        title={<><RocketIcon size={20} /> Deploy Application</>}
         size="large"
         variant="terminal"
       >

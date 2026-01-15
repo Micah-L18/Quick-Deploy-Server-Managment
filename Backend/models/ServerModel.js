@@ -36,7 +36,13 @@ function toCamelCase(row) {
     status: row.status,
     error: row.error,
     addedAt: row.added_at,
-    lastChecked: row.last_checked
+    lastChecked: row.last_checked,
+    firstConnectedAt: row.first_connected_at,
+    // Customization fields
+    displayName: row.display_name,
+    color: row.color,
+    icon: row.icon,
+    tags: row.tags ? JSON.parse(row.tags) : []
   };
 }
 
@@ -97,8 +103,8 @@ async function create(server) {
 
   await run(`
     INSERT INTO servers 
-    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked, display_name, color, icon, tags)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     server.userId || null,
@@ -112,7 +118,11 @@ async function create(server) {
     server.status || 'pending',
     server.error || null,
     addedAt,
-    server.lastChecked || null
+    server.lastChecked || null,
+    server.displayName || null,
+    server.color || null,
+    server.icon || null,
+    server.tags ? JSON.stringify(server.tags) : null
   ]);
 
   return { ...server, id, addedAt };
@@ -130,10 +140,15 @@ async function update(serverId, updates) {
 
   const updatedServer = { ...server, ...updates };
 
+  // Handle tags serialization
+  const tagsValue = updatedServer.tags 
+    ? JSON.stringify(updatedServer.tags) 
+    : null;
+
   await run(`
     INSERT OR REPLACE INTO servers 
-    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked, display_name, color, icon, tags)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     updatedServer.id,
     updatedServer.userId || null,
@@ -147,7 +162,11 @@ async function update(serverId, updates) {
     updatedServer.status,
     updatedServer.error || null,
     updatedServer.addedAt,
-    updatedServer.lastChecked || null
+    updatedServer.lastChecked || null,
+    updatedServer.displayName || null,
+    updatedServer.color || null,
+    updatedServer.icon || null,
+    tagsValue
   ]);
 }
 
@@ -163,16 +182,40 @@ async function remove(serverId) {
 
 /**
  * Update server status
+ * If server has never connected (first_connected_at is null) and status is offline, keep it as pending
  * @param {string} serverId - Server ID
- * @param {string} status - New status
+ * @param {string} status - New status (online/offline)
  * @param {string|null} error - Error message
  * @returns {Promise<void>}
  */
 async function updateStatus(serverId, status, error = null) {
-  await run(
-    'UPDATE servers SET status = ?, error = ?, last_checked = ? WHERE id = ?',
-    [status, error, new Date().toISOString(), serverId]
-  );
+  const server = await get('SELECT first_connected_at, status FROM servers WHERE id = ?', [serverId]);
+  
+  if (!server) return;
+  
+  const now = new Date().toISOString();
+  
+  // If this is the first successful connection, record it
+  if (status === 'online' && !server.first_connected_at) {
+    await run(
+      'UPDATE servers SET status = ?, error = ?, last_checked = ?, first_connected_at = ? WHERE id = ?',
+      [status, error, now, now, serverId]
+    );
+  } 
+  // If server has never connected and connection failed, keep it as pending
+  else if (!server.first_connected_at && status === 'offline') {
+    await run(
+      'UPDATE servers SET status = ?, error = ?, last_checked = ? WHERE id = ?',
+      ['pending', error, now, serverId]
+    );
+  }
+  // Normal status update for servers that have connected before
+  else {
+    await run(
+      'UPDATE servers SET status = ?, error = ?, last_checked = ? WHERE id = ?',
+      [status, error, now, serverId]
+    );
+  }
 }
 
 module.exports = {

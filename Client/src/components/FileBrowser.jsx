@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { serversService } from '../api/servers';
 import { filesService } from '../api/files';
 import FileEditor from './FileEditor';
+import Modal from './Modal';
 import styles from './FileBrowser.module.css';
 
 const FileBrowser = ({ serverId }) => {
@@ -12,6 +13,14 @@ const FileBrowser = ({ serverId }) => {
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchWholeSystem, setSearchWholeSystem] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const { data: filesData, isLoading, error, refetch } = useQuery({
     queryKey: ['server-files', serverId, currentPath],
@@ -240,23 +249,44 @@ const FileBrowser = ({ serverId }) => {
       )}
       </div>
 
-      <div className={styles.editorPanel}>
-        {selectedFile ? (
-          <FileEditor
-            serverId={serverId}
-            filePath={selectedFile}
-            onClose={() => setSelectedFile(null)}
-          />
-        ) : (
-          <div className={styles.editorPlaceholder}>
-            <div className={styles.placeholderContent}>
-              <span className={styles.placeholderIcon}>📝</span>
-              <h3>Select a text file to view and edit</h3>
-              <p>Click on any file in the browser to open it here</p>
+      {/* Desktop: side-by-side editor panel */}
+      {!isMobile && (
+        <div className={styles.editorPanel}>
+          {selectedFile ? (
+            <FileEditor
+              serverId={serverId}
+              filePath={selectedFile}
+              onClose={() => setSelectedFile(null)}
+            />
+          ) : (
+            <div className={styles.editorPlaceholder}>
+              <div className={styles.placeholderContent}>
+                <span className={styles.placeholderIcon}>📝</span>
+                <h3>Select a text file to view and edit</h3>
+                <p>Click on any file in the browser to open it here</p>
+              </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Mobile: modal popup for file editor */}
+      {isMobile && selectedFile && (
+        <Modal
+          isOpen={!!selectedFile}
+          onClose={() => setSelectedFile(null)}
+          title={selectedFile.split('/').pop()}
+          size="large"
+        >
+          <div className={styles.mobileEditorModal}>
+            <FileEditor
+              serverId={serverId}
+              filePath={selectedFile}
+              onClose={() => setSelectedFile(null)}
+            />
           </div>
-        )}
-      </div>
+        </Modal>
+      )}
     </div>
   );
 };

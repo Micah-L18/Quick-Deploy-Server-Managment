@@ -130,77 +130,163 @@
 
 .settingsContent {
   padding: 24px 0;
-}
-
-.servicesContent {
-  padding: 24px 0;
-}
-
-.comingSoonPlaceholder {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 40px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 2px;
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.placeholderIcon {
-  font-size: 72px;
-  margin-bottom: 20px;
-  opacity: 0.6;
-}
-
-.comingSoonPlaceholder h3 {
-  font-size: 1.5rem;
-  color: var(--text-primary);
-  margin: 0 0 12px 0;
-  font-weight: 600;
-}
-
-.comingSoonPlaceholder p {
-  color: var(--text-medium);
-  margin: 0 0 20px 0;
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.comingSoonBadge {
-  display: inline-block;
-  padding: 6px 16px;
-  background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
-  color: white;
-  border-radius: 2px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  gap: 24px;
 }
 
 .settingsSection {
-  background: var(--card-bg);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 2px;
+  border-radius: 8px;
   padding: 32px;
-  max-width: 800px;
+  max-width: 900px;
 }
 
 .settingsTitle {
   font-size: 1.3rem;
-  color: var(--text-primary);
+  color: var(--text-dark);
   font-weight: 600;
   margin: 0 0 12px 0;
 }
 
 .settingsDescription {
   color: var(--text-medium);
-  margin: 0 0 20px 0;
+  margin: 0 0 24px 0;
   line-height: 1.6;
+}
+
+.settingsForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settingsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .settingsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settingsField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.fieldLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-medium);
+}
+
+.fieldInput,
+.fieldSelect {
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-dark);
+  transition: all 0.2s ease;
+}
+
+.fieldInput:focus,
+.fieldSelect:focus {
+  outline: none;
+  border-color: var(--primary-gradient);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.fieldInput::placeholder {
+  color: var(--text-muted);
+}
+
+.fieldSelect {
+  cursor: pointer;
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tagsInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 48px;
+  align-items: center;
+}
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--primary-gradient);
+  color: white;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tagRemove {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.tagRemove:hover {
+  opacity: 1;
+}
+
+.tagInputField {
+  flex: 1;
+  min-width: 80px;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--text-dark);
+}
+
+.tagInputField:focus {
+  outline: none;
+}
+
+.tagInputField::placeholder {
+  color: var(--text-muted);
+}
+
+.settingsActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.saveSuccess {
+  color: var(--success-color);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .codeBlock {
@@ -415,16 +501,16 @@
 .progressBar {
   width: 100%;
   height: 12px;
-  background: var(--bg-secondary);
-  border-radius: 2px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-  border-radius: 2px;
+  background: linear-gradient(90deg, #00d4ff, #00a8cc);
+  border-radius: 6px;
   transition: width 0.5s ease;
 }
 
@@ -761,31 +847,113 @@
 }
 
 @media (max-width: 768px) {
+  /* Ensure all content fits within viewport */
+  .pageHeader,
+  .serverInfo,
+  .tabs,
+  .metricsGrid,
+  .chartsGrid,
+  .settingsContent,
+  .appsContent,
+  .deploymentsTable {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   .pageHeader {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .backLink {
+    font-size: 0.85rem;
   }
 
   .pageTitle {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
+    flex-wrap: wrap;
+    word-break: break-word;
+  }
+
+  .regionBadge {
+    font-size: 0.75rem;
+    padding: 4px 10px;
   }
 
   .headerActions {
     width: 100%;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .headerActions button {
-    flex: 1;
+    width: 100%;
+    justify-content: center;
   }
 
+  /* Tabs - horizontal scrolling on mobile */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 20px 0 16px;
+    padding: 0;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Info Card */
+  .serverInfo {
+    margin-bottom: 24px;
+    width: 100%;
+  }
+
+  .infoCard {
+    padding: 12px;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .infoRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .ipAddress {
+    font-size: 0.8rem;
+    word-break: break-all;
+  }
+
+  .ipContainer {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  /* Metrics */
   .metricsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .metricsHeader {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+    align-items: stretch;
+    gap: 12px;
   }
 
   .metricsHeader .headerActions {
@@ -793,11 +961,266 @@
     flex-wrap: wrap;
   }
 
-  .timeRangeSelect {
-    flex: 1;
+  .sectionTitle {
+    font-size: 1.2rem;
   }
 
+  .timeRangeSelect {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .metricCard {
+    padding: 16px;
+  }
+
+  .metricTitle {
+    font-size: 1rem;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .metricDetail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 6px 0;
+  }
+
+  .metricValue {
+    text-align: left;
+  }
+
+  /* Charts */
   .chartsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
+
+  .chartCard {
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  .chartContainer {
+    height: 200px !important;
+    width: 100% !important;
+  }
+
+  /* Settings */
+  .settingsSection {
+    padding: 20px 12px;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .settingsContent {
+    width: 100%;
+    padding: 0;
+  }
+
+  .settingsTitle {
+    font-size: 1.1rem;
+  }
+
+  .settingsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsActions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .settingsActions button {
+    width: 100%;
+  }
+
+  /* Apps/Deployments Table - Card layout on mobile */
+  .deploymentsTable {
+    background: transparent;
+    border: none;
+  }
+
+  .tableHeader {
+    display: none;
+  }
+
+  .tableRow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+
+  .tableRow:hover {
+    background: var(--card-bg);
+  }
+
+  .appCell,
+  .containerCell,
+  .portsCell,
+  .dateCell {
+    width: 100%;
+  }
+
+  .appCell::before {
+    content: 'App: ';
+    font-weight: 500;
+    color: var(--text-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .containerCell::before {
+    content: 'Container: ';
+    font-weight: 500;
+    color: var(--text-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .portsCell::before {
+    content: 'Ports: ';
+    font-weight: 500;
+    color: var(--text-medium);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .actionsCell {
+    width: 100%;
+    justify-content: stretch;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 4px;
+  }
+
+  .actionsCell button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Stats Row */
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .statItem {
+    padding: 10px;
+  }
+
+  /* Logs */
+  .logsContent {
+    max-height: 200px;
+  }
+
+  .logsOutput {
+    font-size: 0.7rem;
+  }
+
+  /* Offline/Error notices */
+  .offlineNotice,
+  .metricsError {
+    padding: 32px 16px;
+  }
+
+  .offlineNotice h3,
+  .metricsError h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Width constraints for all tab content */
+  .settingsSection {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .infoCard {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Code blocks - prevent overflow */
+  .codeBlock,
+  .logsOutput {
+    max-width: 100%;
+    overflow-x: auto;
+    word-break: break-all;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .pageTitle {
+    font-size: 1.1rem;
+  }
+
+  .tab {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .metricCard {
+    padding: 12px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionsCell {
+    flex-direction: column;
+  }
+
+  .portBadge {
+    font-size: 0.7rem;
+  }
+}
+
+/* Delete Server Section */
+.deleteServerSection {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.deleteWarningBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.deleteWarningBox svg {
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.deleteWarningBox span {
+  font-size: 14px;
+  color: #b45309;
+  line-height: 1.5;
+}
+
+.deleteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 400px;
 }

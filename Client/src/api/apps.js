@@ -58,8 +58,11 @@ export const appsService = {
     return response.data;
   },
 
-  removeDeployment: async (appId, deploymentId) => {
-    const response = await api.delete(`/apps/${appId}/deployments/${deploymentId}`);
+  removeDeployment: async (appId, deploymentId, force = false) => {
+    const url = force 
+      ? `/apps/${appId}/deployments/${deploymentId}?force=true`
+      : `/apps/${appId}/deployments/${deploymentId}`;
+    const response = await api.delete(url);
     return response.data;
   },
 
