@@ -6,12 +6,45 @@ const execPromise = util.promisify(exec);
 const { SSH_KEYS_DIR, DEFAULT_SSH_USERNAME } = require('../../config');
 
 /**
+ * Supported operating systems for SSH setup
+ */
+const OS_TYPES = {
+  UBUNTU_DEBIAN: 'ubuntu-debian',
+  RHEL_CENTOS: 'rhel-centos',
+  ALPINE: 'alpine',
+  WINDOWS: 'windows'
+};
+
+/**
+ * OS display names and descriptions
+ */
+const OS_INFO = {
+  [OS_TYPES.UBUNTU_DEBIAN]: {
+    name: 'Ubuntu / Debian',
+    description: 'Ubuntu, Debian, Linux Mint, Pop!_OS, etc.'
+  },
+  [OS_TYPES.RHEL_CENTOS]: {
+    name: 'RHEL / CentOS / Fedora',
+    description: 'Red Hat Enterprise Linux, CentOS, Fedora, Rocky Linux, AlmaLinux'
+  },
+  [OS_TYPES.ALPINE]: {
+    name: 'Alpine Linux',
+    description: 'Alpine Linux (uses ash shell and doas)'
+  },
+  [OS_TYPES.WINDOWS]: {
+    name: 'Windows Server (PowerShell)',
+    description: 'Windows Server with OpenSSH installed'
+  }
+};
+
+/**
  * Generate SSH key pair for a server
  * @param {string} serverId - Server ID
  * @param {string} username - Username to create (defaults to nobase)
- * @returns {Promise<{privateKeyPath: string, publicKey: string, setupCommand: string, username: string}>}
+ * @param {string} osType - Operating system type
+ * @returns {Promise<{privateKeyPath: string, publicKey: string, setupCommand: string, username: string, osType: string}>}
  */
-async function generateKeyPair(serverId, username = DEFAULT_SSH_USERNAME) {
+async function generateKeyPair(serverId, username = DEFAULT_SSH_USERNAME, osType = OS_TYPES.UBUNTU_DEBIAN) {
   const keyPath = path.join(SSH_KEYS_DIR, `server_${serverId}`);
   const publicKeyPath = `${keyPath}.pub`;
 
@@ -28,14 +61,15 @@ async function generateKeyPair(serverId, username = DEFAULT_SSH_USERNAME) {
     const publicKey = await fs.readFile(publicKeyPath, 'utf-8');
     const trimmedPublicKey = publicKey.trim();
 
-    // Generate setup command based on username
-    const setupCommand = generateSetupCommand(username, trimmedPublicKey);
+    // Generate setup command based on OS type
+    const setupCommand = generateSetupCommand(username, trimmedPublicKey, osType);
 
     return {
       privateKeyPath: keyPath,
       publicKey: trimmedPublicKey,
       setupCommand,
-      username
+      username,
+      osType
     };
   } catch (error) {
     throw new Error(`Failed to generate SSH key: ${error.message}`);
@@ -43,41 +77,136 @@ async function generateKeyPair(serverId, username = DEFAULT_SSH_USERNAME) {
 }
 
 /**
- * Generate the setup command to configure SSH access on the server
- * Creates user with passwordless sudo if using non-root user
+ * Generate the setup command based on OS type
  * @param {string} username - Target username
  * @param {string} publicKey - SSH public key
+ * @param {string} osType - Operating system type
  * @returns {string} - Setup command to run on the server
  */
-function generateSetupCommand(username, publicKey) {
+function generateSetupCommand(username, publicKey, osType = OS_TYPES.UBUNTU_DEBIAN) {
+  switch (osType) {
+    case OS_TYPES.UBUNTU_DEBIAN:
+      return generateUbuntuDebianSetup(username, publicKey);
+    case OS_TYPES.RHEL_CENTOS:
+      return generateRhelCentosSetup(username, publicKey);
+    case OS_TYPES.ALPINE:
+      return generateAlpineSetup(username, publicKey);
+    case OS_TYPES.WINDOWS:
+      return generateWindowsSetup(username, publicKey);
+    default:
+      return generateUbuntuDebianSetup(username, publicKey);
+  }
+}
+
+/**
+ * Ubuntu/Debian setup (uses sudo group, apt package manager)
+ */
+function generateUbuntuDebianSetup(username, publicKey) {
   if (username === 'root') {
-    // Simple root setup - just add key to authorized_keys
     return `mkdir -p ~/.ssh && echo "${publicKey}" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys`;
   }
 
-  // Non-root user setup - single line command chain for easy copy/paste
-  // Creates user, configures sudo, sets up SSH key
   const commands = [
-    // Create user if doesn't exist
     `id "${username}" &>/dev/null || useradd -m -s /bin/bash ${username}`,
-    // Add user to sudo group
     `usermod -aG sudo ${username}`,
-    // Add user to docker group if it exists
     `getent group docker &>/dev/null && usermod -aG docker ${username} || true`,
-    // Configure passwordless sudo for the user
     `echo "${username} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${username}`,
     `chmod 440 /etc/sudoers.d/${username}`,
-    // Set up SSH directory and key
     `mkdir -p /home/${username}/.ssh`,
     `echo "${publicKey}" >> /home/${username}/.ssh/authorized_keys`,
     `chmod 700 /home/${username}/.ssh`,
     `chmod 600 /home/${username}/.ssh/authorized_keys`,
     `chown -R ${username}:${username} /home/${username}/.ssh`,
-    // Success message
-    `echo "User ${username} configured successfully with passwordless sudo"`
+    `echo "User ${username} configured successfully"`
   ];
-
   return commands.join(' && ');
+}
+
+/**
+ * RHEL/CentOS/Fedora setup (uses wheel group, yum/dnf package manager)
+ */
+function generateRhelCentosSetup(username, publicKey) {
+  if (username === 'root') {
+    return `mkdir -p ~/.ssh && echo "${publicKey}" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys`;
+  }
+
+  const commands = [
+    `id "${username}" &>/dev/null || useradd -m -s /bin/bash ${username}`,
+    `usermod -aG wheel ${username}`,
+    `getent group docker &>/dev/null && usermod -aG docker ${username} || true`,
+    `echo "${username} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${username}`,
+    `chmod 440 /etc/sudoers.d/${username}`,
+    `mkdir -p /home/${username}/.ssh`,
+    `echo "${publicKey}" >> /home/${username}/.ssh/authorized_keys`,
+    `chmod 700 /home/${username}/.ssh`,
+    `chmod 600 /home/${username}/.ssh/authorized_keys`,
+    `chown -R ${username}:${username} /home/${username}/.ssh`,
+    `restorecon -R /home/${username}/.ssh 2>/dev/null || true`,
+    `echo "User ${username} configured successfully"`
+  ];
+  return commands.join(' && ');
+}
+
+/**
+ * Alpine Linux setup (uses doas instead of sudo, ash shell, adduser/addgroup)
+ */
+function generateAlpineSetup(username, publicKey) {
+  if (username === 'root') {
+    return `mkdir -p ~/.ssh && echo "${publicKey}" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys`;
+  }
+
+  const commands = [
+    `id "${username}" 2>/dev/null || adduser -D -s /bin/ash ${username}`,
+    `addgroup ${username} wheel 2>/dev/null || true`,
+    `addgroup ${username} docker 2>/dev/null || true`,
+    `apk add --no-cache doas 2>/dev/null || true`,
+    `mkdir -p /etc/doas.d`,
+    `echo "permit nopass ${username}" > /etc/doas.d/${username}.conf`,
+    `chmod 400 /etc/doas.d/${username}.conf`,
+    `mkdir -p /home/${username}/.ssh`,
+    `echo "${publicKey}" >> /home/${username}/.ssh/authorized_keys`,
+    `chmod 700 /home/${username}/.ssh`,
+    `chmod 600 /home/${username}/.ssh/authorized_keys`,
+    `chown -R ${username}:${username} /home/${username}/.ssh`,
+    `echo "User ${username} configured successfully"`
+  ];
+  return commands.join(' && ');
+}
+
+/**
+ * Windows Server PowerShell setup (uses OpenSSH)
+ * Note: Users in Administrators group MUST use administrators_authorized_keys
+ * Regular users use their own .ssh/authorized_keys
+ */
+function generateWindowsSetup(username, publicKey) {
+  // For built-in Administrator account - just add the key
+  if (username.toLowerCase() === 'administrator') {
+    return `$authKeys = "$env:ProgramData\\ssh\\administrators_authorized_keys"; ` +
+      `New-Item -ItemType Directory -Path (Split-Path $authKeys) -Force -ErrorAction SilentlyContinue; ` +
+      `Add-Content -Path $authKeys -Value '${publicKey}'; ` +
+      `icacls $authKeys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"; ` +
+      `Write-Host "Administrator SSH key configured successfully"`;
+  }
+
+  // For custom users (like nobase) - create user, add to Admins, use administrators_authorized_keys
+  // Windows OpenSSH requires admin users to use the shared administrators_authorized_keys file
+  const commands = [
+    `$u = "${username}"`,
+    // Create user if doesn't exist
+    `if (!(Get-LocalUser -Name $u -ErrorAction SilentlyContinue)) { ` +
+      `$p = ConvertTo-SecureString -String ([System.Guid]::NewGuid().ToString()) -AsPlainText -Force; ` +
+      `New-LocalUser -Name $u -Password $p -PasswordNeverExpires -Description "SSH management user" }`,
+    // Add to Administrators group (required for management)
+    `Add-LocalGroupMember -Group "Administrators" -Member $u -ErrorAction SilentlyContinue`,
+    // For admin users, we MUST use administrators_authorized_keys (not user's .ssh folder)
+    `$authKeys = "$env:ProgramData\\ssh\\administrators_authorized_keys"`,
+    `New-Item -ItemType Directory -Path (Split-Path $authKeys) -Force -ErrorAction SilentlyContinue`,
+    `Add-Content -Path $authKeys -Value '${publicKey}'`,
+    // Fix permissions - only Administrators and SYSTEM can access this file
+    `icacls $authKeys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`,
+    `Write-Host "User $u configured with admin SSH key successfully"`
+  ];
+  return commands.join('; ');
 }
 
 /**
@@ -134,5 +263,7 @@ module.exports = {
   deleteKeyPair,
   readPrivateKey,
   readPublicKey,
-  keyPairExists
+  keyPairExists,
+  OS_TYPES,
+  OS_INFO
 };

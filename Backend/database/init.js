@@ -147,7 +147,8 @@ async function runMigrations() {
     { name: 'color', type: 'TEXT' },
     { name: 'icon', type: 'TEXT' },
     { name: 'tags', type: 'TEXT' },  // JSON array of tags
-    { name: 'first_connected_at', type: 'TEXT' }  // Timestamp of first successful connection
+    { name: 'first_connected_at', type: 'TEXT' },  // Timestamp of first successful connection
+    { name: 'os_type', type: 'TEXT DEFAULT \'ubuntu-debian\'' }  // Operating system type for setup commands
   ];
 
   for (const column of serverColumns) {

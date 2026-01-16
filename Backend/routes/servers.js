@@ -6,6 +6,19 @@ const { keyManager, connectionManager, sftpService } = require('../services/ssh'
 const { DEFAULT_SSH_USERNAME } = require('../config');
 
 /**
+ * GET /api/servers/os-types
+ * Get supported OS types for setup commands
+ */
+router.get('/os-types', requireAuth, (req, res) => {
+  const osTypes = Object.entries(keyManager.OS_TYPES).map(([key, value]) => ({
+    id: value,
+    ...keyManager.OS_INFO[value]
+  }));
+  
+  res.json(osTypes);
+});
+
+/**
  * GET /api/servers
  * Get all servers for user
  */
@@ -109,7 +122,7 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
  * Add a new server
  */
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
-  const { name, region, ip, username: providedUsername } = req.body;
+  const { name, region, ip, username: providedUsername, osType } = req.body;
 
   // Use provided username or default to nobase
   const username = providedUsername || DEFAULT_SSH_USERNAME;
@@ -134,8 +147,8 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
   const serverId = Date.now().toString();
 
-  // Generate SSH key for this server with the target username
-  const keyInfo = await keyManager.generateKeyPair(serverId, username);
+  // Generate SSH key for this server with the target username and OS type
+  const keyInfo = await keyManager.generateKeyPair(serverId, username, osType);
 
   const newServer = await ServerModel.create({
     id: serverId,
@@ -144,6 +157,7 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     region: region || null,
     ip,
     username,
+    osType: keyInfo.osType,
     privateKeyPath: keyInfo.privateKeyPath,
     publicKey: keyInfo.publicKey,
     setupCommand: keyInfo.setupCommand,

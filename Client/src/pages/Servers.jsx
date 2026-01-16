@@ -19,6 +19,8 @@ const Servers = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showWindowsHelpModal, setShowWindowsHelpModal] = useState(false);
+  const [showWindowsAuthModal, setShowWindowsAuthModal] = useState(false);
   const [selectedServer, setSelectedServer] = useState(null);
   const [modalMessage, setModalMessage] = useState({ title: '', content: '' });
   const [newServerData, setNewServerData] = useState(null);
@@ -31,12 +33,20 @@ const Servers = () => {
     name: '',
     region: 'us-east',
     ip: '',
+    osType: 'ubuntu-debian',
   });
 
   const { data: servers, isLoading } = useQuery({
     queryKey: ['servers'],
     queryFn: serversService.getServers,
     refetchInterval: 30000,
+  });
+
+  // Fetch OS types for the dropdown
+  const { data: osTypes } = useQuery({
+    queryKey: ['os-types'],
+    queryFn: serversService.getOsTypes,
+    staleTime: Infinity, // OS types don't change
   });
 
   // Fetch metrics for all online servers using useQueries
@@ -65,7 +75,7 @@ const Servers = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries(['servers']);
       setShowAddModal(false);
-      setFormData({ name: '', region: 'us-east', ip: '' });
+      setFormData({ name: '', region: 'us-east', ip: '', osType: 'ubuntu-debian' });
       // Show setup command modal
       setNewServerData(data);
       setShowSetupModal(true);
@@ -334,6 +344,25 @@ const Servers = () => {
                     <span className={styles.statusDot}></span>
                     {server.status || 'pending'}
                   </span>
+                  {/* Show clickable help for Windows errors */}
+                  {server.status === 'offline' && server.osType === 'windows' && server.error?.includes('ECONNREFUSED') && (
+                    <button
+                      className={styles.errorHelpBtn}
+                      onClick={() => setShowWindowsHelpModal(true)}
+                      title="Click for help"
+                    >
+                      ⚠️ SSH not enabled
+                    </button>
+                  )}
+                  {server.status === 'offline' && server.osType === 'windows' && server.error?.includes('authentication') && (
+                    <button
+                      className={styles.errorHelpBtn}
+                      onClick={() => setShowWindowsAuthModal(true)}
+                      title="Click for help"
+                    >
+                      🔑 Key not configured
+                    </button>
+                  )}
                 </div>
                 <button
                   className={styles.settingsBtn}
@@ -502,21 +531,44 @@ const Servers = () => {
             </div>
           </div>
 
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>IP Address / Hostname</label>
-              <input
-                type="text"
-                className={styles.formInput}
-                value={formData.ip}
-                onChange={(e) =>
-                  setFormData({ ...formData, ip: e.target.value })
-                }
-                required
-                placeholder="192.168.1.100"
-              />
-              <p className={styles.formHint}>SSH connection will use root user</p>
-            </div>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>IP Address / Hostname</label>
+            <input
+              type="text"
+              className={styles.formInput}
+              value={formData.ip}
+              onChange={(e) =>
+                setFormData({ ...formData, ip: e.target.value })
+              }
+              required
+              placeholder="192.168.1.100"
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Operating System</label>
+            <select
+              className={styles.formSelect}
+              value={formData.osType}
+              onChange={(e) =>
+                setFormData({ ...formData, osType: e.target.value })
+              }
+            >
+              {osTypes?.map(os => (
+                <option key={os.id} value={os.id}>{os.name}</option>
+              )) || (
+                <>
+                  <option value="ubuntu-debian">Ubuntu / Debian</option>
+                  <option value="rhel-centos">RHEL / CentOS / Fedora</option>
+                  <option value="alpine">Alpine Linux</option>
+                  <option value="windows">Windows Server (PowerShell)</option>
+                  <option value="macos">macOS</option>
+                </>
+              )}
+            </select>
+            <p className={styles.formHint}>
+              {osTypes?.find(os => os.id === formData.osType)?.description || 'Select your server operating system'}
+            </p>
           </div>
 
           <div className={styles.modalFooter}>
@@ -550,7 +602,13 @@ const Servers = () => {
           
           <div className={styles.setupInstructions}>
             <ol>
-              <li>SSH into your server using password: <code>ssh root@{newServerData?.ip}</code></li>
+              <li>
+                {newServerData?.osType === 'windows' ? (
+                  <>Open PowerShell as Administrator on your server</>
+                ) : (
+                  <>SSH into your server as root: <code>ssh root@{newServerData?.ip}</code></>
+                )}
+              </li>
               <li>Run this command on the server:</li>
             </ol>
           </div>
@@ -569,6 +627,9 @@ const Servers = () => {
           </Button>
           
           <p className={styles.setupNote}>
+            {newServerData?.username && newServerData.username !== 'root' && newServerData?.osType !== 'windows' && (
+              <>This will create a <code>{newServerData.username}</code> user with passwordless sudo access. <br/></>
+            )}
             After running the command, click "Check Status" on the server to verify the connection.
           </p>
           
@@ -608,6 +669,77 @@ const Servers = () => {
             <Button onClick={() => setShowSuccessModal(false)}>
               OK
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Windows SSH Not Enabled Modal */}
+      <Modal
+        isOpen={showWindowsHelpModal}
+        onClose={() => setShowWindowsHelpModal(false)}
+        title="🖥️ Enable OpenSSH on Windows Server"
+      >
+        <div className={styles.messageModal}>
+          <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+            The connection was refused because OpenSSH Server is not running. Follow these steps to enable it:
+          </p>
+          
+          <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Using PowerShell (Run as Administrator)</h4>
+          <div className={styles.codeBlock}>
+            <code>
+              # Install OpenSSH Server{`\n`}
+              Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0{`\n\n`}
+              # Start the service{`\n`}
+              Start-Service sshd{`\n\n`}
+              # Set to start automatically{`\n`}
+              Set-Service -Name sshd -StartupType 'Automatic'
+            </code>
+          </div>
+
+          <p style={{ marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            After enabling SSH, run the setup command shown when you added the server, then click "Check Status".
+          </p>
+          
+          <div className={styles.modalFooter}>
+            <Button onClick={() => setShowWindowsHelpModal(false)}>Got it</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Windows SSH Auth Failed Modal */}
+      <Modal
+        isOpen={showWindowsAuthModal}
+        onClose={() => setShowWindowsAuthModal(false)}
+        title="🔑 Windows SSH Key Setup Required"
+      >
+        <div className={styles.messageModal}>
+          <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+            SSH is running but key authentication failed. You need to run the setup command on the Windows server.
+          </p>
+          
+          <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Important for Windows</h4>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '1rem' }}>
+            On Windows, users in the <strong>Administrators</strong> group must use a special key file at:
+          </p>
+          <div className={styles.codeBlock}>
+            <code>C:\ProgramData\ssh\administrators_authorized_keys</code>
+          </div>
+
+          <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Steps to Fix</h4>
+          <ol style={{ paddingLeft: '1.25rem', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
+            <li>Go to the server's detail page</li>
+            <li>Find the <strong>Setup Command</strong> section</li>
+            <li>Copy the PowerShell command</li>
+            <li>Run it on your Windows server as <strong>Administrator</strong></li>
+            <li>Click "Check Status" to verify</li>
+          </ol>
+
+          <p style={{ marginTop: '1.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            ⚠️ <strong>Note:</strong> The permissions on <code>administrators_authorized_keys</code> must only allow Administrators and SYSTEM. The setup command handles this automatically.
+          </p>
+          
+          <div className={styles.modalFooter}>
+            <Button onClick={() => setShowWindowsAuthModal(false)}>Got it</Button>
           </div>
         </div>
       </Modal>
