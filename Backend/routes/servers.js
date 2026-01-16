@@ -3,6 +3,7 @@ const router = express.Router();
 const { ServerModel, ActivityModel } = require('../models');
 const { requireAuth, asyncHandler, checkServerOwnership } = require('../middleware');
 const { keyManager, connectionManager, sftpService } = require('../services/ssh');
+const { DEFAULT_SSH_USERNAME } = require('../config');
 
 /**
  * GET /api/servers
@@ -108,10 +109,13 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
  * Add a new server
  */
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
-  const { name, region, ip, username } = req.body;
+  const { name, region, ip, username: providedUsername } = req.body;
 
-  if (!ip || !username) {
-    return res.status(400).json({ error: 'IP address and username are required' });
+  // Use provided username or default to nobase
+  const username = providedUsername || DEFAULT_SSH_USERNAME;
+
+  if (!ip) {
+    return res.status(400).json({ error: 'IP address is required' });
   }
 
   // Check if server with this IP already exists for this user
@@ -130,8 +134,8 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
   const serverId = Date.now().toString();
 
-  // Generate SSH key for this server
-  const keyInfo = await keyManager.generateKeyPair(serverId);
+  // Generate SSH key for this server with the target username
+  const keyInfo = await keyManager.generateKeyPair(serverId, username);
 
   const newServer = await ServerModel.create({
     id: serverId,

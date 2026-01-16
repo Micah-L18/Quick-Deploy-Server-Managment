@@ -405,11 +405,8 @@ const ServicesManager = ({ serverId }) => {
                       {output.isSudoError && (
                         <div className={styles.sudoHelp}>
                           <p><strong>How to fix:</strong> Your SSH user requires a password for sudo.</p>
-                          <p>Either:</p>
-                          <ol>
-                            <li>Use <code>root</code> as the username when adding the server</li>
-                            <li>Or configure passwordless sudo on your server:</li>
-                          </ol>
+                          <p>Make sure you ran the setup command as root when adding the server. The setup command creates a <code>nobase</code> user with passwordless sudo access.</p>
+                          <p>If you're using a custom user, configure passwordless sudo:</p>
                           <pre className={styles.helpCode}>sudo visudo{'\n'}# Add this line at the end:{'\n'}yourusername ALL=(ALL) NOPASSWD: ALL</pre>
                         </div>
                       )}

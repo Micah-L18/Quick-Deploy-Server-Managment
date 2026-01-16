@@ -17,8 +17,8 @@ router.get('/:id/files', requireAuth, asyncHandler(async (req, res) => {
   const dirPath = req.query.path || '/';
 
   try {
-    // Try SFTP first
-    const items = await sftpService.listDirectory(
+    // Use smart listing that auto-elevates for protected paths
+    const items = await sftpService.listDirectorySmart(
       {
         host: server.ip,
         username: server.username,
@@ -70,7 +70,8 @@ router.get('/:id/files/read', requireAuth, asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'File path is required' });
   }
 
-  const content = await sftpService.readFile(
+  // Use smart read that auto-elevates for protected files
+  const content = await sftpService.readFileSmart(
     {
       host: server.ip,
       username: server.username,
@@ -137,7 +138,8 @@ router.put('/:id/files/write', requireAuth, asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'File path is required' });
   }
 
-  await sftpService.writeFile(
+  // Use smart write that auto-elevates for protected files
+  await sftpService.writeFileSmart(
     {
       host: server.ip,
       username: server.username,

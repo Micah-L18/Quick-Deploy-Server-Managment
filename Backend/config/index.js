@@ -18,6 +18,9 @@ const DB_FILE = path.join(__dirname, '..', 'servers.db');
 // SSH keys directory
 const SSH_KEYS_DIR = path.join(__dirname, '..', 'ssh_keys');
 
+// Default SSH username for new servers (non-root with passwordless sudo)
+const DEFAULT_SSH_USERNAME = process.env.DEFAULT_SSH_USERNAME || 'nobase';
+
 // CORS configuration
 // Uses FRONTEND_URL from .env, defaults to localhost:3000
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -53,6 +56,7 @@ module.exports = {
   PORT,
   DB_FILE,
   SSH_KEYS_DIR,
+  DEFAULT_SSH_USERNAME,
   CORS_ORIGINS,
   SESSION_CONFIG,
   SSH_POOL_CONFIG,

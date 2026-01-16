@@ -366,6 +366,176 @@ async function searchFiles(serverConfig, query, searchPath = '/') {
   return results;
 }
 
+/**
+ * Read a protected file using sudo cat
+ * For files that require elevated permissions
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} filePath - File path
+ * @returns {Promise<string>}
+ */
+async function readProtectedFile(serverConfig, filePath) {
+  const { executeCommand, isProtectedPath } = require('./connectionManager');
+  
+  // Escape the path for shell
+  const escapedPath = filePath.replace(/"/g, '\\"');
+  const command = `sudo cat "${escapedPath}"`;
+  
+  const { stdout, stderr, code } = await executeCommand(serverConfig, command);
+  
+  if (code !== 0) {
+    throw new Error(stderr || `Failed to read file: ${filePath}`);
+  }
+  
+  return stdout;
+}
+
+/**
+ * Write to a protected file using sudo tee
+ * For files that require elevated permissions
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} filePath - File path
+ * @param {string} content - File content
+ * @returns {Promise<void>}
+ */
+async function writeProtectedFile(serverConfig, filePath, content) {
+  const { executeCommand } = require('./connectionManager');
+  
+  // Escape the path for shell
+  const escapedPath = filePath.replace(/"/g, '\\"');
+  // Use printf to handle special characters properly, pipe to sudo tee
+  // This avoids issues with newlines and special chars in echo
+  const escapedContent = content
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, '\\$')
+    .replace(/`/g, '\\`');
+  
+  const command = `printf '%s' "${escapedContent}" | sudo tee "${escapedPath}" > /dev/null`;
+  
+  const { stderr, code } = await executeCommand(serverConfig, command);
+  
+  if (code !== 0) {
+    throw new Error(stderr || `Failed to write file: ${filePath}`);
+  }
+}
+
+/**
+ * Smart read file - uses sudo for protected paths, SFTP otherwise
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} filePath - File path
+ * @returns {Promise<string>}
+ */
+async function readFileSmart(serverConfig, filePath) {
+  const { isProtectedPath } = require('./connectionManager');
+  
+  // Try regular SFTP first
+  try {
+    return await readFile(serverConfig, filePath);
+  } catch (err) {
+    // If permission denied or protected path, try with sudo
+    if (err.message.includes('Permission denied') || 
+        err.message.includes('EACCES') || 
+        isProtectedPath(filePath)) {
+      return await readProtectedFile(serverConfig, filePath);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Smart write file - uses sudo for protected paths, SFTP otherwise
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} filePath - File path
+ * @param {string} content - File content
+ * @returns {Promise<void>}
+ */
+async function writeFileSmart(serverConfig, filePath, content) {
+  const { isProtectedPath } = require('./connectionManager');
+  
+  // Try regular SFTP first
+  try {
+    return await writeFile(serverConfig, filePath, content);
+  } catch (err) {
+    // If permission denied or protected path, try with sudo
+    if (err.message.includes('Permission denied') || 
+        err.message.includes('EACCES') || 
+        isProtectedPath(filePath)) {
+      return await writeProtectedFile(serverConfig, filePath, content);
+    }
+    throw err;
+  }
+}
+
+/**
+ * List directory with fallback to sudo ls for protected directories
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} dirPath - Directory path
+ * @returns {Promise<Array>}
+ */
+async function listDirectorySmart(serverConfig, dirPath = '/') {
+  const { executeCommand, isProtectedPath } = require('./connectionManager');
+  
+  // Try regular SFTP first
+  try {
+    return await listDirectory(serverConfig, dirPath);
+  } catch (err) {
+    // If permission denied, try with sudo ls
+    if (err.message.includes('Permission denied') || 
+        err.message.includes('EACCES') || 
+        isProtectedPath(dirPath)) {
+      const command = `sudo ls -la "${dirPath}" 2>&1`;
+      const { stdout, code } = await executeCommand(serverConfig, command);
+      
+      if (code !== 0 || stdout.includes('cannot access')) {
+        throw new Error('Directory not found or permission denied');
+      }
+      
+      // Parse ls output (same as listFilesViaCommand)
+      const lines = stdout.trim().split('\n');
+      const files = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const parts = line.split(/\s+/);
+        if (parts.length < 9) continue;
+        
+        const permissions = parts[0];
+        const size = parseInt(parts[4]) || 0;
+        const name = parts.slice(8).join(' ');
+        
+        if (name === '.' || name === '..') continue;
+        
+        const isDirectory = permissions.startsWith('d');
+        const fullPath = dirPath.endsWith('/')
+          ? dirPath + name
+          : dirPath + '/' + name;
+        
+        files.push({
+          name,
+          path: fullPath,
+          type: isDirectory ? 'directory' : 'file',
+          isDirectory,
+          isFile: !isDirectory,
+          permissions,
+          size: isDirectory ? 0 : size,
+          modified: Date.now()
+        });
+      }
+      
+      files.sort((a, b) => {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      return files;
+    }
+    throw err;
+  }
+}
+
 module.exports = {
   listDirectory,
   readFile,
@@ -376,5 +546,12 @@ module.exports = {
   deleteDirectory,
   rename,
   listFilesViaCommand,
-  searchFiles
+  searchFiles,
+  // Protected file operations
+  readProtectedFile,
+  writeProtectedFile,
+  // Smart operations (auto-elevate if needed)
+  readFileSmart,
+  writeFileSmart,
+  listDirectorySmart
 };

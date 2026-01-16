@@ -100,7 +100,8 @@ const Servers = () => {
 
   const handleAddServer = (e) => {
     e.preventDefault();
-    addServerMutation.mutate({ ...formData, username: 'root' });
+    // Username defaults to 'nobase' on backend if not provided
+    addServerMutation.mutate(formData);
   };
 
   const toggleIPVisibility = (serverId) => {

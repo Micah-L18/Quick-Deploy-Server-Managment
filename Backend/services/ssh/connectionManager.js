@@ -4,6 +4,94 @@ const connectionPool = require('./connectionPool');
 const { SSH_POOL_CONFIG } = require('../../config');
 
 /**
+ * Commands that require sudo when running as non-root user
+ */
+const SUDO_COMMANDS = [
+  'apt-get',
+  'apt',
+  'dpkg',
+  'systemctl',
+  'service',
+  'useradd',
+  'usermod',
+  'userdel',
+  'groupadd',
+  'chmod',
+  'chown',
+  'mount',
+  'umount',
+  'reboot',
+  'shutdown',
+  'iptables',
+  'ufw',
+  'firewall-cmd',
+  'journalctl',
+  'lsof -i', // specifically lsof for ports
+];
+
+/**
+ * Paths that typically require sudo for file operations
+ */
+const PROTECTED_PATHS = [
+  '/etc/',
+  '/var/log/',
+  '/root/',
+  '/usr/local/',
+  '/opt/',
+  '/sys/',
+  '/proc/',
+];
+
+/**
+ * Check if a command needs sudo
+ * @param {string} command - Command to check
+ * @returns {boolean}
+ */
+function needsSudo(command) {
+  const trimmedCmd = command.trim();
+  return SUDO_COMMANDS.some(sudoCmd => 
+    trimmedCmd.startsWith(sudoCmd) || 
+    trimmedCmd.includes(` ${sudoCmd}`) ||
+    trimmedCmd.includes(`&& ${sudoCmd}`) ||
+    trimmedCmd.includes(`| ${sudoCmd}`)
+  );
+}
+
+/**
+ * Check if a file path requires elevated permissions
+ * @param {string} filePath - Path to check
+ * @returns {boolean}
+ */
+function isProtectedPath(filePath) {
+  return PROTECTED_PATHS.some(protectedPath => 
+    filePath.startsWith(protectedPath)
+  );
+}
+
+/**
+ * Wrap a command with sudo if needed (for non-root users)
+ * If the command already has sudo, it won't be added again
+ * @param {string} command - Command to wrap
+ * @param {boolean} forceSudo - Force sudo regardless of command detection
+ * @returns {string}
+ */
+function wrapWithSudo(command, forceSudo = false) {
+  const trimmedCmd = command.trim();
+  
+  // Don't add sudo if it's already there
+  if (trimmedCmd.startsWith('sudo ')) {
+    return command;
+  }
+  
+  // Add sudo if needed or forced
+  if (forceSudo || needsSudo(trimmedCmd)) {
+    return `sudo ${command}`;
+  }
+  
+  return command;
+}
+
+/**
  * Test SSH connection to a server
  * @param {string} host - Server IP/hostname
  * @param {string} username - SSH username
@@ -161,5 +249,10 @@ module.exports = {
   executeCommand,
   executeCommands,
   createShell,
+  wrapWithSudo,
+  needsSudo,
+  isProtectedPath,
+  SUDO_COMMANDS,
+  PROTECTED_PATHS,
   pool: connectionPool
 };
