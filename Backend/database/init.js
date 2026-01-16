@@ -187,7 +187,8 @@ async function runMigrations() {
     { name: 'custom_args', type: 'TEXT' },     // Custom docker run arguments
     { name: 'registry_url', type: 'TEXT' },
     { name: 'registry_username', type: 'TEXT' },
-    { name: 'registry_password', type: 'TEXT' }
+    { name: 'registry_password', type: 'TEXT' },
+    { name: 'web_ui_port', type: 'TEXT' }      // Host port that has web UI (null = no web UI)
   ];
 
   for (const column of appsColumns) {

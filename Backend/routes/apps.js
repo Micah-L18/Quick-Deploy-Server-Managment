@@ -98,7 +98,8 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     custom_args,
     registry_url,
     registry_username,
-    registry_password
+    registry_password,
+    web_ui_port
   } = req.body;
   
   await AppModel.update(req.params.id, { 
@@ -115,7 +116,8 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     custom_args,
     registry_url,
     registry_username,
-    registry_password
+    registry_password,
+    web_ui_port
   });
 
   const updatedApp = await AppModel.findById(req.params.id, req.session.userId);

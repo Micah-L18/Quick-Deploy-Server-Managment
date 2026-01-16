@@ -228,6 +228,25 @@
   font-family: monospace;
 }
 
+.webUiLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  text-decoration: none;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  transition: all 0.2s ease;
+}
+
+.webUiLink:hover {
+  background: rgba(74, 222, 128, 0.25);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
 .noPorts {
   color: var(--text-light);
   font-size: 0.85rem;
