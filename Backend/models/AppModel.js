@@ -131,6 +131,12 @@ async function update(appId, updates) {
     fields.push('registry_password = ?');
     values.push(updates.registry_password);
   }
+  
+  // Web UI configuration
+  if (updates.web_ui_port !== undefined) {
+    fields.push('web_ui_port = ?');
+    values.push(updates.web_ui_port || null);
+  }
 
   if (fields.length === 0) return;
 
@@ -264,7 +270,8 @@ async function findAllDeployments(userId) {
       s.ip as server_ip,
       a.name as app_name,
       a.image as app_image,
-      a.tag as app_tag
+      a.tag as app_tag,
+      a.web_ui_port
     FROM app_deployments d
     LEFT JOIN servers s ON d.server_id = s.id
     LEFT JOIN apps a ON d.app_id = a.id

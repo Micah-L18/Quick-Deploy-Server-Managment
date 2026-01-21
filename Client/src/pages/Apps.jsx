@@ -410,6 +410,17 @@ const Apps = () => {
                                     {port.host}→{port.container}
                                   </span>
                                 ))}
+                                {deployment.web_ui_port && deployment.status === 'running' && deployment.server_ip && (
+                                  <a
+                                    href={`http://${deployment.server_ip}:${deployment.web_ui_port}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.webUiLink}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    🌐 Open
+                                  </a>
+                                )}
                               </div>
                             ) : (
                               <span className={styles.noPorts}>No ports</span>

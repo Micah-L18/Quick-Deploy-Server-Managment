@@ -29,6 +29,7 @@ function toCamelCase(row) {
     region: row.region,
     ip: row.ip,
     username: row.username,
+    osType: row.os_type || 'ubuntu-debian',
     // Resolve key path at runtime so it works across machines
     privateKeyPath: resolveKeyPath(row.private_key_path),
     publicKey: row.public_key,
@@ -103,8 +104,8 @@ async function create(server) {
 
   await run(`
     INSERT INTO servers 
-    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked, display_name, color, icon, tags)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, user_id, name, region, ip, username, os_type, private_key_path, public_key, setup_command, status, error, added_at, last_checked, display_name, color, icon, tags)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     server.userId || null,
@@ -112,6 +113,7 @@ async function create(server) {
     server.region || null,
     server.ip,
     server.username,
+    server.osType || 'ubuntu-debian',
     server.privateKeyPath,
     server.publicKey,
     server.setupCommand,

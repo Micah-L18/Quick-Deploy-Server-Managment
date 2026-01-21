@@ -242,7 +242,7 @@ templates:
     description: Java Edition Minecraft server with auto-updates
     category: game-servers
     icon: ⛏️
-    logo_url: https://www.minecraft.net/etc.clientlibs/minecraft/clientlibs/main/resources/favicon-96x96.png
+    logo_url: https://www.hiclipart.com/free-transparent-background-png-clipart-vghbs
     image: itzg/minecraft-server
     tag: latest
     ports:

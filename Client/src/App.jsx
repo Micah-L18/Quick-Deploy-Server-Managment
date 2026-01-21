@@ -39,6 +39,7 @@ function App() {
               <Route path="/apps" element={<Apps />} />
               <Route path="/apps/:id" element={<AppDetail />} />
               <Route path="/connections" element={<ComingSoon title="Connections" icon="🔗" />} />
+              <Route path="/docs" element={<ComingSoon title="Documentation" icon="📖" />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </BrowserRouter>

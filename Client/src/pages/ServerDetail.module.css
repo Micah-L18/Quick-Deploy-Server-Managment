@@ -694,6 +694,21 @@
   color: var(--text-medium);
 }
 
+.webUiLink {
+  background: var(--primary-color);
+  color: var(--bg-primary);
+  padding: 4px 10px;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.webUiLink:hover {
+  opacity: 0.85;
+}
+
 .noPorts {
   font-size: 0.85rem;
   color: var(--text-medium);

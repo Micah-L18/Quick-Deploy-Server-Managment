@@ -48,7 +48,8 @@ async function collectAllServerMetrics() {
         const metrics = await collectMetrics({
           host: server.ip,
           username: server.username,
-          privateKeyPath: server.privateKeyPath
+          privateKeyPath: server.privateKeyPath,
+          osType: server.osType || 'ubuntu-debian'
         });
 
         // Store metrics in database

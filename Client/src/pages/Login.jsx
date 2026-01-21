@@ -65,7 +65,7 @@ const Login = () => {
               <circle cx="32" cy="44" r="2.5" fill="#ffffff"/>
               <path d="M 40 28 L 44 32 L 40 36 L 36 32 Z" fill="#ffffff" opacity="0.6"/>
             </svg>
-            <span>NeoBase</span>
+            <span>NoBase</span>
           </div>
           <h1 className={styles.authTitle}>Welcome Back</h1>
           <p className={styles.authSubtitle}>Sign in to your account</p>

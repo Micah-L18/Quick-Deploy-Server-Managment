@@ -30,7 +30,8 @@ router.get('/:id/metrics', requireAuth, asyncHandler(async (req, res) => {
       const metrics = await collectMetrics({
         host: server.ip,
         username: server.username,
-        privateKeyPath: server.privateKeyPath
+        privateKeyPath: server.privateKeyPath,
+        osType: server.osType || 'ubuntu-debian'
       });
       
       // Store the new metrics
@@ -82,7 +83,8 @@ router.post('/:id/metrics/refresh', requireAuth, asyncHandler(async (req, res) =
   const metrics = await collectMetrics({
     host: server.ip,
     username: server.username,
-    privateKeyPath: server.privateKeyPath
+    privateKeyPath: server.privateKeyPath,
+    osType: server.osType || 'ubuntu-debian'
   });
 
   // Store the new metrics
