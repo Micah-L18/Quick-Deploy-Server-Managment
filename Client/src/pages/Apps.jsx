@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
+import EditDeploymentModal from '../components/EditDeploymentModal';
 import { appsService } from '../api/apps';
 import { templatesService } from '../api/templates';
 import { 
@@ -28,7 +30,8 @@ import {
   ActivityIcon,
   FilmIcon,
   ToolIcon,
-  LayersIcon
+  LayersIcon,
+  EditIcon
 } from '../components/Icons';
 import styles from './Apps.module.css';
 
@@ -54,6 +57,8 @@ const Apps = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedDeployments, setExpandedDeployments] = useState({});
   const [expandedLogs, setExpandedLogs] = useState({});
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, data: null });
+  const [editingDeployment, setEditingDeployment] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -90,7 +95,15 @@ const Apps = () => {
             portMappings = [];
           }
         }
-        return { ...d, port_mappings: portMappings || [] };
+        // Find the host port that maps to the app's web_ui_port (container port)
+        let effectiveWebUiPort = null;
+        if (d.web_ui_port && portMappings && portMappings.length > 0) {
+          const webUiMapping = portMappings.find(
+            p => String(p.container) === String(d.web_ui_port)
+          );
+          effectiveWebUiPort = webUiMapping?.host || null;
+        }
+        return { ...d, port_mappings: portMappings || [], web_ui_port: effectiveWebUiPort };
       });
     },
     refetchInterval: 10000,
@@ -189,24 +202,53 @@ const Apps = () => {
   };
 
   const handleDeleteApp = (id, name) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      deleteAppMutation.mutate(id);
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: 'deleteApp',
+      data: { id, name }
+    });
   };
 
   const handleRemoveDeployment = (deployment, forceRemove = false) => {
     const isOrphaned = !deployment.server_id || !deployment.server_name;
-    const message = isOrphaned || forceRemove
-      ? `Remove orphaned deployment record "${deployment.container_name}" from the database?`
-      : `Stop and remove container "${deployment.container_name}"?`;
-    
-    if (window.confirm(message)) {
+    setConfirmModal({
+      isOpen: true,
+      type: 'removeDeployment',
+      data: { deployment, isOrphaned, forceRemove }
+    });
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmModal.type === 'deleteApp') {
+      deleteAppMutation.mutate(confirmModal.data.id);
+    } else if (confirmModal.type === 'removeDeployment') {
+      const { deployment, isOrphaned, forceRemove } = confirmModal.data;
       removeDeploymentMutation.mutate({ 
         appId: deployment.app_id, 
         deploymentId: deployment.id,
         force: isOrphaned || forceRemove
       });
     }
+  };
+
+  const getConfirmModalProps = () => {
+    if (confirmModal.type === 'deleteApp') {
+      return {
+        title: 'Delete App',
+        message: `Are you sure you want to delete "${confirmModal.data?.name}"?`,
+        confirmText: 'Delete',
+      };
+    } else if (confirmModal.type === 'removeDeployment') {
+      const { deployment, isOrphaned, forceRemove } = confirmModal.data || {};
+      return {
+        title: isOrphaned || forceRemove ? 'Remove Record' : 'Remove Deployment',
+        message: isOrphaned || forceRemove
+          ? `Remove orphaned deployment record "${deployment?.container_name}" from the database?`
+          : `Stop and remove container "${deployment?.container_name}"?`,
+        confirmText: 'Remove',
+      };
+    }
+    return {};
   };
 
   const toggleDeploymentStats = (deploymentId) => {
@@ -480,6 +522,15 @@ const Apps = () => {
                                   {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                                   Logs
                                 </Button>
+                                {deployment.status !== 'running' && (
+                                  <Button
+                                    variant="outline"
+                                    size="small"
+                                    onClick={() => setEditingDeployment(deployment)}
+                                  >
+                                    <EditIcon size={14} /> Edit
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="small"
@@ -610,6 +661,15 @@ const Apps = () => {
                             {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                             Logs
                           </Button>
+                          {deployment.status !== 'running' && (
+                            <Button
+                              variant="outline"
+                              size="small"
+                              onClick={() => setEditingDeployment(deployment)}
+                            >
+                              <EditIcon size={14} />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="small"
@@ -917,6 +977,21 @@ const Apps = () => {
           </div>
         </form>
       </Modal>
+
+      <EditDeploymentModal
+        isOpen={!!editingDeployment}
+        onClose={() => setEditingDeployment(null)}
+        deployment={editingDeployment}
+        serverId={editingDeployment?.server_id}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: null, data: null })}
+        onConfirm={handleConfirmAction}
+        variant="danger"
+        {...getConfirmModalProps()}
+      />
     </Layout>
   );
 };

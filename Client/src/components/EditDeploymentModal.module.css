@@ -1,0 +1,357 @@
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.errorMessage {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 2px;
+  font-size: 0.9rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-medium);
+  font-size: 1rem;
+}
+
+.portConflictWarning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  padding: 10px 14px;
+  border-radius: 2px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.portConflict {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.checkingIndicator {
+  font-weight: normal;
+  font-size: 0.8rem;
+  color: var(--text-medium);
+  margin-left: 8px;
+}
+
+.infoBox {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--primary-color);
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-radius: 2px;
+  font-size: 0.9rem;
+}
+
+.infoBox strong {
+  color: var(--primary-color);
+}
+
+.configSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  padding: 20px;
+}
+
+.configSection h3 {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.hint {
+  color: var(--text-medium);
+  font-size: 0.85rem;
+  margin: 0 0 16px 0;
+}
+
+/* Port Labels */
+.portLabels {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 0 0 0;
+}
+
+.portLabel {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.portLabelSpacer {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+/* Array Fields (Ports, Env Vars, Volumes) */
+.arrayRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.arrayRow input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 2px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.arrayRow input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.arrayRow input::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.arrow {
+  color: var(--text-medium);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.equals {
+  color: var(--text-medium);
+  font-size: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 2px;
+  transition: background 0.2s;
+  font-size: 1.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.addBtn {
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-color);
+  color: var(--text-medium);
+  padding: 10px 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.addBtn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* Form Elements */
+.formRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.formGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.formGroup label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.85rem;
+}
+
+.formGroup input,
+.formGroup select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 2px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.formGroup input:focus,
+.formGroup select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.formGroup input::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.formGroup select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* Modal Footer */
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: var(--text-medium);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.activeTab {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* Preview Tab */
+.previewContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.previewSection {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.previewHeader h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.copyBtn {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 2px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copyBtn:hover {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 20px;
+  background: #0d1117;
+  color: #e6edf3;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .formRow {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .arrayRow {
+    flex-wrap: wrap;
+  }
+
+  .arrayRow input {
+    min-width: 120px;
+  }
+
+  .tabs {
+    overflow-x: auto;
+  }
+
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+}

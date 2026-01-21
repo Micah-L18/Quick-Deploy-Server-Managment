@@ -12,7 +12,7 @@ const Sidebar = () => {
     { path: '/', icon: DashboardIcon, label: 'Dashboard' },
     { path: '/servers', icon: ServersIcon, label: 'Servers' },
     { path: '/apps', icon: AppsIcon, label: 'Apps' },
-    { path: '/connections', icon: ConnectionsIcon, label: 'Connections' },
+    // { path: '/connections', icon: ConnectionsIcon, label: 'Connections' },
   ];
 
   const handleNavClick = () => {

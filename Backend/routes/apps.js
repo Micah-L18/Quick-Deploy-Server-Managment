@@ -154,9 +154,10 @@ router.delete('/:id', requireAuth, asyncHandler(async (req, res) => {
 /**
  * POST /api/apps/:id/check-ports
  * Check if ports are available on a server
+ * Also checks configured ports from other deployments on the same server
  */
 router.post('/:id/check-ports', requireAuth, asyncHandler(async (req, res) => {
-  const { serverId, ports } = req.body;
+  const { serverId, ports, excludeDeploymentId } = req.body;
 
   if (!serverId || !ports || !Array.isArray(ports)) {
     return res.status(400).json({ error: 'Server ID and ports array required' });
@@ -176,8 +177,9 @@ router.post('/:id/check-ports', requireAuth, asyncHandler(async (req, res) => {
 
   const server = serverCheck.server;
   const portNumbers = ports.map(p => p.host).filter(Boolean);
-
-  const result = await checkPortsAvailable(
+  
+  // First, check ports that are actually in use on the server (running processes)
+  const liveResult = await checkPortsAvailable(
     {
       host: server.ip,
       username: server.username,
@@ -186,7 +188,56 @@ router.post('/:id/check-ports', requireAuth, asyncHandler(async (req, res) => {
     portNumbers
   );
 
-  res.json(result);
+  // Also check configured ports from other deployments on this server
+  const serverDeployments = await AppModel.findDeploymentsByServer(serverId, req.session.userId);
+  const configuredConflicts = [];
+
+  for (const deployment of serverDeployments) {
+    // Skip the deployment being edited
+    if (excludeDeploymentId && deployment.id === excludeDeploymentId) {
+      continue;
+    }
+
+    // Parse port mappings
+    let deploymentPorts = deployment.port_mappings;
+    if (typeof deploymentPorts === 'string') {
+      try {
+        deploymentPorts = JSON.parse(deploymentPorts);
+      } catch {
+        deploymentPorts = [];
+      }
+    }
+    deploymentPorts = deploymentPorts || [];
+
+    // Check for conflicts with configured ports
+    for (const portNum of portNumbers) {
+      const hasConflict = deploymentPorts.some(p => String(p.host) === String(portNum));
+      if (hasConflict) {
+        // Check if this conflict is already in the list
+        if (!configuredConflicts.find(c => c.port === portNum)) {
+          configuredConflicts.push({
+            port: portNum,
+            inUse: true,
+            details: `Configured for deployment "${deployment.container_name}" (${deployment.status})`
+          });
+        }
+      }
+    }
+  }
+
+  // Merge live conflicts with configured conflicts
+  const allConflicts = [...liveResult.conflicts];
+  for (const conflict of configuredConflicts) {
+    // Don't duplicate if already found in live check
+    if (!allConflicts.find(c => c.port === conflict.port)) {
+      allConflicts.push(conflict);
+    }
+  }
+
+  res.json({
+    available: allConflicts.length === 0,
+    conflicts: allConflicts
+  });
 }));
 
 /**
@@ -252,6 +303,7 @@ router.delete('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(asy
 /**
  * POST /api/apps/:appId/deployments/:deploymentId/start
  * Start a stopped container
+ * If the deployment has config overrides, recreate the container with new settings
  */
 router.post('/:appId/deployments/:deploymentId/start', requireAuth, asyncHandler(async (req, res) => {
   const { appId, deploymentId } = req.params;
@@ -267,24 +319,189 @@ router.post('/:appId/deployments/:deploymentId/start', requireAuth, asyncHandler
     return res.status(400).json({ error: 'No container reference found' });
   }
 
-  try {
-    const { stdout, stderr, code } = await connectionManager.executeCommand(
-      {
-        host: deployment.ip,
-        username: deployment.username,
-        privateKeyPath: deployment.private_key_path
-      },
-      `docker start ${containerRef}`
-    );
+  // Helper to check if a field has been explicitly set (even if empty)
+  // This detects if the deployment has been edited - any non-null value means it was saved
+  const hasBeenSet = (val) => {
+    return val !== null && val !== undefined;
+  };
 
-    if (code === 0) {
-      // Update deployment status in database
-      await AppModel.updateDeploymentStatus(deploymentId, 'running');
-      res.json({ success: true, message: 'Container started', output: stdout });
+  // Helper to check if a value has actual content (not empty/null)
+  const hasValue = (val) => {
+    if (!val) return false;
+    if (typeof val === 'string') {
+      // Check if it's an empty JSON array/object
+      const trimmed = val.trim();
+      if (trimmed === '[]' || trimmed === '{}' || trimmed === '') return false;
+      return true;
+    }
+    if (Array.isArray(val)) return val.length > 0;
+    if (typeof val === 'object') return Object.keys(val).length > 0;
+    return true;
+  };
+
+  // Check if deployment has been edited (any config field explicitly set)
+  // This handles the case where user intentionally sets empty config
+  const hasBeenEdited = hasBeenSet(deployment.env_vars) || 
+    hasBeenSet(deployment.volumes) || hasBeenSet(deployment.restart_policy) || 
+    hasBeenSet(deployment.network_mode) || hasBeenSet(deployment.command) || 
+    hasBeenSet(deployment.custom_args);
+
+  // Check if deployment has any config overrides that require container recreation
+  // This includes all editable fields that could differ from the app defaults
+  // Also triggers if the deployment has been edited (even with empty values)
+  const hasConfigOverrides = hasBeenEdited || hasValue(deployment.port_mappings) ||
+    hasValue(deployment.env_vars) || hasValue(deployment.volumes) || 
+    hasValue(deployment.restart_policy) || hasValue(deployment.network_mode) || 
+    hasValue(deployment.command) || hasValue(deployment.custom_args);
+
+  try {
+    if (hasConfigOverrides) {
+      console.log(`[Deployment Start] Recreating container ${containerRef} with config overrides`);
+      
+      // Need to recreate container with new settings
+      const app = await AppModel.findById(appId, req.session.userId);
+      if (!app) {
+        return res.status(404).json({ error: 'App not found' });
+      }
+
+      // Parse JSON fields
+      const parseJson = (val) => {
+        if (!val) return null;
+        if (typeof val === 'string') {
+          try { return JSON.parse(val); } catch { return null; }
+        }
+        return val;
+      };
+
+      // Stop and remove the existing container
+      console.log(`[Deployment Start] Stopping and removing old container...`);
+      await connectionManager.executeCommand(
+        {
+          host: deployment.ip,
+          username: deployment.username,
+          privateKeyPath: deployment.private_key_path
+        },
+        `docker stop ${containerRef} 2>/dev/null; docker rm ${containerRef} 2>/dev/null || true`
+      );
+
+      // Build merged config (deployment overrides take precedence)
+      const portMappings = parseJson(deployment.port_mappings) || parseJson(app.ports) || [];
+      const envVars = parseJson(deployment.env_vars) || parseJson(app.env_vars) || [];
+      const volumes = parseJson(deployment.volumes) || parseJson(app.volumes) || [];
+      const restartPolicy = deployment.restart_policy || app.restart_policy || '';
+      const networkMode = deployment.network_mode || app.network_mode || '';
+      const command = deployment.command || app.command || '';
+      const customArgs = deployment.custom_args || app.custom_args || '';
+
+      // Build docker run command
+      let cmd = 'docker run -d';
+      
+      // Container name (reuse same name)
+      cmd += ` --name ${deployment.container_name}`;
+      
+      // Port mappings
+      if (portMappings.length > 0) {
+        portMappings.forEach(port => {
+          if (port.host && port.container) {
+            cmd += ` -p ${port.host}:${port.container}`;
+          }
+        });
+      }
+      
+      // Environment variables
+      if (envVars.length > 0) {
+        envVars.forEach(envVar => {
+          if (envVar.key && envVar.value) {
+            cmd += ` -e "${envVar.key}=${envVar.value}"`;
+          }
+        });
+      }
+      
+      // Volumes
+      if (volumes.length > 0) {
+        volumes.forEach(vol => {
+          if (vol.host && vol.container) {
+            cmd += ` -v ${vol.host}:${vol.container}`;
+          }
+        });
+      }
+      
+      // Restart policy
+      if (restartPolicy) {
+        cmd += ` --restart ${restartPolicy}`;
+      }
+      
+      // Network mode
+      if (networkMode) {
+        cmd += ` --network ${networkMode}`;
+      }
+      
+      // Custom arguments
+      if (customArgs && customArgs.trim()) {
+        cmd += ` ${customArgs.trim()}`;
+      }
+      
+      // Image
+      const image = app.image;
+      const tag = app.tag || 'latest';
+      const fullImage = app.registry_url 
+        ? `${app.registry_url}/${image}:${tag}` 
+        : `${image}:${tag}`;
+      cmd += ` ${fullImage}`;
+      
+      // Command override
+      if (command) {
+        cmd += ` ${command}`;
+      }
+
+      console.log(`[Deployment Start] Running command: ${cmd}`);
+
+      // Run the new container
+      const { stdout, stderr, code } = await connectionManager.executeCommand(
+        {
+          host: deployment.ip,
+          username: deployment.username,
+          privateKeyPath: deployment.private_key_path
+        },
+        cmd
+      );
+
+      if (code === 0) {
+        // Extract new container ID
+        const newContainerId = stdout.trim().substring(0, 12);
+        console.log(`[Deployment Start] Container recreated successfully, new ID: ${newContainerId}`);
+        await AppModel.updateDeploymentStatus(deploymentId, 'running', newContainerId);
+        res.json({ 
+          success: true, 
+          message: 'Container recreated with new configuration', 
+          output: stdout,
+          recreated: true
+        });
+      } else {
+        console.log(`[Deployment Start] Failed to recreate container: ${stderr}`);
+        res.status(500).json({ error: stderr || 'Failed to recreate container' });
+      }
     } else {
-      res.status(500).json({ error: stderr || 'Failed to start container' });
+      // Simple start without recreation
+      console.log(`[Deployment Start] Simple start for container ${containerRef} (no config overrides)`);
+      const { stdout, stderr, code } = await connectionManager.executeCommand(
+        {
+          host: deployment.ip,
+          username: deployment.username,
+          privateKeyPath: deployment.private_key_path
+        },
+        `docker start ${containerRef}`
+      );
+
+      if (code === 0) {
+        await AppModel.updateDeploymentStatus(deploymentId, 'running');
+        res.json({ success: true, message: 'Container started', output: stdout });
+      } else {
+        res.status(500).json({ error: stderr || 'Failed to start container' });
+      }
     }
   } catch (err) {
+    console.error(`[Deployment Start] Error:`, err.message);
     res.status(500).json({ error: err.message });
   }
 }));
@@ -436,6 +653,133 @@ router.get('/:appId/deployments/:deploymentId/logs', requireAuth, asyncHandler(a
     console.error('Logs error:', err);
     res.json({ error: err.message, logs: '' });
   }
+}));
+
+/**
+ * PUT /api/apps/:appId/deployments/:deploymentId
+ * Update deployment configuration (only when stopped)
+ */
+router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  // Only allow editing stopped containers
+  if (deployment.status === 'running') {
+    return res.status(400).json({ error: 'Cannot edit a running deployment. Stop the container first.' });
+  }
+
+  const {
+    port_mappings,
+    env_vars,
+    volumes,
+    restart_policy,
+    network_mode,
+    command,
+    custom_args
+  } = req.body;
+
+  // Validate port conflicts before saving
+  if (port_mappings && Array.isArray(port_mappings) && port_mappings.length > 0) {
+    const portNumbers = port_mappings.map(p => p.host).filter(Boolean);
+    
+    if (portNumbers.length > 0 && deployment.server_id) {
+      // Check for port conflicts with other deployments on the same server
+      const serverDeployments = await AppModel.findDeploymentsByServer(deployment.server_id, req.session.userId);
+      const conflicts = [];
+
+      for (const otherDeployment of serverDeployments) {
+        // Skip the current deployment being edited
+        if (otherDeployment.id === deploymentId) {
+          continue;
+        }
+
+        // Parse port mappings
+        let otherPorts = otherDeployment.port_mappings;
+        if (typeof otherPorts === 'string') {
+          try {
+            otherPorts = JSON.parse(otherPorts);
+          } catch {
+            otherPorts = [];
+          }
+        }
+        otherPorts = otherPorts || [];
+
+        // Check for conflicts
+        for (const portNum of portNumbers) {
+          const hasConflict = otherPorts.some(p => String(p.host) === String(portNum));
+          if (hasConflict && !conflicts.includes(portNum)) {
+            conflicts.push(portNum);
+          }
+        }
+      }
+
+      if (conflicts.length > 0) {
+        return res.status(400).json({ 
+          error: `Port(s) ${conflicts.join(', ')} already configured for another deployment on this server` 
+        });
+      }
+    }
+  }
+
+  await AppModel.updateDeploymentConfig(deploymentId, {
+    port_mappings,
+    env_vars,
+    volumes,
+    restart_policy,
+    network_mode,
+    command,
+    custom_args
+  });
+
+  // Log activity
+  try {
+    await ActivityModel.create(
+      req.session.userId,
+      'info',
+      `Updated deployment configuration for container "${deployment.container_name}"`
+    );
+  } catch (err) {
+    console.error('Failed to log activity:', err);
+  }
+
+  res.json({ success: true, message: 'Deployment configuration updated' });
+}));
+
+/**
+ * GET /api/apps/:appId/deployments/:deploymentId
+ * Get single deployment with full config
+ */
+router.get('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  // Also get the app to include app-level defaults
+  const app = await AppModel.findById(appId, req.session.userId);
+
+  res.json({
+    ...deployment,
+    app_image: app?.image || null,
+    app_tag: app?.tag || 'latest',
+    app_config: app ? {
+      ports: app.ports,
+      env_vars: app.env_vars,
+      volumes: app.volumes,
+      restart_policy: app.restart_policy,
+      network_mode: app.network_mode,
+      command: app.command,
+      custom_args: app.custom_args
+    } : null
+  });
 }));
 
 module.exports = router;

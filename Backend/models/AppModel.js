@@ -258,6 +258,51 @@ async function removeDeployment(deploymentId) {
 }
 
 /**
+ * Update deployment configuration (for stopped containers)
+ * @param {string} deploymentId - Deployment ID
+ * @param {Object} config - Configuration overrides
+ * @returns {Promise<void>}
+ */
+async function updateDeploymentConfig(deploymentId, config) {
+  const fields = [];
+  const values = [];
+
+  if (config.port_mappings !== undefined) {
+    fields.push('port_mappings = ?');
+    values.push(JSON.stringify(config.port_mappings));
+  }
+  if (config.env_vars !== undefined) {
+    fields.push('env_vars = ?');
+    values.push(JSON.stringify(config.env_vars));
+  }
+  if (config.volumes !== undefined) {
+    fields.push('volumes = ?');
+    values.push(JSON.stringify(config.volumes));
+  }
+  if (config.restart_policy !== undefined) {
+    fields.push('restart_policy = ?');
+    values.push(config.restart_policy);
+  }
+  if (config.network_mode !== undefined) {
+    fields.push('network_mode = ?');
+    values.push(config.network_mode);
+  }
+  if (config.command !== undefined) {
+    fields.push('command = ?');
+    values.push(config.command);
+  }
+  if (config.custom_args !== undefined) {
+    fields.push('custom_args = ?');
+    values.push(config.custom_args);
+  }
+
+  if (fields.length === 0) return;
+
+  values.push(deploymentId);
+  await run(`UPDATE app_deployments SET ${fields.join(', ')} WHERE id = ?`, values);
+}
+
+/**
  * Get all deployments across all apps for a user
  * @param {string} userId - User ID
  * @returns {Promise<Array>}
@@ -282,6 +327,28 @@ async function findAllDeployments(userId) {
   return rows;
 }
 
+/**
+ * Get all deployments for a specific server
+ * @param {string} serverId - Server ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>}
+ */
+async function findDeploymentsByServer(serverId, userId) {
+  const rows = await all(`
+    SELECT 
+      d.id,
+      d.app_id,
+      d.container_name,
+      d.port_mappings,
+      d.status
+    FROM app_deployments d
+    LEFT JOIN apps a ON d.app_id = a.id
+    WHERE d.server_id = ? AND a.user_id = ?
+  `, [serverId, userId]);
+
+  return rows;
+}
+
 module.exports = {
   findAll,
   findById,
@@ -293,6 +360,8 @@ module.exports = {
   findDeploymentById,
   createDeployment,
   updateDeploymentStatus,
+  updateDeploymentConfig,
   removeDeployment,
-  findAllDeployments
+  findAllDeployments,
+  findDeploymentsByServer
 };

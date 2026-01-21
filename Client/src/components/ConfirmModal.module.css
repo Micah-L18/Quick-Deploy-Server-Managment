@@ -1,0 +1,16 @@
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.content {
+  padding: 8px 0;
+}
+
+.message {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}

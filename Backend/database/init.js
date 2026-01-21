@@ -162,7 +162,14 @@ async function runMigrations() {
 
   // App deployments table migrations
   const deploymentColumns = [
-    { name: 'port_mappings', type: 'TEXT' }  // JSON string of port mappings
+    { name: 'port_mappings', type: 'TEXT' },  // JSON string of port mappings
+    // Deployment-specific config overrides (nullable - uses app defaults if null)
+    { name: 'env_vars', type: 'TEXT' },  // JSON string of env vars
+    { name: 'volumes', type: 'TEXT' },  // JSON string of volumes
+    { name: 'restart_policy', type: 'TEXT' },
+    { name: 'network_mode', type: 'TEXT' },
+    { name: 'command', type: 'TEXT' },
+    { name: 'custom_args', type: 'TEXT' }
   ];
 
   for (const column of deploymentColumns) {

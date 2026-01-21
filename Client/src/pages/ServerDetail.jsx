@@ -9,10 +9,12 @@ import FileBrowser from '../components/FileBrowser';
 import ServicesManager from '../components/ServicesManager';
 import ColorPicker from '../components/ColorPicker';
 import IconSelector, { SERVER_ICONS } from '../components/IconSelector';
+import EditDeploymentModal from '../components/EditDeploymentModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { serversService } from '../api/servers';
 import { appsService } from '../api/apps';
 import { getRegionFlag } from '../utils/formatters';
-import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '../components/Icons';
+import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon } from '../components/Icons';
 import styles from './ServerDetail.module.css';
 
 const ServerDetail = () => {
@@ -26,6 +28,8 @@ const ServerDetail = () => {
   const [expandedDeployments, setExpandedDeployments] = useState({});
   const [expandedLogs, setExpandedLogs] = useState({});
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [editingDeployment, setEditingDeployment] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, deployment: null });
 
   // Detect mobile viewport
   useEffect(() => {
@@ -95,6 +99,14 @@ const ServerDetail = () => {
                 portMappings = [];
               }
             }
+            // Find the host port that maps to the app's web_ui_port (container port)
+            let effectiveWebUiPort = null;
+            if (app.web_ui_port && portMappings && portMappings.length > 0) {
+              const webUiMapping = portMappings.find(
+                p => String(p.container) === String(app.web_ui_port)
+              );
+              effectiveWebUiPort = webUiMapping?.host || null;
+            }
             return { 
               ...d, 
               port_mappings: portMappings || [], 
@@ -102,7 +114,7 @@ const ServerDetail = () => {
               app_id: app.id, 
               app_image: app.image, 
               app_tag: app.tag,
-              web_ui_port: app.web_ui_port  // Include web UI port from app config
+              web_ui_port: effectiveWebUiPort  // Host port that maps to web UI container port
             };
           });
         serverDeployments.push(...serverSpecificDeployments);
@@ -152,8 +164,15 @@ const ServerDetail = () => {
   });
 
   const handleRemoveDeployment = (deployment) => {
-    if (window.confirm(`Stop and remove container "${deployment.container_name}"?`)) {
-      removeDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id });
+    setConfirmModal({ isOpen: true, deployment });
+  };
+
+  const handleConfirmRemoveDeployment = () => {
+    if (confirmModal.deployment) {
+      removeDeploymentMutation.mutate({ 
+        appId: confirmModal.deployment.app_id, 
+        deploymentId: confirmModal.deployment.id 
+      });
     }
   };
 
@@ -846,6 +865,16 @@ const ServerDetail = () => {
                           {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                           Logs
                         </Button>
+                        {deployment.status !== 'running' && (
+                          <Button
+                            variant="outline"
+                            size="small"
+                            onClick={() => setEditingDeployment(deployment)}
+                            style={{ marginRight: '8px' }}
+                          >
+                            <EditIcon size={14} /> Edit
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="small"
@@ -879,6 +908,26 @@ const ServerDetail = () => {
           deleteWarning={deleteWarning}
         />
       )}
+
+      {/* Edit Deployment Modal */}
+      <EditDeploymentModal
+        isOpen={!!editingDeployment}
+        onClose={() => setEditingDeployment(null)}
+        deployment={editingDeployment}
+        serverId={id}
+        server={server}
+      />
+
+      {/* Remove Deployment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, deployment: null })}
+        onConfirm={handleConfirmRemoveDeployment}
+        title="Remove Deployment"
+        message={`Stop and remove container "${confirmModal.deployment?.container_name}"?`}
+        confirmText="Remove"
+        variant="danger"
+      />
     </Layout>
   );
 };
