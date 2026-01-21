@@ -14,7 +14,9 @@ const METRICS_COMMANDS = [
   'cat /proc/meminfo | grep MemTotal',
   'hostname',
   // Get two CPU readings 1 second apart for accurate usage calculation
-  'cat /proc/stat | grep "^cpu " | head -1 && sleep 1 && cat /proc/stat | grep "^cpu " | head -1'
+  'cat /proc/stat | grep "^cpu " | head -1 && sleep 1 && cat /proc/stat | grep "^cpu " | head -1',
+  // Get detailed OS info (distro name, version, etc.)
+  'cat /etc/os-release 2>/dev/null || cat /etc/lsb-release 2>/dev/null || echo ""'
 ];
 
 /**

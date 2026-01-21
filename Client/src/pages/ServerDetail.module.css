@@ -76,6 +76,9 @@
 
 .serverInfo {
   margin-bottom: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .infoCard {
@@ -83,7 +86,20 @@
   border: 1px solid var(--border-color);
   border-radius: 2px;
   padding: 24px;
-  max-width: 600px;
+}
+
+.infoCardTitle {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary-color);
+}
+
+.infoContent {
+  display: flex;
+  flex-direction: column;
 }
 
 .infoRow {
@@ -96,6 +112,11 @@
 
 .infoRow:last-child {
   border-bottom: none;
+}
+
+.infoValue {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .tabs {

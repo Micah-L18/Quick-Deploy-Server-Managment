@@ -102,6 +102,26 @@ function parseMetrics(results) {
     }
   }
 
+  // Parse detailed OS info from /etc/os-release
+  if (results[9] && !results[9].error && results[9].trim()) {
+    const osRelease = results[9];
+    // Try to get PRETTY_NAME first (e.g., "Ubuntu 24.04.1 LTS")
+    const prettyNameMatch = osRelease.match(/PRETTY_NAME="?([^"\n]+)"?/);
+    if (prettyNameMatch) {
+      metrics.os = prettyNameMatch[1];
+    } else {
+      // Fallback to NAME + VERSION
+      const nameMatch = osRelease.match(/^NAME="?([^"\n]+)"?/m);
+      const versionMatch = osRelease.match(/^VERSION="?([^"\n]+)"?/m);
+      if (nameMatch && versionMatch) {
+        metrics.os = `${nameMatch[1]} ${versionMatch[1]}`;
+      } else if (nameMatch) {
+        metrics.os = nameMatch[1];
+      }
+      // If no match, keep the uname output from results[0]
+    }
+  }
+
   return metrics;
 }
 

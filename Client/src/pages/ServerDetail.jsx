@@ -335,6 +335,37 @@ const ServerDetail = () => {
             </div>
           )}
         </div>
+
+        {/* System Info Card */}
+        {server.status === 'online' && metrics?.os && (
+          <div className={styles.infoCard}>
+            <h3 className={styles.infoCardTitle}>System Info</h3>
+            <div className={styles.infoContent}>
+              {metrics.hostname && (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Hostname</span>
+                  <span className={styles.infoValue}>{metrics.hostname}</span>
+                </div>
+              )}
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>OS</span>
+                <span className={styles.infoValue}>{metrics.os}</span>
+              </div>
+              {metrics.uptime && (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Uptime</span>
+                  <span className={styles.infoValue}>{metrics.uptime}</span>
+                </div>
+              )}
+              {metrics.totalRam && (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Total RAM</span>
+                  <span className={styles.infoValue}>{metrics.totalRam}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -502,36 +533,6 @@ const ServerDetail = () => {
                       <span className={styles.metricLabel}>Usage</span>
                       <span className={styles.metricValue}>{metrics.disk.percentage}%</span>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {metrics.os && (
-                <div className={styles.metricCard}>
-                  <h3 className={styles.metricTitle}>System Info</h3>
-                  <div className={styles.metricContent}>
-                    {metrics.hostname && (
-                      <div className={styles.metricDetail}>
-                        <span className={styles.metricLabel}>Hostname</span>
-                        <span className={styles.metricValue}>{metrics.hostname}</span>
-                      </div>
-                    )}
-                    <div className={styles.metricDetail}>
-                      <span className={styles.metricLabel}>OS</span>
-                      <span className={styles.metricValue}>{metrics.os}</span>
-                    </div>
-                    {metrics.uptime && (
-                      <div className={styles.metricDetail}>
-                        <span className={styles.metricLabel}>Uptime</span>
-                        <span className={styles.metricValue}>{metrics.uptime}</span>
-                      </div>
-                    )}
-                    {metrics.totalRam && (
-                      <div className={styles.metricDetail}>
-                        <span className={styles.metricLabel}>Total RAM</span>
-                        <span className={styles.metricValue}>{metrics.totalRam}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
