@@ -40,7 +40,7 @@ const OS_INFO = {
 /**
  * Generate SSH key pair for a server
  * @param {string} serverId - Server ID
- * @param {string} username - Username to create (defaults to nobase)
+ * @param {string} username - Username to create (defaults to NoBase)
  * @param {string} osType - Operating system type
  * @returns {Promise<{privateKeyPath: string, publicKey: string, setupCommand: string, username: string, osType: string}>}
  */
@@ -188,7 +188,7 @@ function generateWindowsSetup(username, publicKey) {
       `Write-Host "Administrator SSH key configured successfully"`;
   }
 
-  // For custom users (like nobase) - create user, add to Admins, use administrators_authorized_keys
+  // For custom users (like NoBase) - create user, add to Admins, use administrators_authorized_keys
   // Windows OpenSSH requires admin users to use the shared administrators_authorized_keys file
   const commands = [
     `$u = "${username}"`,

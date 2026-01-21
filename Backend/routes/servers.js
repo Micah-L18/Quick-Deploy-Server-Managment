@@ -124,7 +124,7 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
   const { name, region, ip, username: providedUsername, osType } = req.body;
 
-  // Use provided username or default to nobase
+  // Use provided username or default to nobase user
   const username = providedUsername || DEFAULT_SSH_USERNAME;
 
   if (!ip) {

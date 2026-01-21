@@ -125,7 +125,7 @@ const Settings = () => {
 
   useEffect(() => {
     // Load preferences from localStorage
-    const stored = localStorage.getItem('neobase_preferences');
+    const stored = localStorage.getItem('NoBase_preferences');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -142,7 +142,7 @@ const Settings = () => {
       [key]: value,
     };
     setPreferences(newPreferences);
-    localStorage.setItem('neobase_preferences', JSON.stringify(newPreferences));
+    localStorage.setItem('NoBase_preferences', JSON.stringify(newPreferences));
   };
 
   const handleLogout = async () => {
