@@ -4,6 +4,7 @@ import { serversService } from '../api/servers';
 import { filesService } from '../api/files';
 import FileEditor from './FileEditor';
 import Modal from './Modal';
+import { FolderIcon, FileIcon } from './Icons';
 import styles from './FileBrowser.module.css';
 
 const FileBrowser = ({ serverId }) => {
@@ -208,7 +209,7 @@ const FileBrowser = ({ serverId }) => {
             >
               <div className={styles.nameColumn}>
                 <span className={styles.icon}>
-                  {file.isDirectory ? '📁' : '📄'}
+                  {file.isDirectory ? <FolderIcon size={16} /> : <FileIcon size={16} />}
                 </span>
                 <div className={styles.nameWithPath}>
                   <div className={styles.fileName}>{file.name}</div>
@@ -261,7 +262,7 @@ const FileBrowser = ({ serverId }) => {
           ) : (
             <div className={styles.editorPlaceholder}>
               <div className={styles.placeholderContent}>
-                <span className={styles.placeholderIcon}>📝</span>
+                <span className={styles.placeholderIcon}><FileIcon size={32} /></span>
                 <h3>Select a text file to view and edit</h3>
                 <p>Click on any file in the browser to open it here</p>
               </div>

@@ -592,30 +592,30 @@
 }
 
 .deploymentsTable {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   border-radius: 2px;
   overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1.5fr 1.2fr 0.8fr 1fr 1fr 0.8fr;
-  gap: 16px;
-  padding: 16px 24px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  grid-template-columns: 1fr 1fr 90px 100px 120px 0.8fr;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--bg-tertiary);
   font-weight: 600;
   color: var(--text-medium);
   font-size: 0.85rem;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .tableRow {
   display: grid;
-  grid-template-columns: 1.5fr 1.2fr 0.8fr 1fr 1fr 0.8fr;
-  gap: 16px;
-  padding: 16px 24px;
+  grid-template-columns: 1fr 1fr 90px 100px 120px 0.8fr;
+  gap: 12px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   align-items: center;
 }
@@ -624,100 +624,91 @@
   border-bottom: none;
 }
 
-.tableRow:hover {
-  background: var(--bg-secondary);
+.appCell {
+  min-width: 0;
 }
 
-.appCell {
+.appLink {
+  text-decoration: none;
+  color: var(--text-dark);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.appLink {
-  text-decoration: none;
-  color: var(--text-primary);
-  transition: color 0.2s;
-}
-
 .appLink:hover {
-  color: var(--primary-color);
+  color: #00a8cc;
 }
 
 .appLink strong {
   display: block;
-  margin-bottom: 4px;
 }
 
 .appImage {
   font-size: 0.8rem;
   color: var(--text-medium);
-  font-family: 'Monaco', 'Menlo', monospace;
 }
 
 .containerCell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  min-width: 0;
 }
 
 .containerName {
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .containerId {
-  font-size: 0.8rem;
-  color: var(--text-medium);
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-family: monospace;
 }
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 4px 10px;
   border-radius: 2px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  width: fit-content;
 }
 
 .statusRunning {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
 }
 
 .statusStopped {
-  background: rgba(107, 114, 128, 0.15);
+  background: rgba(156, 163, 175, 0.2);
   color: var(--text-medium);
 }
 
 .portsCell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  min-width: 0;
 }
 
 .portBadges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .portBadge {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 4px 8px;
+  background: rgba(0, 212, 255, 0.1);
+  color: #00a8cc;
+  padding: 2px 8px;
   border-radius: 2px;
   font-size: 0.75rem;
-  font-family: 'Monaco', 'Menlo', monospace;
-  color: var(--text-medium);
+  font-family: monospace;
 }
 
 .webUiLink {
   background: var(--primary-color);
-  color: var(--bg-primary);
+  color: #ffffff;
   padding: 4px 10px;
   border-radius: 2px;
   font-size: 0.75rem;
@@ -730,10 +721,15 @@
   opacity: 0.85;
 }
 
+@media (prefers-color-scheme: light) {
+  .webUiLink {
+    color: #000000;
+  }
+}
+
 .noPorts {
+  color: var(--text-light);
   font-size: 0.85rem;
-  color: var(--text-medium);
-  font-style: italic;
 }
 
 .dateCell {
@@ -744,6 +740,7 @@
 .actionsCell {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .statsRow {

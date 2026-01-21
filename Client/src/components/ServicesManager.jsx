@@ -3,7 +3,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import { io } from 'socket.io-client';
 import { servicesAPI } from '../api/services';
 import styles from './ServicesManager.module.css';
-import { ServerIcon, CheckCircleIcon, XCircleIcon, ClockIcon, DownloadIcon, PlayIcon, StopCircleIcon, RotateIcon } from './Icons';
+import { ServerIcon, CheckCircleIcon, XCircleIcon, ClockIcon, DownloadIcon, PlayIcon, StopCircleIcon, RotateIcon, CheckIcon } from './Icons';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
 
@@ -399,7 +399,7 @@ const ServicesManager = ({ serverId }) => {
                     <div className={`${styles.output} ${styles[output.type]}`}>
                       <div className={styles.outputHeader}>
                         <span className={styles.outputTitle}>
-                          {output.type === 'success' ? '✓' : '✗'} {output.message}
+                          {output.type === 'success' ? <><CheckIcon size={16} /> Success</> : <><XCircleIcon size={16} /> Error</>}: {output.message}
                         </span>
                       </div>
                       {output.isSudoError && (

@@ -6,6 +6,7 @@ import ConfirmModal from './ConfirmModal';
 import { appsService } from '../api/apps';
 import { generateDockerRun } from '../utils/dockerParser';
 import { generateDockerComposeYaml } from '../utils/yamlParser';
+import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon } from './Icons';
 import styles from './EditDeploymentModal.module.css';
 
 const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) => {
@@ -26,7 +27,8 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     restart_policy: 'unless-stopped',
     network_mode: '',
     command: '',
-    custom_args: ''
+    custom_args: '',
+    web_ui_port: ''
   });
 
   // Fetch fresh deployment data when modal opens
@@ -65,7 +67,8 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
         restart_policy: freshDeployment.restart_policy || appConfig.restart_policy || 'unless-stopped',
         network_mode: freshDeployment.network_mode || appConfig.network_mode || '',
         command: freshDeployment.command || appConfig.command || '',
-        custom_args: freshDeployment.custom_args || appConfig.custom_args || ''
+        custom_args: freshDeployment.custom_args || appConfig.custom_args || '',
+        web_ui_port: freshDeployment.web_ui_port || appConfig.web_ui_port || ''
       });
       setError('');
       setIsSaving(false);
@@ -296,13 +299,13 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           className={`${styles.tab} ${activeTab === 'config' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('config')}
         >
-          ⚙️ Configuration
+          <SettingsIcon size={16} /> Config
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'preview' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('preview')}
         >
-          👁️ Preview Commands
+          <EyeIcon size={16} /> Preview Commands
         </button>
       </div>
 
@@ -325,7 +328,8 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           <p className={styles.hint}>Map host ports to container ports. The host port is what you access from outside, the container port is where the app listens inside.</p>
           {portConflicts.length > 0 && (
             <div className={styles.portConflictWarning}>
-              ⚠️ Port conflict detected: {portConflicts.join(', ')} already in use on this server
+              <AlertIcon size={14} style={{ marginRight: '6px', display: 'inline-block' }} />
+              Port conflict detected: {portConflicts.join(', ')} already in use on this server
             </div>
           )}
           {formData.port_mappings.length > 0 && (
@@ -351,7 +355,9 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 onChange={(e) => updatePort(index, 'container', e.target.value)}
                 placeholder="e.g., 80"
               />
-              <button className={styles.removeBtn} onClick={() => removePort(index)}>×</button>
+              <button className={styles.removeBtn} onClick={() => removePort(index)}>
+                <XIcon size={16} />
+              </button>
             </div>
           ))}
           <button className={styles.addBtn} onClick={addPort}>+ Add Port Mapping</button>
@@ -376,7 +382,9 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                 placeholder="Value"
               />
-              <button className={styles.removeBtn} onClick={() => removeEnvVar(index)}>×</button>
+              <button className={styles.removeBtn} onClick={() => removeEnvVar(index)}>
+                <XIcon size={16} />
+              </button>
             </div>
           ))}
           <button className={styles.addBtn} onClick={addEnvVar}>+ Add Environment Variable</button>
@@ -401,7 +409,9 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 onChange={(e) => updateVolume(index, 'container', e.target.value)}
                 placeholder="Container Path (e.g., /app/data)"
               />
-              <button className={styles.removeBtn} onClick={() => removeVolume(index)}>×</button>
+              <button className={styles.removeBtn} onClick={() => removeVolume(index)}>
+                <XIcon size={16} />
+              </button>
             </div>
           ))}
           <button className={styles.addBtn} onClick={addVolume}>+ Add Volume Mount</button>
@@ -454,6 +464,40 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
               placeholder="Additional docker run arguments (e.g., --cap-add=SYS_ADMIN)"
             />
           </div>
+
+          <div className={styles.formGroup}>
+            <label>Web GUI</label>
+            <div className={styles.toggleWithSelect}>
+              <label className={styles.toggleLabel}>
+                <input
+                  type="checkbox"
+                  checked={!!formData.web_ui_port}
+                  onChange={(e) => setFormData(prev => ({ ...prev, web_ui_port: e.target.checked ? '' : '' }))}
+                />
+                <span>Enable Web UI Access</span>
+              </label>
+              {formData.port_mappings.length > 0 && formData.web_ui_port !== false && (
+                <select
+                  value={formData.web_ui_port || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, web_ui_port: e.target.value }))}
+                  className={styles.webUiSelect}
+                  disabled={!formData.port_mappings.some(p => p.host)}
+                >
+                  <option value="">Select port with web UI...</option>
+                  {formData.port_mappings.map((port, index) => (
+                    port.host && (
+                      <option key={index} value={port.host}>
+                        Port {port.host} → {port.container} {server?.ip && `(http://${server.ip}:${port.host})`}
+                      </option>
+                    )
+                  ))}
+                </select>
+              )}
+              {formData.port_mappings.length === 0 && (
+                <p className={styles.hint}>Add port mappings first to enable web UI access</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
       )}
@@ -472,7 +516,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 className={styles.copyBtn}
                 onClick={() => handleCopy('docker', previewConfig.dockerRun)}
               >
-                {copied === 'docker' ? '✓ Copied!' : '📋 Copy'}
+                {copied === 'docker' ? <><CheckIcon size={14} /> Copied!</> : <><ClipboardIcon size={14} /> Copy</>}
               </button>
             </div>
             <pre className={styles.codeBlock}>{previewConfig.dockerRun}</pre>
@@ -486,7 +530,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 className={styles.copyBtn}
                 onClick={() => handleCopy('yaml', previewConfig.yaml)}
               >
-                {copied === 'yaml' ? '✓ Copied!' : '📋 Copy'}
+                {copied === 'yaml' ? <><CheckIcon size={14} /> Copied!</> : <><ClipboardIcon size={14} /> Copy</>}
               </button>
             </div>
             <pre className={styles.codeBlock}>{previewConfig.yaml}</pre>

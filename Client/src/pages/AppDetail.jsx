@@ -7,7 +7,7 @@ import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { appsService } from '../api/apps';
 import { serversService } from '../api/servers';
-import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon } from '../components/Icons';
+import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon } from '../components/Icons';
 import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
 import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
 import styles from './AppDetail.module.css';
@@ -468,7 +468,7 @@ const AppDetail = () => {
           </h1>
           {app.image && (
             <span className={styles.imageBadge}>
-              🐳 {app.image}:{app.tag || 'latest'}
+              <DockerIcon size={16} /> {app.image}:{app.tag || 'latest'}
             </span>
           )}
         </div>
@@ -495,7 +495,7 @@ const AppDetail = () => {
           className={`${styles.tab} ${activeTab === 'config' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('config')}
         >
-          ⚙️ Config
+          <SettingsIcon size={16} /> Config
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'yaml' ? styles.activeTab : ''}`}
@@ -509,7 +509,8 @@ const AppDetail = () => {
             setActiveTab('yaml');
           }}
         >
-          📄 YAML
+          <FileIcon size={16} style={{ marginRight: '6px', display: 'inline-block' }} />
+          YAML
         </button>
       </div>
 
@@ -708,7 +709,9 @@ const AppDetail = () => {
                   onChange={(e) => updatePort(index, 'container', e.target.value)}
                   placeholder="Container Port (e.g., 80)"
                 />
-                <button className={styles.removeBtn} onClick={() => removePort(index)}>×</button>
+                <button className={styles.removeBtn} onClick={() => removePort(index)}>
+                  <XIcon size={16} />
+                </button>
               </div>
             ))}
             <button className={styles.addBtn} onClick={addPort}>+ Add Port Mapping</button>
@@ -768,7 +771,9 @@ const AppDetail = () => {
                   onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                   placeholder="value"
                 />
-                <button className={styles.removeBtn} onClick={() => removeEnvVar(index)}>×</button>
+                <button className={styles.removeBtn} onClick={() => removeEnvVar(index)}>
+                  <XIcon size={16} />
+                </button>
               </div>
             ))}
             <button className={styles.addBtn} onClick={addEnvVar}>+ Add Environment Variable</button>
@@ -792,7 +797,9 @@ const AppDetail = () => {
                   onChange={(e) => updateVolume(index, 'container', e.target.value)}
                   placeholder="Container Path (e.g., /var/lib/data)"
                 />
-                <button className={styles.removeBtn} onClick={() => removeVolume(index)}>×</button>
+                <button className={styles.removeBtn} onClick={() => removeVolume(index)}>
+                  <XIcon size={16} />
+                </button>
               </div>
             ))}
             <button className={styles.addBtn} onClick={addVolume}>+ Add Volume</button>
@@ -904,7 +911,7 @@ const AppDetail = () => {
                     navigator.clipboard.writeText(yamlText);
                   }}
                 >
-                  📋 Copy
+                  <ClipboardIcon size={14} /> Copy
                 </Button>
               </div>
             </div>
@@ -935,7 +942,7 @@ const AppDetail = () => {
                   navigator.clipboard.writeText(generateDockerRunCommand());
                 }}
               >
-                📋 Copy
+                <ClipboardIcon size={14} /> Copy
               </Button>
             </div>
             <pre className={styles.dockerRunCode}>{generateDockerRunCommand()}</pre>
@@ -990,7 +997,7 @@ const AppDetail = () => {
 
               {selectedServer && !checkingDocker && dockerStatus && !dockerStatus.installed && (
                 <div className={styles.dockerError}>
-                  <strong>⚠️ Docker Not Available</strong>
+                  <strong><AlertIcon size={18} style={{ marginRight: '8px', display: 'inline-block' }} />Docker Not Available</strong>
                   <p>{dockerStatus.message || 'Docker is not installed on this server.'}</p>
                   <p>Please install Docker on the server before deploying.</p>
                   <Link to={`/servers/${selectedServer}?tab=services`} className={styles.dockerInstallLink}>
@@ -1001,14 +1008,15 @@ const AppDetail = () => {
 
               {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && !dockerStatus.running && (
                 <div className={styles.dockerWarning}>
-                  <strong>⚠️ Docker Not Running</strong>
+                  <strong><AlertIcon size={18} style={{ marginRight: '8px', display: 'inline-block' }} />Docker Not Running</strong>
                   <p>Docker is installed but the daemon is not running. Please start Docker on the server.</p>
                 </div>
               )}
 
               {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && dockerStatus.running && (
                 <div className={styles.dockerSuccess}>
-                  <strong>✓ Docker Ready</strong>
+                  <CheckCircleIcon size={20} />
+                  <strong>Docker Ready</strong>
                   <span>{dockerStatus.version}</span>
                 </div>
               )}
@@ -1043,7 +1051,7 @@ const AppDetail = () => {
                         disabled
                       />
                       {portConflicts && portConflicts.includes(port.host) && (
-                        <span className={styles.portConflict}>⚠️ In use</span>
+                        <span className={styles.portConflict}><AlertIcon size={12} style={{ marginRight: '4px', display: 'inline-block' }} />In use</span>
                       )}
                     </div>
                   ))}
@@ -1052,7 +1060,7 @@ const AppDetail = () => {
 
               {portConflicts && portConflicts.length > 0 && (
                 <div className={styles.conflictWarning}>
-                  <strong>⚠️ Port Conflict Detected</strong>
+                  <strong><AlertIcon size={18} style={{ marginRight: '8px', display: 'inline-block' }} />Port Conflict Detected</strong>
                   <p>Ports {portConflicts.join(', ')} are already in use on this server.</p>
                   <p>You can change the host ports above, or proceed anyway (may fail).</p>
                 </div>
@@ -1074,7 +1082,7 @@ const AppDetail = () => {
             <div className={styles.deployTerminal}>
               <div className={styles.terminalHeader}>
                 {isDeploying && <span className={styles.deployingIndicator}>● DEPLOYING</span>}
-                {!isDeploying && deployOutput && <span className={styles.doneIndicator}>✓ COMPLETE</span>}
+                {!isDeploying && deployOutput && <span className={styles.doneIndicator}><CheckCircleIcon size={16} /> COMPLETE</span>}
               </div>
               <pre ref={deployOutputRef} className={styles.terminalOutput}>
                 {deployOutput || 'Starting deployment...'}
@@ -1231,7 +1239,7 @@ const DeploymentRow = ({ deployment, appId, onRemove, webUiPort }) => {
             rel="noopener noreferrer"
           >
             <Button variant="primary" size="small">
-              🌐 Open UI
+              <GlobeAltIcon size={14} /> Open UI
             </Button>
           </a>
         )}

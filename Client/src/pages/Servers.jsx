@@ -8,7 +8,7 @@ import ServerSettingsModal from '../components/ServerSettingsModal';
 import { SERVER_ICONS } from '../components/IconSelector';
 import { serversService } from '../api/servers';
 import { getRegionFlag } from '../utils/formatters';
-import { RefreshIcon, PlusIcon, ServersIcon, EyeIcon, EyeOffIcon, SettingsIcon } from '../components/Icons';
+import { RefreshIcon, PlusIcon, ServersIcon, EyeIcon, EyeOffIcon, SettingsIcon, ClipboardIcon, AlertIcon } from '../components/Icons';
 import styles from './Servers.module.css';
 
 const Servers = () => {
@@ -84,7 +84,10 @@ const Servers = () => {
       if (error.response?.status === 409) {
         const errorData = error.response.data;
         setModalMessage({
-          title: '⚠️ Duplicate Server',
+          title: <>
+            <AlertIcon size={20} style={{ marginRight: '8px', display: 'inline-block' }} />
+            Duplicate Server
+          </>,
           content: `${errorData.error}\n\nExisting server: ${errorData.existingServer?.name || 'Unnamed'} (${errorData.existingServer?.ip})`
         });
         setShowErrorModal(true);
@@ -351,7 +354,8 @@ const Servers = () => {
                       onClick={() => setShowWindowsHelpModal(true)}
                       title="Click for help"
                     >
-                      ⚠️ SSH not enabled
+                      <AlertIcon size={14} style={{ marginRight: '4px', display: 'inline-block' }} />
+                      SSH not enabled
                     </button>
                   )}
                   {server.status === 'offline' && server.osType === 'windows' && server.error?.includes('authentication') && (
@@ -623,7 +627,7 @@ const Servers = () => {
             }}
             style={{ marginTop: '1rem', width: '100%' }}
           >
-            📋 Copy Setup Command
+            <ClipboardIcon size={14} /> Copy Setup Command
           </Button>
           
           <p className={styles.setupNote}>
@@ -735,7 +739,8 @@ const Servers = () => {
           </ol>
 
           <p style={{ marginTop: '1.5rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            ⚠️ <strong>Note:</strong> The permissions on <code>administrators_authorized_keys</code> must only allow Administrators and SYSTEM. The setup command handles this automatically.
+            <AlertIcon size={14} style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'text-bottom' }} />
+            <strong>Note:</strong> The permissions on <code>administrators_authorized_keys</code> must only allow Administrators and SYSTEM. The setup command handles this automatically.
           </p>
           
           <div className={styles.modalFooter}>

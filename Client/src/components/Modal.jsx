@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import styles from './Modal.module.css';
 import Button from './Button';
+import { XIcon } from './Icons';
 
 const Modal = ({ isOpen, onClose, title, children, footer, size = 'default', variant = 'default' }) => {
   useEffect(() => {
@@ -35,7 +36,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'default', var
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>{title}</h2>
           <button className={styles.closeBtn} onClick={handleCloseClick}>
-            ×
+            <XIcon size={20} />
           </button>
         </div>
         <div className={styles.modalBody}>{children}</div>

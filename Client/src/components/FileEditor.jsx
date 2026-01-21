@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { filesService } from '../api/files';
+import { CheckIcon, AlertIcon } from './Icons';
 import styles from './FileEditor.module.css';
 
 const FileEditor = ({ serverId, filePath, onClose }) => {
@@ -94,10 +95,10 @@ const FileEditor = ({ serverId, filePath, onClose }) => {
             <span className={styles.unsavedIndicator}>● Unsaved changes</span>
           )}
           {saveStatus === 'success' && (
-            <span className={styles.saveSuccess}>✓ Saved</span>
+            <span className={styles.saveSuccess}><CheckIcon size={16} /> Saved</span>
           )}
           {saveStatus === 'error' && (
-            <span className={styles.saveError}>✗ Save failed</span>
+            <span className={styles.saveError}><AlertIcon size={16} /> Save failed</span>
           )}
           <button
             className={styles.saveButton}

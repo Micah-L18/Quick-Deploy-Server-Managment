@@ -169,7 +169,8 @@ async function runMigrations() {
     { name: 'restart_policy', type: 'TEXT' },
     { name: 'network_mode', type: 'TEXT' },
     { name: 'command', type: 'TEXT' },
-    { name: 'custom_args', type: 'TEXT' }
+    { name: 'custom_args', type: 'TEXT' },
+    { name: 'web_ui_port', type: 'TEXT' }  // Host port that has web UI (null = no web UI)
   ];
 
   for (const column of deploymentColumns) {

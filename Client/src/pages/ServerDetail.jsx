@@ -14,7 +14,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { serversService } from '../api/servers';
 import { appsService } from '../api/apps';
 import { getRegionFlag } from '../utils/formatters';
-import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon } from '../components/Icons';
+import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon, DockerIcon, GlobeAltIcon, XIcon, CheckCircleIcon } from '../components/Icons';
 import styles from './ServerDetail.module.css';
 
 const ServerDetail = () => {
@@ -782,7 +782,7 @@ const ServerDetail = () => {
                         <Link to={`/apps/${deployment.app_id}`} className={styles.appLink}>
                           <strong>{deployment.app_name}</strong>
                           <span className={styles.appImage}>
-                            🐳 {deployment.app_image}:{deployment.app_tag || 'latest'}
+                            <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
                           </span>
                         </Link>
                       </div>
@@ -812,7 +812,7 @@ const ServerDetail = () => {
                                 rel="noopener noreferrer"
                                 className={styles.webUiLink}
                               >
-                                🌐 Open
+                                <GlobeAltIcon size={12} /> Open
                               </a>
                             )}
                           </div>
@@ -830,7 +830,6 @@ const ServerDetail = () => {
                             size="small"
                             onClick={() => stopDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id })}
                             disabled={stopDeploymentMutation.isPending}
-                            style={{ marginRight: '8px' }}
                           >
                             <StopCircleIcon size={14} /> Stop
                           </Button>
@@ -840,7 +839,6 @@ const ServerDetail = () => {
                             size="small"
                             onClick={() => startDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id })}
                             disabled={startDeploymentMutation.isPending}
-                            style={{ marginRight: '8px' }}
                           >
                             <PlayIcon size={14} /> Start
                           </Button>
@@ -850,7 +848,6 @@ const ServerDetail = () => {
                             variant="outline"
                             size="small"
                             onClick={() => toggleDeploymentStats(deployment.id)}
-                            style={{ marginRight: '8px' }}
                           >
                             {isExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                             Stats
@@ -860,7 +857,6 @@ const ServerDetail = () => {
                           variant="outline"
                           size="small"
                           onClick={() => toggleDeploymentLogs(deployment.id)}
-                          style={{ marginRight: '8px' }}
                         >
                           {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                           Logs
@@ -870,7 +866,6 @@ const ServerDetail = () => {
                             variant="outline"
                             size="small"
                             onClick={() => setEditingDeployment(deployment)}
-                            style={{ marginRight: '8px' }}
                           >
                             <EditIcon size={14} /> Edit
                           </Button>
@@ -1108,7 +1103,7 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
                     onClick={() => handleRemoveTag(tag)}
                     type="button"
                   >
-                    ×
+                    <XIcon size={14} />
                   </button>
                 </span>
               ))}
@@ -1132,7 +1127,7 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
             {saveSuccess && (
-              <span className={styles.saveSuccess}>✓ Settings saved!</span>
+              <span className={styles.saveSuccess}><CheckCircleIcon size={16} /> Settings saved!</span>
             )}
           </div>
         </div>

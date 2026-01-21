@@ -295,6 +295,10 @@ async function updateDeploymentConfig(deploymentId, config) {
     fields.push('custom_args = ?');
     values.push(config.custom_args);
   }
+  if (config.web_ui_port !== undefined) {
+    fields.push('web_ui_port = ?');
+    values.push(config.web_ui_port || null);
+  }
 
   if (fields.length === 0) return;
 

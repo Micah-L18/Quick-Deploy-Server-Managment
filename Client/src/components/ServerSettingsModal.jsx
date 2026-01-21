@@ -3,6 +3,7 @@ import Modal from './Modal';
 import Button from './Button';
 import ColorPicker from './ColorPicker';
 import IconSelector from './IconSelector';
+import { XIcon } from './Icons';
 import styles from './ServerSettingsModal.module.css';
 
 const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => {
@@ -168,7 +169,7 @@ const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => 
                   onClick={() => handleRemoveTag(tag)}
                   type="button"
                 >
-                  ×
+                  <XIcon size={16} />
                 </button>
               </span>
             ))}

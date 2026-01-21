@@ -233,7 +233,7 @@
   align-items: center;
   gap: 4px;
   background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  color: #ffffff;
   padding: 2px 8px;
   border-radius: 2px;
   font-size: 0.75rem;
@@ -245,6 +245,12 @@
 .webUiLink:hover {
   background: rgba(74, 222, 128, 0.25);
   border-color: rgba(74, 222, 128, 0.5);
+}
+
+@media (prefers-color-scheme: light) {
+  .webUiLink {
+    color: #000000;
+  }
 }
 
 .noPorts {

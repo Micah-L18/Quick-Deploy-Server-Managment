@@ -31,7 +31,9 @@ import {
   FilmIcon,
   ToolIcon,
   LayersIcon,
-  EditIcon
+  EditIcon,
+  DockerIcon,
+  GlobeAltIcon
 } from '../components/Icons';
 import styles from './Apps.module.css';
 
@@ -413,7 +415,7 @@ const Apps = () => {
                             <Link to={`/apps/${deployment.app_id}`} className={styles.appLink}>
                               <strong>{deployment.app_name}</strong>
                               <span className={styles.appImage}>
-                                🐳 {deployment.app_image}:{deployment.app_tag || 'latest'}
+                                <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
                               </span>
                             </Link>
                           </div>
@@ -460,7 +462,7 @@ const Apps = () => {
                                     className={styles.webUiLink}
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    🌐 Open
+                                    <GlobeAltIcon size={12} /> Open
                                   </a>
                                 )}
                               </div>
@@ -579,7 +581,7 @@ const Apps = () => {
                         <div className={styles.deploymentCardMeta}>
                           <div className={styles.deploymentCardRow}>
                             <span className={styles.deploymentCardLabel}>Image:</span>
-                            <span className={styles.deploymentCardValue}>🐳 {deployment.app_image}:{deployment.app_tag || 'latest'}</span>
+                            <span className={styles.deploymentCardValue}><DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}</span>
                           </div>
                           <div className={styles.deploymentCardRow}>
                             <span className={styles.deploymentCardLabel}>Container:</span>

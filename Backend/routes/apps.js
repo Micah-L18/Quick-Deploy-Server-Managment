@@ -680,7 +680,8 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     restart_policy,
     network_mode,
     command,
-    custom_args
+    custom_args,
+    web_ui_port
   } = req.body;
 
   // Validate port conflicts before saving
@@ -733,7 +734,8 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     restart_policy,
     network_mode,
     command,
-    custom_args
+    custom_args,
+    web_ui_port
   });
 
   // Log activity
