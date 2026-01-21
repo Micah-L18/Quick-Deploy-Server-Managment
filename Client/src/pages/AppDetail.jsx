@@ -36,7 +36,8 @@ const AppDetail = () => {
     registry_url: '',
     registry_username: '',
     registry_password: '',
-    use_custom_registry: false
+    use_custom_registry: false,
+    web_ui_port: ''
   });
   const [hasChanges, setHasChanges] = useState(false);
   
@@ -116,7 +117,8 @@ const AppDetail = () => {
         registry_url: app.registry_url || '',
         registry_username: app.registry_username || '',
         registry_password: '',
-        use_custom_registry: !!(app.registry_url || app.registry_username)
+        use_custom_registry: !!(app.registry_url || app.registry_username),
+        web_ui_port: app.web_ui_port || ''
       });
       setCustomPorts(app.ports || []);
     }
@@ -710,6 +712,42 @@ const AppDetail = () => {
               </div>
             ))}
             <button className={styles.addBtn} onClick={addPort}>+ Add Port Mapping</button>
+            
+            {/* Web UI Configuration */}
+            <div className={styles.webUiConfig}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={!!formData.web_ui_port}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      // Default to first port with a host value
+                      const firstPort = formData.ports.find(p => p.host);
+                      handleFormChange('web_ui_port', firstPort?.host || '');
+                    } else {
+                      handleFormChange('web_ui_port', '');
+                    }
+                  }}
+                />
+                <span>This container has a Web UI</span>
+              </label>
+              {formData.web_ui_port && formData.ports.filter(p => p.host).length > 0 && (
+                <div className={styles.webUiPortSelect}>
+                  <label>Web UI Port:</label>
+                  <select
+                    value={formData.web_ui_port}
+                    onChange={(e) => handleFormChange('web_ui_port', e.target.value)}
+                  >
+                    {formData.ports.filter(p => p.host).map((port, idx) => (
+                      <option key={idx} value={port.host}>
+                        {port.host} → {port.container}
+                      </option>
+                    ))}
+                  </select>
+                  <span className={styles.hint}>Quick link will open http://server-ip:{formData.web_ui_port}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.configSection}>
@@ -1129,7 +1167,7 @@ const AppDetail = () => {
 };
 
 // Deployment row component with stats fetching
-const DeploymentRow = ({ deployment, appId, onRemove }) => {
+const DeploymentRow = ({ deployment, appId, onRemove, webUiPort }) => {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -1185,7 +1223,18 @@ const DeploymentRow = ({ deployment, appId, onRemove }) => {
       <div className={styles.deployedAt}>
         {new Date(deployment.deployed_at).toLocaleString()}
       </div>
-      <div>
+      <div className={styles.deploymentActions}>
+        {webUiPort && stats?.status === 'running' && deployment.server_ip && (
+          <a
+            href={`http://${deployment.server_ip}:${webUiPort}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="primary" size="small">
+              🌐 Open UI
+            </Button>
+          </a>
+        )}
         <Button variant="danger" size="small" onClick={onRemove}>
           <TrashIcon size={14} />
         </Button>

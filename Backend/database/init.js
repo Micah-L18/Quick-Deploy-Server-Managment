@@ -147,7 +147,8 @@ async function runMigrations() {
     { name: 'color', type: 'TEXT' },
     { name: 'icon', type: 'TEXT' },
     { name: 'tags', type: 'TEXT' },  // JSON array of tags
-    { name: 'first_connected_at', type: 'TEXT' }  // Timestamp of first successful connection
+    { name: 'first_connected_at', type: 'TEXT' },  // Timestamp of first successful connection
+    { name: 'os_type', type: 'TEXT DEFAULT \'ubuntu-debian\'' }  // Operating system type for setup commands
   ];
 
   for (const column of serverColumns) {
@@ -186,7 +187,8 @@ async function runMigrations() {
     { name: 'custom_args', type: 'TEXT' },     // Custom docker run arguments
     { name: 'registry_url', type: 'TEXT' },
     { name: 'registry_username', type: 'TEXT' },
-    { name: 'registry_password', type: 'TEXT' }
+    { name: 'registry_password', type: 'TEXT' },
+    { name: 'web_ui_port', type: 'TEXT' }      // Host port that has web UI (null = no web UI)
   ];
 
   for (const column of appsColumns) {

@@ -206,8 +206,67 @@ function parseOsRelease(output) {
   };
 }
 
+/**
+ * Parse Windows metrics from PowerShell JSON output
+ * @param {string} output - JSON string from PowerShell command
+ * @returns {Object} - Parsed metrics in standard format
+ */
+function parseWindowsMetrics(output) {
+  try {
+    console.log('[Windows Parser] Raw output:', output);
+    
+    // Try to find JSON in the output (might have extra text before/after)
+    const jsonMatch = output.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('[Windows Parser] No JSON found in output');
+      return { error: 'No JSON found in Windows metrics output', raw: output };
+    }
+    
+    const jsonStr = jsonMatch[0];
+    console.log('[Windows Parser] Extracted JSON:', jsonStr);
+    
+    const data = JSON.parse(jsonStr);
+    console.log('[Windows Parser] Parsed data:', JSON.stringify(data, null, 2));
+    
+    return {
+      os: data.os || 'Windows',
+      hostname: data.hostname || 'Unknown',
+      uptime: data.uptime || 'Unknown',
+      cpu: {
+        model: data.cpu?.model || 'Unknown',
+        cores: data.cpu?.cores || 0,
+        usage: data.cpu?.usage || 0
+      },
+      memory: {
+        total: data.memory?.total || 0,
+        used: data.memory?.used || 0,
+        free: data.memory?.free || 0,
+        percentage: data.memory?.percentage || 0
+      },
+      disk: {
+        total: data.disk?.total || '0G',
+        used: data.disk?.used || '0G',
+        available: data.disk?.available || '0G',
+        percentage: data.disk?.percentage || 0
+      },
+      load: {
+        '1min': data.cpu?.usage || 0,
+        '5min': data.cpu?.usage || 0,
+        '15min': data.cpu?.usage || 0
+      }
+    };
+  } catch (err) {
+    console.error('Failed to parse Windows metrics:', err.message, 'Output:', output);
+    return {
+      error: 'Failed to parse Windows metrics',
+      raw: output
+    };
+  }
+}
+
 module.exports = {
   parseMetrics,
   parseCpuUsage,
-  parseOsRelease
+  parseOsRelease,
+  parseWindowsMetrics
 };

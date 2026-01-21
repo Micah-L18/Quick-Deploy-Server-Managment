@@ -95,7 +95,15 @@ const ServerDetail = () => {
                 portMappings = [];
               }
             }
-            return { ...d, port_mappings: portMappings || [], app_name: app.name, app_id: app.id, app_image: app.image, app_tag: app.tag };
+            return { 
+              ...d, 
+              port_mappings: portMappings || [], 
+              app_name: app.name, 
+              app_id: app.id, 
+              app_image: app.image, 
+              app_tag: app.tag,
+              web_ui_port: app.web_ui_port  // Include web UI port from app config
+            };
           });
         serverDeployments.push(...serverSpecificDeployments);
       }
@@ -778,6 +786,16 @@ const ServerDetail = () => {
                                 {port.host}→{port.container}
                               </span>
                             ))}
+                            {deployment.web_ui_port && deployment.status === 'running' && (
+                              <a
+                                href={`http://${server.ip}:${deployment.web_ui_port}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.webUiLink}
+                              >
+                                🌐 Open
+                              </a>
+                            )}
                           </div>
                         ) : (
                           <span className={styles.noPorts}>No ports</span>

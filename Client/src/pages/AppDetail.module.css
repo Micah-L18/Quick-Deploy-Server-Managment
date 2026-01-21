@@ -359,6 +359,56 @@
   color: var(--primary-color);
 }
 
+/* Web UI Configuration */
+.webUiConfig {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.webUiPortSelect {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.webUiPortSelect label {
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.webUiPortSelect select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 2px;
+  font-size: 0.9rem;
+}
+
+.webUiPortSelect .hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .configActions {
   display: flex;
   gap: 16px;
@@ -771,6 +821,17 @@
 .deployedAt {
   font-size: 0.85rem;
   color: var(--text-medium);
+}
+
+/* Deployment Actions */
+.deploymentActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.deploymentActions a {
+  text-decoration: none;
 }
 
 /* Empty State */

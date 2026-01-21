@@ -61,4 +61,9 @@ export const serversService = {
     const response = await api.get('/servers/tags');
     return response.data;
   },
+
+  getOsTypes: async () => {
+    const response = await api.get('/servers/os-types');
+    return response.data;
+  },
 };

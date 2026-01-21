@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon } from './Icons';
+import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon, BookOpenIcon } from './Icons';
 import styles from './Sidebar.module.css';
 
 const Sidebar = () => {
@@ -86,8 +86,16 @@ const Sidebar = () => {
         </nav>
 
         <div className={styles.sidebarFooter}>
+          <NavLink 
+            to="/docs" 
+            className={styles.docsBtn} 
+            onClick={handleNavClick}
+          >
+            <BookOpenIcon size={18} />
+            <span className={styles.docsBtnLabel}>Docs</span>
+          </NavLink>
           {user && (
-            <>
+            <div className={styles.userCard}>
               <div className={styles.userInfo}>
                 <div className={styles.userName}>{user.name}</div>
                 <div className={styles.userEmail}>{user.email}</div>
@@ -95,7 +103,7 @@ const Sidebar = () => {
               <NavLink to="/settings" className={styles.settingsBtn} onClick={handleNavClick}>
                 <SettingsIcon size={20} />
               </NavLink>
-            </>
+            </div>
           )}
         </div>
       </div>
