@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SnapshotProgressProvider } from './contexts/SnapshotProgressContext';
+import { BackgroundJobsProvider } from './contexts/BackgroundJobsContext';
+import BackgroundJobsWidget from './components/BackgroundJobsWidget';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -31,20 +33,23 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <SnapshotProgressProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/servers" element={<Servers />} />
-                <Route path="/servers/:id" element={<ServerDetail />} />
-                <Route path="/apps" element={<Apps />} />
-                <Route path="/apps/:id" element={<AppDetail />} />
-                <Route path="/connections" element={<ComingSoon title="Connections" icon="🔗" />} />
-                <Route path="/docs" element={<ComingSoon title="Documentation" icon="📖" />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
-            </BrowserRouter>
+            <BackgroundJobsProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/servers" element={<Servers />} />
+                  <Route path="/servers/:id" element={<ServerDetail />} />
+                  <Route path="/apps" element={<Apps />} />
+                  <Route path="/apps/:id" element={<AppDetail />} />
+                  <Route path="/connections" element={<ComingSoon title="Connections" icon="🔗" />} />
+                  <Route path="/docs" element={<ComingSoon title="Documentation" icon="📖" />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+                <BackgroundJobsWidget />
+              </BrowserRouter>
+            </BackgroundJobsProvider>
           </SnapshotProgressProvider>
         </AuthProvider>
       </ThemeProvider>

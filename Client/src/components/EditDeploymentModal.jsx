@@ -4,10 +4,11 @@ import Modal from './Modal';
 import Button from './Button';
 import ConfirmModal from './ConfirmModal';
 import SnapshotContent from './SnapshotContent';
+import MigrationContent from './MigrationContent';
 import { appsService } from '../api/apps';
 import { generateDockerRun } from '../utils/dockerParser';
 import { generateDockerComposeYaml } from '../utils/yamlParser';
-import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon, HardDriveIcon, StopCircleIcon } from './Icons';
+import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon, HardDriveIcon, StopCircleIcon, CopyIcon, MoveIcon } from './Icons';
 import styles from './EditDeploymentModal.module.css';
 
 const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) => {
@@ -351,10 +352,23 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           className={`${styles.tab} ${activeTab === 'preview' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('preview')}
         >
-          <EyeIcon size={16} /> Preview Commands
+          <EyeIcon size={16} /> Preview
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'copy' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('copy')}
+        >
+          <CopyIcon size={16} /> Copy
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'move' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('move')}
+        >
+          <MoveIcon size={16} /> Move
         </button>
       </div>
 
+      <div className={styles.tabContent}>
       {activeTab === 'config' && (
       <div className={styles.editForm}>
         {error && (
@@ -613,6 +627,23 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           showFooter={false}
         />
       )}
+
+      {activeTab === 'copy' && (
+        <MigrationContent 
+          deployment={freshDeployment || deployment}
+          mode="copy"
+          isVisible={isOpen && activeTab === 'copy'}
+        />
+      )}
+
+      {activeTab === 'move' && (
+        <MigrationContent 
+          deployment={freshDeployment || deployment}
+          mode="move"
+          isVisible={isOpen && activeTab === 'move'}
+        />
+      )}
+      </div>
         </>
       )}
     </Modal>

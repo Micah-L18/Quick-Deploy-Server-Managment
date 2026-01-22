@@ -358,3 +358,21 @@ export const FolderIcon = ({ size = 24, color = "currentColor" }) => (
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
   </svg>
 );
+
+export const MoveIcon = ({ size = 24, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="5 9 2 12 5 15"></polyline>
+    <polyline points="9 5 12 2 15 5"></polyline>
+    <polyline points="15 19 12 22 9 19"></polyline>
+    <polyline points="19 9 22 12 19 15"></polyline>
+    <line x1="2" y1="12" x2="22" y2="12"></line>
+    <line x1="12" y1="2" x2="12" y2="22"></line>
+  </svg>
+);
+
+export const CopyIcon = ({ size = 24, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+  </svg>
+);

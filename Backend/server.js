@@ -27,7 +27,8 @@ const {
   metricsRoutes,
   serviceRoutes,
   systemRoutes,
-  snapshotRoutes
+  snapshotRoutes,
+  migrationRoutes
 } = require('./routes');
 const templateRoutes = require('./routes/templates');
 
@@ -85,6 +86,10 @@ app.use('/api/apps', appRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api', snapshotRoutes);  // /api/snapshots/*, /api/deployments/:id/snapshots/*
+app.use('/api/migrations', migrationRoutes);  // /api/migrations/*
+
+// Set Socket.IO for routes that need real-time progress
+migrationRoutes.setSocketIO(io);
 
 // Store io reference for access in routes (e.g., system update progress)
 app.set('io', { io });

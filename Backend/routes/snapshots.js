@@ -141,11 +141,11 @@ router.post('/deployments/:id/snapshots', requireAuth, asyncHandler(async (req, 
     complete: { percent: 100, label: 'Complete' }
   };
   
-  // Progress callback to emit Socket.IO events
+  // Progress callback to emit Socket.IO events (broadcast to all clients)
   const onProgress = (stage, message) => {
-    if (io && socketId) {
+    if (io) {
       const stageInfo = progressStages[stage] || { percent: 0, label: stage };
-      io.to(socketId).emit('snapshot-progress', {
+      io.emit('snapshot-progress', {
         deploymentId,
         stage,
         percent: stageInfo.percent,
@@ -179,8 +179,8 @@ router.post('/deployments/:id/snapshots', requireAuth, asyncHandler(async (req, 
     console.error('Snapshot creation failed:', error);
     // Restore original status on error
     await AppModel.updateDeploymentStatus(deploymentId, originalStatus);
-    if (io && socketId) {
-      io.to(socketId).emit('snapshot-progress', {
+    if (io) {
+      io.emit('snapshot-progress', {
         deploymentId,
         stage: 'error',
         percent: 0,
@@ -257,11 +257,11 @@ router.post('/snapshots/:id/restore', requireAuth, asyncHandler(async (req, res)
     complete: { percent: 100, label: 'Complete' }
   };
   
-  // Progress callback to emit Socket.IO events
+  // Progress callback to emit Socket.IO events (broadcast to all clients)
   const onProgress = (stage, message) => {
-    if (io && socketId) {
+    if (io) {
       const stageInfo = progressStages[stage] || { percent: 0, label: stage };
-      io.to(socketId).emit('snapshot-progress', {
+      io.emit('snapshot-progress', {
         snapshotId: snapshot.id,
         deploymentId: snapshot.deployment_id,
         stage,
@@ -294,8 +294,8 @@ router.post('/snapshots/:id/restore', requireAuth, asyncHandler(async (req, res)
     console.error('Snapshot restore failed:', error);
     // Restore original status on error
     await AppModel.updateDeploymentStatus(snapshot.deployment_id, originalStatus);
-    if (io && socketId) {
-      io.to(socketId).emit('snapshot-progress', {
+    if (io) {
+      io.emit('snapshot-progress', {
         snapshotId: snapshot.id,
         deploymentId: snapshot.deployment_id,
         stage: 'error',

@@ -18,14 +18,16 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'default', var
   if (!isOpen) return null;
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && onClose) {
       onClose();
     }
   };
 
   const handleCloseClick = (e) => {
     e.stopPropagation();
-    onClose();
+    if (onClose) {
+      onClose();
+    }
   };
 
   const modalClasses = `${styles.modal} ${size === 'large' ? styles.modalLarge : ''} ${variant === 'terminal' ? styles.modalTerminal : ''}`;
@@ -35,9 +37,11 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'default', var
       <div className={modalClasses}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>{title}</h2>
-          <button className={styles.closeBtn} onClick={handleCloseClick}>
-            <XIcon size={20} />
-          </button>
+          {onClose && (
+            <button className={styles.closeBtn} onClick={handleCloseClick}>
+              <XIcon size={20} />
+            </button>
+          )}
         </div>
         <div className={styles.modalBody}>{children}</div>
         {footer && <div className={styles.modalFooter}>{footer}</div>}

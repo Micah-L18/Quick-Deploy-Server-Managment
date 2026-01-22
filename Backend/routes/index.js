@@ -7,5 +7,6 @@ module.exports = {
   metricsRoutes: require('./metrics'),
   serviceRoutes: require('./services'),
   systemRoutes: require('./system'),
-  snapshotRoutes: require('./snapshots')
+  snapshotRoutes: require('./snapshots'),
+  migrationRoutes: require('./migrations')
 };

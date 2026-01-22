@@ -292,6 +292,11 @@
   border-bottom-color: var(--primary-color);
 }
 
+/* Tab Content - consistent sizing */
+.tabContent {
+  min-height: 400px;
+}
+
 /* Preview Tab */
 .previewContainer {
   display: flex;

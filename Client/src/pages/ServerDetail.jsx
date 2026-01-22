@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -215,8 +215,8 @@ const ServerDetail = () => {
                 <span className={styles.statValue}>{stats.memory}</span>
               </div>
               <div className={styles.statItem}>
-                <span className={styles.statLabel}>Memory %</span>
-                <span className={styles.statValue}>{stats.memoryPercent}</span>
+                <span className={styles.statLabel}>Storage I/O</span>
+                <span className={styles.statValue}>{stats.blockIO || 'N/A'}</span>
               </div>
               <div className={styles.statItem}>
                 <span className={styles.statLabel}>Container Status</span>
@@ -233,11 +233,19 @@ const ServerDetail = () => {
 
   // Component for deployment logs section
   const DeploymentLogsRow = ({ deployment }) => {
+    const logsContentRef = useRef(null);
     const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery({
       queryKey: ['deployment-logs', deployment.app_id, deployment.id],
       queryFn: () => appsService.getDeploymentLogs(deployment.app_id, deployment.id, 100),
       enabled: true,
     });
+
+    // Auto-scroll to bottom when logs load
+    useEffect(() => {
+      if (logsContentRef.current && logsData?.logs) {
+        logsContentRef.current.scrollTop = logsContentRef.current.scrollHeight;
+      }
+    }, [logsData]);
 
     return (
       <div className={styles.logsRow}>
@@ -247,7 +255,7 @@ const ServerDetail = () => {
             <RefreshIcon size={12} /> Refresh
           </Button>
         </div>
-        <div className={styles.logsContent}>
+        <div className={styles.logsContent} ref={logsContentRef}>
           {logsLoading ? (
             <div className={styles.logsLoading}>Loading container logs...</div>
           ) : logsData?.error ? (
@@ -793,12 +801,13 @@ const ServerDetail = () => {
                       <div>
                         <span className={`${styles.statusBadge} ${
                           deployment.status === 'running' ? styles.statusRunning :
-                          deployment.status === 'snapshotting' || deployment.status === 'restoring' ? styles.statusPending :
+                          ['snapshotting', 'restoring', 'migrating'].includes(deployment.status) ? styles.statusPending :
                           styles.statusStopped
                         }`}>
                           {deployment.status === 'running' ? '● Running' : 
                            deployment.status === 'snapshotting' ? '◐ Snapshotting' :
                            deployment.status === 'restoring' ? '◐ Restoring' :
+                           deployment.status === 'migrating' ? '◐ Migrating' :
                            '○ Stopped'}
                         </span>
                       </div>
@@ -829,13 +838,14 @@ const ServerDetail = () => {
                         {new Date(deployment.deployed_at).toLocaleString()}
                       </div>
                       <div className={styles.actionsCell}>
-                        {deployment.status === 'snapshotting' || deployment.status === 'restoring' ? (
+                        {['snapshotting', 'restoring', 'migrating'].includes(deployment.status) ? (
                           <Button
                             variant="outline"
                             size="small"
                             disabled
                           >
-                            {deployment.status === 'snapshotting' ? 'Snapshotting...' : 'Restoring...'}
+                            {deployment.status === 'snapshotting' ? 'Snapshotting...' : 
+                             deployment.status === 'restoring' ? 'Restoring...' : 'Migrating...'}
                           </Button>
                         ) : deployment.status === 'running' ? (
                           <Button
