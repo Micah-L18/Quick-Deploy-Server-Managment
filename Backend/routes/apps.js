@@ -178,6 +178,24 @@ router.post('/:id/check-ports', requireAuth, asyncHandler(async (req, res) => {
   const server = serverCheck.server;
   const portNumbers = ports.map(p => p.host).filter(Boolean);
   
+  // Get the excluded deployment's current ports (if editing an existing deployment)
+  // These ports are owned by the deployment being edited, so they shouldn't be flagged as conflicts
+  let excludedPorts = [];
+  if (excludeDeploymentId) {
+    const excludedDeployment = await AppModel.findDeploymentById(excludeDeploymentId, req.params.id, req.session.userId);
+    if (excludedDeployment) {
+      let deploymentPorts = excludedDeployment.port_mappings;
+      if (typeof deploymentPorts === 'string') {
+        try {
+          deploymentPorts = JSON.parse(deploymentPorts);
+        } catch {
+          deploymentPorts = [];
+        }
+      }
+      excludedPorts = (deploymentPorts || []).map(p => String(p.host));
+    }
+  }
+  
   // First, check ports that are actually in use on the server (running processes)
   const liveResult = await checkPortsAvailable(
     {
@@ -187,6 +205,13 @@ router.post('/:id/check-ports', requireAuth, asyncHandler(async (req, res) => {
     },
     portNumbers
   );
+  
+  // Filter out ports that belong to the excluded deployment (the one being edited)
+  // These are not real conflicts - they're the deployment's own ports
+  liveResult.conflicts = liveResult.conflicts.filter(conflict => {
+    const portStr = String(conflict.port);
+    return !excludedPorts.includes(portStr);
+  });
 
   // Also check configured ports from other deployments on this server
   const serverDeployments = await AppModel.findDeploymentsByServer(serverId, req.session.userId);

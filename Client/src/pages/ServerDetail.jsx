@@ -14,7 +14,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { serversService } from '../api/servers';
 import { appsService } from '../api/apps';
 import { getRegionFlag } from '../utils/formatters';
-import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon, DockerIcon, GlobeAltIcon, XIcon, CheckCircleIcon } from '../components/Icons';
+import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon, DockerIcon, GlobeAltIcon, XIcon, CheckCircleIcon, SettingsIcon } from '../components/Icons';
 import styles from './ServerDetail.module.css';
 
 const ServerDetail = () => {
@@ -792,9 +792,14 @@ const ServerDetail = () => {
                       </div>
                       <div>
                         <span className={`${styles.statusBadge} ${
-                          deployment.status === 'running' ? styles.statusRunning : styles.statusStopped
+                          deployment.status === 'running' ? styles.statusRunning :
+                          deployment.status === 'snapshotting' || deployment.status === 'restoring' ? styles.statusPending :
+                          styles.statusStopped
                         }`}>
-                          {deployment.status === 'running' ? '● Running' : '○ Stopped'}
+                          {deployment.status === 'running' ? '● Running' : 
+                           deployment.status === 'snapshotting' ? '◐ Snapshotting' :
+                           deployment.status === 'restoring' ? '◐ Restoring' :
+                           '○ Stopped'}
                         </span>
                       </div>
                       <div className={styles.portsCell}>
@@ -824,7 +829,15 @@ const ServerDetail = () => {
                         {new Date(deployment.deployed_at).toLocaleString()}
                       </div>
                       <div className={styles.actionsCell}>
-                        {deployment.status === 'running' ? (
+                        {deployment.status === 'snapshotting' || deployment.status === 'restoring' ? (
+                          <Button
+                            variant="outline"
+                            size="small"
+                            disabled
+                          >
+                            {deployment.status === 'snapshotting' ? 'Snapshotting...' : 'Restoring...'}
+                          </Button>
+                        ) : deployment.status === 'running' ? (
                           <Button
                             variant="outline"
                             size="small"
@@ -861,15 +874,13 @@ const ServerDetail = () => {
                           {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                           Logs
                         </Button>
-                        {deployment.status !== 'running' && (
-                          <Button
-                            variant="outline"
-                            size="small"
-                            onClick={() => setEditingDeployment(deployment)}
-                          >
-                            <EditIcon size={14} /> Edit
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="small"
+                          onClick={() => setEditingDeployment(deployment)}
+                        >
+                          <SettingsIcon size={14} /> Config
+                        </Button>
                         <Button
                           variant="outline"
                           size="small"

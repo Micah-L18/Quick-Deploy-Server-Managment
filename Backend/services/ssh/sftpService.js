@@ -536,6 +536,81 @@ async function listDirectorySmart(serverConfig, dirPath = '/') {
   }
 }
 
+/**
+ * Download a file from remote server to local filesystem
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} remotePath - Remote file path
+ * @param {string} localPath - Local file path to save to
+ * @returns {Promise<void>}
+ */
+async function downloadFile(serverConfig, remotePath, localPath) {
+  const { sftp, release } = await getSftpSession(serverConfig);
+  const localFs = require('fs');
+  const path = require('path');
+  
+  // Ensure local directory exists
+  const localDir = path.dirname(localPath);
+  await require('fs').promises.mkdir(localDir, { recursive: true });
+
+  return new Promise((resolve, reject) => {
+    const writeStream = localFs.createWriteStream(localPath);
+    const readStream = sftp.createReadStream(remotePath);
+    
+    readStream.on('error', (err) => {
+      release();
+      writeStream.close();
+      reject(err);
+    });
+    
+    writeStream.on('error', (err) => {
+      release();
+      reject(err);
+    });
+    
+    writeStream.on('close', () => {
+      release();
+      resolve();
+    });
+    
+    readStream.pipe(writeStream);
+  });
+}
+
+/**
+ * Upload a file from local filesystem to remote server
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} localPath - Local file path
+ * @param {string} remotePath - Remote file path to save to
+ * @returns {Promise<void>}
+ */
+async function uploadFile(serverConfig, localPath, remotePath) {
+  const { sftp, release } = await getSftpSession(serverConfig);
+  const localFs = require('fs');
+
+  return new Promise((resolve, reject) => {
+    const readStream = localFs.createReadStream(localPath);
+    const writeStream = sftp.createWriteStream(remotePath);
+    
+    readStream.on('error', (err) => {
+      release();
+      writeStream.close();
+      reject(err);
+    });
+    
+    writeStream.on('error', (err) => {
+      release();
+      reject(err);
+    });
+    
+    writeStream.on('close', () => {
+      release();
+      resolve();
+    });
+    
+    readStream.pipe(writeStream);
+  });
+}
+
 module.exports = {
   listDirectory,
   readFile,
@@ -553,5 +628,8 @@ module.exports = {
   // Smart operations (auto-elevate if needed)
   readFileSmart,
   writeFileSmart,
-  listDirectorySmart
+  listDirectorySmart,
+  // File transfer operations
+  downloadFile,
+  uploadFile
 };

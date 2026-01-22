@@ -33,7 +33,8 @@ import {
   LayersIcon,
   EditIcon,
   DockerIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  SettingsIcon
 } from '../components/Icons';
 import styles from './Apps.module.css';
 
@@ -441,9 +442,15 @@ const Apps = () => {
                           <div>
                             <span className={`${styles.statusBadge} ${
                               isOrphaned ? styles.statusOrphaned :
-                              deployment.status === 'running' ? styles.statusRunning : styles.statusStopped
+                              deployment.status === 'running' ? styles.statusRunning :
+                              deployment.status === 'snapshotting' || deployment.status === 'restoring' ? styles.statusPending :
+                              styles.statusStopped
                             }`}>
-                              {isOrphaned ? '⚠ Orphaned' : deployment.status === 'running' ? '● Running' : '○ Stopped'}
+                              {isOrphaned ? '⚠ Orphaned' : 
+                               deployment.status === 'running' ? '● Running' : 
+                               deployment.status === 'snapshotting' ? '◐ Snapshotting' :
+                               deployment.status === 'restoring' ? '◐ Restoring' :
+                               '○ Stopped'}
                             </span>
                           </div>
                           <div className={styles.portsCell}>
@@ -487,7 +494,15 @@ const Apps = () => {
                             ) : (
                               // Normal deployment - show all controls
                               <>
-                                {deployment.status === 'running' ? (
+                                {deployment.status === 'snapshotting' || deployment.status === 'restoring' ? (
+                                  <Button
+                                    variant="outline"
+                                    size="small"
+                                    disabled
+                                  >
+                                    {deployment.status === 'snapshotting' ? 'Snapshotting...' : 'Restoring...'}
+                                  </Button>
+                                ) : deployment.status === 'running' ? (
                                   <Button
                                     variant="outline"
                                     size="small"
@@ -524,15 +539,13 @@ const Apps = () => {
                                   {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                                   Logs
                                 </Button>
-                                {deployment.status !== 'running' && (
-                                  <Button
-                                    variant="outline"
-                                    size="small"
-                                    onClick={() => setEditingDeployment(deployment)}
-                                  >
-                                    <EditIcon size={14} /> Edit
-                                  </Button>
-                                )}
+                                <Button
+                                  variant="outline"
+                                  size="small"
+                                  onClick={() => setEditingDeployment(deployment)}
+                                >
+                                  <SettingsIcon size={14} /> Config
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="small"
@@ -572,9 +585,15 @@ const Apps = () => {
                           </Link>
                           <span className={`${styles.statusBadge} ${
                             isOrphaned ? styles.statusOrphaned :
-                            deployment.status === 'running' ? styles.statusRunning : styles.statusStopped
+                            deployment.status === 'running' ? styles.statusRunning :
+                            deployment.status === 'snapshotting' || deployment.status === 'restoring' ? styles.statusPending :
+                            styles.statusStopped
                           }`}>
-                            {isOrphaned ? '⚠ Orphaned' : deployment.status === 'running' ? '● Running' : '○ Stopped'}
+                            {isOrphaned ? '⚠ Orphaned' : 
+                             deployment.status === 'running' ? '● Running' : 
+                             deployment.status === 'snapshotting' ? '◐ Snapshotting' :
+                             deployment.status === 'restoring' ? '◐ Restoring' :
+                             '○ Stopped'}
                           </span>
                         </div>
                         
@@ -626,7 +645,15 @@ const Apps = () => {
                             </Button>
                           ) : (
                             <>
-                              {deployment.status === 'running' ? (
+                              {deployment.status === 'snapshotting' || deployment.status === 'restoring' ? (
+                                <Button
+                                  variant="outline"
+                                  size="small"
+                                  disabled
+                                >
+                                  {deployment.status === 'snapshotting' ? 'Snapshotting...' : 'Restoring...'}
+                                </Button>
+                              ) : deployment.status === 'running' ? (
                                 <Button
                                   variant="outline"
                                   size="small"
@@ -663,15 +690,13 @@ const Apps = () => {
                             {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                             Logs
                           </Button>
-                          {deployment.status !== 'running' && (
-                            <Button
-                              variant="outline"
-                              size="small"
-                              onClick={() => setEditingDeployment(deployment)}
-                            >
-                              <EditIcon size={14} />
-                            </Button>
-                          )}
+                          <Button
+                            variant="outline"
+                            size="small"
+                            onClick={() => setEditingDeployment(deployment)}
+                          >
+                            <SettingsIcon size={14} />
+                          </Button>
                           <Button
                             variant="outline"
                             size="small"

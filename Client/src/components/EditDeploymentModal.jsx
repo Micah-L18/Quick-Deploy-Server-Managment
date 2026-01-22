@@ -3,10 +3,11 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import Modal from './Modal';
 import Button from './Button';
 import ConfirmModal from './ConfirmModal';
+import SnapshotContent from './SnapshotContent';
 import { appsService } from '../api/apps';
 import { generateDockerRun } from '../utils/dockerParser';
 import { generateDockerComposeYaml } from '../utils/yamlParser';
-import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon } from './Icons';
+import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon, HardDriveIcon, StopCircleIcon } from './Icons';
 import styles from './EditDeploymentModal.module.css';
 
 const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) => {
@@ -167,11 +168,37 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     }
   });
 
+  // Stop deployment mutation
+  const [isStopping, setIsStopping] = useState(false);
+  const stopMutation = useMutation({
+    mutationFn: () => appsService.stopDeployment(deployment.app_id, deployment.id),
+    onMutate: () => setIsStopping(true),
+    onSuccess: () => {
+      setIsStopping(false);
+      queryClient.invalidateQueries(['server-deployments', serverId]);
+      queryClient.invalidateQueries(['app-deployments']);
+      queryClient.invalidateQueries(['all-deployments']);
+      queryClient.invalidateQueries(['deployment-detail', deployment.app_id, deployment.id]);
+    },
+    onError: (err) => {
+      setError(err.response?.data?.error || err.message || 'Failed to stop deployment');
+      setIsStopping(false);
+    }
+  });
+
   const handleSave = () => {
     setIsSaving(true);
     setError('');
     updateMutation.mutate(formData);
   };
+
+  const handleStop = () => {
+    setError('');
+    stopMutation.mutate();
+  };
+
+  // Check if deployment is running
+  const isRunning = (freshDeployment?.status || deployment?.status) === 'running';
 
   // Port mapping handlers
   const addPort = () => {
@@ -276,16 +303,29 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
       size="large"
       footer={
         <div className={styles.modalFooter}>
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancel
+          <Button variant="outline" onClick={onClose} disabled={isSaving || isStopping}>
+            {activeTab === 'snapshots' ? 'Close' : 'Cancel'}
           </Button>
-          <Button 
-            variant="primary" 
-            onClick={handleSave} 
-            disabled={isSaving || activeTab === 'preview' || portConflicts.length > 0}
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          {activeTab === 'config' && (
+            isRunning ? (
+              <Button 
+                variant="danger" 
+                onClick={handleStop} 
+                disabled={isStopping}
+              >
+                <StopCircleIcon size={16} />
+                {isStopping ? 'Stopping...' : 'Stop to Edit'}
+              </Button>
+            ) : (
+              <Button 
+                variant="primary" 
+                onClick={handleSave} 
+                disabled={isSaving || portConflicts.length > 0}
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )
+          )}
         </div>
       }
     >
@@ -300,6 +340,12 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           onClick={() => setActiveTab('config')}
         >
           <SettingsIcon size={16} /> Config
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'snapshots' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('snapshots')}
+        >
+          <HardDriveIcon size={16} /> Snapshots
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'preview' ? styles.activeTab : ''}`}
@@ -317,10 +363,20 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           </div>
         )}
 
-        <div className={styles.infoBox}>
-          <strong>Note:</strong> Changes will take effect the next time the container is started.
-          The container will be recreated with the new configuration.
-        </div>
+        {isRunning ? (
+          <div className={styles.warningBox}>
+            <StopCircleIcon size={16} />
+            <span>
+              <strong>Container is running.</strong> Stop the container to make changes. 
+              Use the "Stop to Edit" button below.
+            </span>
+          </div>
+        ) : (
+          <div className={styles.infoBox}>
+            <strong>Note:</strong> Changes will take effect the next time the container is started.
+            The container will be recreated with the new configuration.
+          </div>
+        )}
 
         {/* Port Mappings */}
         <div className={styles.configSection}>
@@ -347,6 +403,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 onChange={(e) => updatePort(index, 'host', e.target.value)}
                 placeholder="e.g., 8080"
                 className={portConflicts.includes(port.host) ? styles.portConflict : ''}
+                disabled={isRunning}
               />
               <span className={styles.arrow}>→</span>
               <input
@@ -354,13 +411,14 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 value={port.container}
                 onChange={(e) => updatePort(index, 'container', e.target.value)}
                 placeholder="e.g., 80"
+                disabled={isRunning}
               />
-              <button className={styles.removeBtn} onClick={() => removePort(index)}>
+              <button className={styles.removeBtn} onClick={() => removePort(index)} disabled={isRunning}>
                 <XIcon size={16} />
               </button>
             </div>
           ))}
-          <button className={styles.addBtn} onClick={addPort}>+ Add Port Mapping</button>
+          <button className={styles.addBtn} onClick={addPort} disabled={isRunning}>+ Add Port Mapping</button>
         </div>
 
         {/* Environment Variables */}
@@ -374,6 +432,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 value={env.key}
                 onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
                 placeholder="Variable Name"
+                disabled={isRunning}
               />
               <span className={styles.equals}>=</span>
               <input
@@ -381,13 +440,14 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 value={env.value}
                 onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                 placeholder="Value"
+                disabled={isRunning}
               />
-              <button className={styles.removeBtn} onClick={() => removeEnvVar(index)}>
+              <button className={styles.removeBtn} onClick={() => removeEnvVar(index)} disabled={isRunning}>
                 <XIcon size={16} />
               </button>
             </div>
           ))}
-          <button className={styles.addBtn} onClick={addEnvVar}>+ Add Environment Variable</button>
+          <button className={styles.addBtn} onClick={addEnvVar} disabled={isRunning}>+ Add Environment Variable</button>
         </div>
 
         {/* Volume Mounts */}
@@ -401,6 +461,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 value={vol.host}
                 onChange={(e) => updateVolume(index, 'host', e.target.value)}
                 placeholder="Host Path (e.g., /data)"
+                disabled={isRunning}
               />
               <span className={styles.arrow}>→</span>
               <input
@@ -408,13 +469,14 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 value={vol.container}
                 onChange={(e) => updateVolume(index, 'container', e.target.value)}
                 placeholder="Container Path (e.g., /app/data)"
+                disabled={isRunning}
               />
-              <button className={styles.removeBtn} onClick={() => removeVolume(index)}>
+              <button className={styles.removeBtn} onClick={() => removeVolume(index)} disabled={isRunning}>
                 <XIcon size={16} />
               </button>
             </div>
           ))}
-          <button className={styles.addBtn} onClick={addVolume}>+ Add Volume Mount</button>
+          <button className={styles.addBtn} onClick={addVolume} disabled={isRunning}>+ Add Volume Mount</button>
         </div>
 
         {/* Advanced Options */}
@@ -427,6 +489,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
               <select
                 value={formData.restart_policy}
                 onChange={(e) => setFormData(prev => ({ ...prev, restart_policy: e.target.value }))}
+                disabled={isRunning}
               >
                 <option value="no">No</option>
                 <option value="always">Always</option>
@@ -441,6 +504,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                 value={formData.network_mode}
                 onChange={(e) => setFormData(prev => ({ ...prev, network_mode: e.target.value }))}
                 placeholder="bridge, host, or custom network"
+                disabled={isRunning}
               />
             </div>
           </div>
@@ -452,6 +516,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
               value={formData.command}
               onChange={(e) => setFormData(prev => ({ ...prev, command: e.target.value }))}
               placeholder="Override default container command"
+              disabled={isRunning}
             />
           </div>
 
@@ -462,6 +527,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
               value={formData.custom_args}
               onChange={(e) => setFormData(prev => ({ ...prev, custom_args: e.target.value }))}
               placeholder="Additional docker run arguments (e.g., --cap-add=SYS_ADMIN)"
+              disabled={isRunning}
             />
           </div>
 
@@ -473,6 +539,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                   type="checkbox"
                   checked={!!formData.web_ui_port}
                   onChange={(e) => setFormData(prev => ({ ...prev, web_ui_port: e.target.checked ? '' : '' }))}
+                  disabled={isRunning}
                 />
                 <span>Enable Web UI Access</span>
               </label>
@@ -481,7 +548,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
                   value={formData.web_ui_port || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, web_ui_port: e.target.value }))}
                   className={styles.webUiSelect}
-                  disabled={!formData.port_mappings.some(p => p.host)}
+                  disabled={isRunning || !formData.port_mappings.some(p => p.host)}
                 >
                   <option value="">Select port with web UI...</option>
                   {formData.port_mappings.map((port, index) => (
@@ -536,6 +603,15 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
             <pre className={styles.codeBlock}>{previewConfig.yaml}</pre>
           </div>
         </div>
+      )}
+
+      {activeTab === 'snapshots' && (
+        <SnapshotContent 
+          deployment={freshDeployment || deployment}
+          server={server}
+          isVisible={isOpen && activeTab === 'snapshots'}
+          showFooter={false}
+        />
       )}
         </>
       )}

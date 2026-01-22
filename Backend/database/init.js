@@ -95,6 +95,34 @@ async function initDatabase() {
     )
   `);
 
+  // Create deployment_snapshots table for backup/migration features
+  await run(`
+    CREATE TABLE IF NOT EXISTS deployment_snapshots (
+      id TEXT PRIMARY KEY,
+      deployment_id TEXT NOT NULL,
+      server_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      size_bytes INTEGER DEFAULT 0,
+      volume_paths TEXT,
+      archive_filename TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      FOREIGN KEY (deployment_id) REFERENCES app_deployments(id) ON DELETE CASCADE,
+      FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create system_settings table for global configuration
+  await run(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
   // Run migrations for additional columns
   await runMigrations();
 

@@ -1202,3 +1202,139 @@
     padding: 20px;
   }
 }
+
+/* Deployments Section */
+.deploymentsSection {
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.deploymentsHeader {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.deploymentsHeader h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.deploymentsHeader p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.deploymentsTable {
+  overflow-x: auto;
+}
+
+.deploymentsTable .tableHeader {
+  grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 120px;
+}
+
+.deploymentsTable .tableRow {
+  grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 120px;
+}
+
+.noDeployments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.noDeployments p {
+  margin: 16px 0 0 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.noDeploymentsHint {
+  margin-top: 8px !important;
+  font-size: 0.9rem !important;
+  color: var(--text-secondary) !important;
+}
+
+.deploymentActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tabBadge {
+  background: var(--primary);
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+/* Stats row in deployment */
+.statsRow {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.portBadge {
+  display: inline-block;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-family: 'Monaco', 'Menlo', monospace;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.deployedAt {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.loading {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Responsive for deployments */
+@media (max-width: 1024px) {
+  .deploymentsTable .tableHeader,
+  .deploymentsTable .tableRow {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  
+  .deploymentsTable .tableHeader > div:nth-child(4),
+  .deploymentsTable .tableHeader > div:nth-child(5),
+  .deploymentsTable .tableRow > div:nth-child(4),
+  .deploymentsTable .tableRow > div:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .deploymentsTable .tableHeader {
+    display: none;
+  }
+  
+  .deploymentsTable .tableRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .deploymentActions {
+    justify-content: flex-start;
+  }
+}

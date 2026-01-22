@@ -52,6 +52,15 @@ const METRICS_CONFIG = {
   cacheTimeout: 120000 // 2 minutes
 };
 
+// Backup and snapshot configuration
+const BACKUP_CONFIG = {
+  storagePath: path.join(__dirname, '..', 'backups'),
+  tempPath: path.join(__dirname, '..', 'tmp', 'backups'),
+  maxStorageGB: parseInt(process.env.BACKUP_MAX_STORAGE_GB) || 50, // Default 50GB
+  retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS) || 30,
+  compressionLevel: 6 // gzip level 1-9
+};
+
 module.exports = {
   PORT,
   DB_FILE,
@@ -60,5 +69,6 @@ module.exports = {
   CORS_ORIGINS,
   SESSION_CONFIG,
   SSH_POOL_CONFIG,
-  METRICS_CONFIG
+  METRICS_CONFIG,
+  BACKUP_CONFIG
 };

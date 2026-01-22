@@ -3,5 +3,7 @@ module.exports = {
   ServerModel: require('./ServerModel'),
   ActivityModel: require('./ActivityModel'),
   AppModel: require('./AppModel'),
-  MetricsModel: require('./MetricsModel')
+  MetricsModel: require('./MetricsModel'),
+  SnapshotModel: require('./SnapshotModel'),
+  SystemSettingsModel: require('./SystemSettingsModel')
 };

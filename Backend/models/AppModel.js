@@ -201,6 +201,21 @@ async function findDeploymentById(deploymentId, appId, userId) {
 }
 
 /**
+ * Get deployment by ID only (simpler version)
+ * @param {string} deploymentId - Deployment ID
+ * @returns {Promise<Object|null>}
+ */
+async function findDeploymentByIdSimple(deploymentId) {
+  return get(`
+    SELECT d.*, s.ip, s.username, s.private_key_path, a.user_id, a.name as app_name, a.volumes
+    FROM app_deployments d
+    LEFT JOIN servers s ON d.server_id = s.id
+    LEFT JOIN apps a ON d.app_id = a.id
+    WHERE d.id = ?
+  `, [deploymentId]);
+}
+
+/**
  * Create a deployment
  * @param {Object} deployment - Deployment data
  * @returns {Promise<Object>}
@@ -362,6 +377,7 @@ module.exports = {
   remove,
   findDeployments,
   findDeploymentById,
+  findDeploymentByIdSimple,
   createDeployment,
   updateDeploymentStatus,
   updateDeploymentConfig,

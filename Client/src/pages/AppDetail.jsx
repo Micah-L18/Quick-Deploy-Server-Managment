@@ -5,9 +5,10 @@ import { io } from 'socket.io-client';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import SnapshotModal from '../components/SnapshotModal';
 import { appsService } from '../api/apps';
 import { serversService } from '../api/servers';
-import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon } from '../components/Icons';
+import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon, LayersIcon, HardDriveIcon, XIcon } from '../components/Icons';
 import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
 import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
 import styles from './AppDetail.module.css';
@@ -75,6 +76,16 @@ const AppDetail = () => {
     queryKey: ['servers'],
     queryFn: serversService.getServers,
   });
+
+  // Fetch deployments for this app
+  const { data: deployments = [] } = useQuery({
+    queryKey: ['app-deployments', id],
+    queryFn: () => appsService.getDeployments(id),
+    enabled: !!id,
+  });
+
+  // Snapshot modal state
+  const [snapshotModal, setSnapshotModal] = useState({ isOpen: false, deployment: null, server: null });
 
   // Update mutation
   const updateMutation = useMutation({
@@ -511,6 +522,15 @@ const AppDetail = () => {
         >
           <FileIcon size={16} style={{ marginRight: '6px', display: 'inline-block' }} />
           YAML
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'deployments' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('deployments')}
+        >
+          <LayersIcon size={16} /> Deployments
+          {deployments.length > 0 && (
+            <span className={styles.tabBadge}>{deployments.length}</span>
+          )}
         </button>
       </div>
 
@@ -950,6 +970,51 @@ const AppDetail = () => {
         </div>
       )}
 
+      {/* Deployments Tab */}
+      {activeTab === 'deployments' && (
+        <div className={styles.tabContent}>
+          <div className={styles.deploymentsSection}>
+            <div className={styles.deploymentsHeader}>
+              <h3>Active Deployments</h3>
+              <p>Manage your running container instances across servers</p>
+            </div>
+            
+            {deployments.length === 0 ? (
+              <div className={styles.noDeployments}>
+                <LayersIcon size={48} color="var(--text-secondary)" />
+                <p>No active deployments</p>
+                <p className={styles.noDeploymentsHint}>Deploy this app to a server to see it here</p>
+              </div>
+            ) : (
+              <div className={styles.deploymentsTable}>
+                <div className={styles.tableHeader}>
+                  <div>Server</div>
+                  <div>Container</div>
+                  <div>Status</div>
+                  <div>Ports</div>
+                  <div>Deployed</div>
+                  <div>Actions</div>
+                </div>
+                {deployments.map(deployment => (
+                  <DeploymentRow
+                    key={deployment.id}
+                    deployment={deployment}
+                    appId={id}
+                    webUiPort={formData.web_ui_port}
+                    onRemove={() => handleRemoveDeployment(deployment)}
+                    onSnapshot={() => {
+                      // Find the server for this deployment
+                      const server = servers.find(s => s.id === deployment.server_id);
+                      setSnapshotModal({ isOpen: true, deployment, server });
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Deploy Modal */}
       <Modal
         isOpen={showDeployModal}
@@ -1170,12 +1235,20 @@ const AppDetail = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Snapshot Modal */}
+      <SnapshotModal
+        isOpen={snapshotModal.isOpen}
+        onClose={() => setSnapshotModal({ isOpen: false, deployment: null, server: null })}
+        deployment={snapshotModal.deployment}
+        server={snapshotModal.server}
+      />
     </Layout>
   );
 };
 
 // Deployment row component with stats fetching
-const DeploymentRow = ({ deployment, appId, onRemove, webUiPort }) => {
+const DeploymentRow = ({ deployment, appId, onRemove, onSnapshot, webUiPort }) => {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -1224,25 +1297,58 @@ const DeploymentRow = ({ deployment, appId, onRemove, webUiPort }) => {
         )}
       </div>
       <div>
-        {deployment.port_mappings && deployment.port_mappings.map((p, i) => (
-          <span key={i} className={styles.portBadge}>{p.host}:{p.container}</span>
-        ))}
+        {(() => {
+          const portMappings = typeof deployment.port_mappings === 'string' 
+            ? JSON.parse(deployment.port_mappings || '[]') 
+            : (deployment.port_mappings || []);
+          return portMappings.map((p, i) => (
+            <span key={i} className={styles.portBadge}>{p.host}:{p.container}</span>
+          ));
+        })()}
       </div>
       <div className={styles.deployedAt}>
         {new Date(deployment.deployed_at).toLocaleString()}
       </div>
       <div className={styles.deploymentActions}>
-        {webUiPort && stats?.status === 'running' && deployment.server_ip && (
-          <a
-            href={`http://${deployment.server_ip}:${webUiPort}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="primary" size="small">
-              <GlobeAltIcon size={14} /> Open UI
-            </Button>
-          </a>
-        )}
+        {(() => {
+          // Find the correct external port for the Web UI
+          if (!webUiPort || stats?.status !== 'running' || !deployment.server_ip) return null;
+          
+          const portMappings = typeof deployment.port_mappings === 'string' 
+            ? JSON.parse(deployment.port_mappings || '[]') 
+            : (deployment.port_mappings || []);
+          
+          // Try to find the external (host) port
+          // webUiPort might be the host port or container port, so check both
+          let externalPort = webUiPort;
+          
+          // First check if webUiPort matches a host port directly
+          const hostMatch = portMappings.find(p => String(p.host) === String(webUiPort));
+          if (hostMatch) {
+            externalPort = hostMatch.host;
+          } else {
+            // If webUiPort matches a container port, get the corresponding host port
+            const containerMatch = portMappings.find(p => String(p.container) === String(webUiPort));
+            if (containerMatch) {
+              externalPort = containerMatch.host;
+            }
+          }
+          
+          return (
+            <a
+              href={`http://${deployment.server_ip}:${externalPort}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="primary" size="small">
+                <GlobeAltIcon size={14} /> Open UI
+              </Button>
+            </a>
+          );
+        })()}
+        <Button variant="secondary" size="small" onClick={onSnapshot} title="Manage Snapshots">
+          <HardDriveIcon size={14} />
+        </Button>
         <Button variant="danger" size="small" onClick={onRemove}>
           <TrashIcon size={14} />
         </Button>

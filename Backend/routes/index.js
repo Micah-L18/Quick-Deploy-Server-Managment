@@ -6,5 +6,6 @@ module.exports = {
   fileRoutes: require('./files'),
   metricsRoutes: require('./metrics'),
   serviceRoutes: require('./services'),
-  systemRoutes: require('./system')
+  systemRoutes: require('./system'),
+  snapshotRoutes: require('./snapshots')
 };
