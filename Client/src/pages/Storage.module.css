@@ -203,6 +203,33 @@
   font-size: 16px;
 }
 
+.emptyStateSubtext {
+  margin-top: 8px !important;
+  font-size: 14px !important;
+  color: #888 !important;
+}
+
+/* Section Header */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.uploadSection {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 /* Icons List */
 .iconsList {
   display: flex;
@@ -277,6 +304,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.iconActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 /* Snapshots List */

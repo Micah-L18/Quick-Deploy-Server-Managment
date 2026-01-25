@@ -30,4 +30,12 @@ export const uploadsService = {
     const response = await api.get('/uploads/icons');
     return response.data;
   },
+
+  renameIcon: async (oldIconUrl, newFilename) => {
+    const response = await api.put('/uploads/icons/rename', {
+      oldIconUrl,
+      newFilename,
+    });
+    return response.data;
+  },
 };

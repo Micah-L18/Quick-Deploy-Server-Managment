@@ -308,6 +308,15 @@
   color: var(--success-color);
   font-size: 14px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.unsavedChanges {
+  color: var(--warning-color);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .codeBlock {

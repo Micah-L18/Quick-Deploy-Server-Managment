@@ -74,6 +74,26 @@ router.delete('/icons', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 /**
+ * PUT /api/uploads/icons/rename
+ * Rename an icon file
+ */
+router.put('/icons/rename', requireAuth, asyncHandler(async (req, res) => {
+  const { oldIconUrl, newFilename } = req.body;
+
+  if (!oldIconUrl || !newFilename) {
+    return res.status(400).json({ error: 'Old icon URL and new filename are required' });
+  }
+
+  try {
+    const newIconUrl = await storageService.renameIcon(oldIconUrl, newFilename);
+    res.json({ success: true, newIconUrl, message: 'Icon renamed successfully' });
+  } catch (err) {
+    console.error('Icon rename error:', err);
+    res.status(400).json({ error: err.message || 'Failed to rename icon' });
+  }
+}));
+
+/**
  * GET /api/uploads/storage-info
  * Get storage statistics
  */

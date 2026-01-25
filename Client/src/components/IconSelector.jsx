@@ -112,35 +112,47 @@ const IconSelector = ({ value, iconUrl, onChange, label = 'Icon', showCustomUplo
   const [showSelector, setShowSelector] = useState(false);
   const [uploadedIcons, setUploadedIcons] = useState([]);
 
+  // Debug logging
+  console.log('[IconSelector] Props:', { value, iconUrl, showCustomUpload });
+
   // Fetch uploaded icons when selector opens
   useEffect(() => {
     if (showSelector && showCustomUpload) {
-      uploadsService.listIcons().then(setUploadedIcons).catch(console.error);
+      uploadsService.listIcons().then(icons => {
+        console.log('[IconSelector] Fetched uploaded icons:', icons);
+        setUploadedIcons(icons);
+      }).catch(console.error);
     }
   }, [showSelector, showCustomUpload]);
 
   const handleIconSelect = (iconKey) => {
+    console.log('[IconSelector] Selected predefined icon:', iconKey);
     onChange({ icon: iconKey, iconUrl: null });
     setShowSelector(false);
   };
 
   const handleUploadedIconSelect = (iconUrl) => {
+    console.log('[IconSelector] Selected custom icon:', iconUrl);
     onChange({ icon: 'custom', iconUrl });
     setShowSelector(false);
   };
 
   const handleClear = () => {
+    console.log('[IconSelector] Cleared icon');
     onChange({ icon: null, iconUrl: null });
     setShowSelector(false);
   };
 
   const handleCustomIconChange = (data) => {
+    console.log('[IconSelector] Custom icon changed:', data);
     onChange(data);
   };
 
   // If iconUrl is provided, it's a custom icon
   const isCustomIcon = iconUrl && iconUrl.startsWith('/uploads/');
   const selectedIcon = value && !isCustomIcon ? SERVER_ICONS[value] : null;
+
+  console.log('[IconSelector] Computed:', { isCustomIcon, selectedIcon: selectedIcon?.name });
 
   return (
     <div className={styles.iconSelectorContainer}>
@@ -189,20 +201,24 @@ const IconSelector = ({ value, iconUrl, onChange, label = 'Icon', showCustomUplo
             <div className={styles.customSection}>
               <h4 className={styles.sectionTitle}>Uploaded Icons</h4>
               <div className={styles.iconGrid}>
-                {uploadedIcons.map((url) => (
-                  <button
-                    key={url}
-                    className={`${styles.iconOption} ${iconUrl === url ? styles.selected : ''}`}
-                    onClick={() => handleUploadedIconSelect(url)}
-                    title="Custom uploaded icon"
-                  >
-                    <img 
-                      src={getIconUrl(url)} 
-                      alt="Custom icon"
-                      className={styles.uploadedIconPreview}
-                    />
-                  </button>
-                ))}
+                {uploadedIcons.map((url) => {
+                  const isSelected = iconUrl === url;
+                  console.log('[IconSelector] Custom icon option:', { url, iconUrl, isSelected });
+                  return (
+                    <button
+                      key={url}
+                      className={`${styles.iconOption} ${isSelected ? styles.selected : ''}`}
+                      onClick={() => handleUploadedIconSelect(url)}
+                      title="Custom uploaded icon"
+                    >
+                      <img 
+                        src={getIconUrl(url)} 
+                        alt="Custom icon"
+                        className={styles.uploadedIconPreview}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

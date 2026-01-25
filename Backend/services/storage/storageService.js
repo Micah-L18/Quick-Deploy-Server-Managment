@@ -88,6 +88,61 @@ async function deleteIcon(iconUrl) {
 }
 
 /**
+ * Rename an icon file
+ * @param {string} oldIconUrl - Current icon URL
+ * @param {string} newFilename - New filename (without path)
+ * @returns {Promise<string>} - New icon URL
+ */
+async function renameIcon(oldIconUrl, newFilename) {
+  if (!oldIconUrl || !oldIconUrl.startsWith('/uploads/icons/')) {
+    throw new Error('Invalid icon URL');
+  }
+  
+  // Validate new filename
+  if (!newFilename || newFilename.includes('/') || newFilename.includes('\\')) {
+    throw new Error('Invalid filename');
+  }
+  
+  const oldFilename = path.basename(oldIconUrl);
+  const oldFilePath = path.join(ICONS_DIR, oldFilename);
+  
+  // Keep the extension from the original file
+  const oldExt = path.extname(oldFilename);
+  const newExt = path.extname(newFilename);
+  
+  // If no extension provided or different extension, use original extension
+  let finalNewFilename = newFilename;
+  if (!newExt || newExt !== oldExt) {
+    finalNewFilename = path.basename(newFilename, newExt) + oldExt;
+  }
+  
+  const newFilePath = path.join(ICONS_DIR, finalNewFilename);
+  
+  // Check if old file exists
+  try {
+    await fs.access(oldFilePath);
+  } catch (err) {
+    throw new Error('Icon file not found');
+  }
+  
+  // Check if new filename already exists
+  try {
+    await fs.access(newFilePath);
+    throw new Error('A file with this name already exists');
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+  
+  // Rename the file
+  await fs.rename(oldFilePath, newFilePath);
+  
+  // Return new URL
+  return `/uploads/icons/${finalNewFilename}`;
+}
+
+/**
  * Get storage info
  * @returns {Promise<Object>} - Storage statistics
  */
@@ -184,6 +239,7 @@ async function listIcons() {
 module.exports = {
   saveIcon,
   deleteIcon,
+  renameIcon,
   getStorageInfo,
   listIcons,
   ensureDirectories,

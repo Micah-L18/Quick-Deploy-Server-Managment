@@ -154,11 +154,11 @@ const Servers = () => {
 
   // Helper to render server icon
   const renderServerIcon = (server) => {
-    if (server.icon_url) {
+    if (server.iconUrl) {
       return (
         <>
           <img 
-            src={getIconUrl(server.icon_url)} 
+            src={getIconUrl(server.iconUrl)} 
             alt="Server icon"
             className={styles.serverIcon}
             onError={(e) => {

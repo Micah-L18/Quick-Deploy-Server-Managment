@@ -53,8 +53,8 @@ export const appsService = {
     return response.data;
   },
 
-  checkPorts: async (appId, serverId, ports, excludeDeploymentId = null) => {
-    const response = await api.post(`/apps/${appId}/check-ports`, { serverId, ports, excludeDeploymentId });
+  checkPorts: async (appId, serverId, ports) => {
+    const response = await api.post(`/apps/${appId}/check-ports`, { serverId, ports });
     return response.data;
   },
 
@@ -83,39 +83,6 @@ export const appsService = {
 
   stopDeployment: async (appId, deploymentId) => {
     const response = await api.post(`/apps/${appId}/deployments/${deploymentId}/stop`);
-    return response.data;
-  },
-
-  getDeployment: async (appId, deploymentId) => {
-    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}`);
-    const deployment = response.data;
-    // Parse JSON fields if they're strings
-    if (deployment.port_mappings && typeof deployment.port_mappings === 'string') {
-      deployment.port_mappings = JSON.parse(deployment.port_mappings);
-    }
-    if (deployment.env_vars && typeof deployment.env_vars === 'string') {
-      deployment.env_vars = JSON.parse(deployment.env_vars);
-    }
-    if (deployment.volumes && typeof deployment.volumes === 'string') {
-      deployment.volumes = JSON.parse(deployment.volumes);
-    }
-    // Parse app_config JSON fields too
-    if (deployment.app_config) {
-      if (deployment.app_config.ports && typeof deployment.app_config.ports === 'string') {
-        deployment.app_config.ports = JSON.parse(deployment.app_config.ports);
-      }
-      if (deployment.app_config.env_vars && typeof deployment.app_config.env_vars === 'string') {
-        deployment.app_config.env_vars = JSON.parse(deployment.app_config.env_vars);
-      }
-      if (deployment.app_config.volumes && typeof deployment.app_config.volumes === 'string') {
-        deployment.app_config.volumes = JSON.parse(deployment.app_config.volumes);
-      }
-    }
-    return deployment;
-  },
-
-  updateDeployment: async (appId, deploymentId, config) => {
-    const response = await api.put(`/apps/${appId}/deployments/${deploymentId}`, config);
     return response.data;
   },
 };

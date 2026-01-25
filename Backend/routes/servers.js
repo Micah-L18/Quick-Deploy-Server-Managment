@@ -102,6 +102,8 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
   }
 
   const { name, region, displayName, color, icon, icon_url, tags } = req.body;
+  console.log('[Server Update] Received body:', { name, region, displayName, color, icon, icon_url, tags });
+  
   const updates = {};
   
   if (name !== undefined) updates.name = name || null;
@@ -109,12 +111,14 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
   if (displayName !== undefined) updates.displayName = displayName || null;
   if (color !== undefined) updates.color = color || null;
   if (icon !== undefined) updates.icon = icon || null;
-  if (icon_url !== undefined) updates.icon_url = icon_url || null;
+  if (icon_url !== undefined) updates.iconUrl = icon_url || null;
   if (tags !== undefined) updates.tags = tags || [];
 
+  console.log('[Server Update] Mapped updates:', updates);
   await ServerModel.update(req.params.id, updates);
   
   const updatedServer = await ServerModel.findById(req.params.id);
+  console.log('[Server Update] After save, server data:', { id: updatedServer.id, icon: updatedServer.icon, iconUrl: updatedServer.iconUrl });
   res.json(updatedServer);
 }));
 

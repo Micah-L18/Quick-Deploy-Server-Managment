@@ -966,19 +966,47 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
 
   useEffect(() => {
     if (server) {
+      console.log('[ServerSettingsTab] Server data received:', { icon: server.icon, iconUrl: server.iconUrl });
       setFormData({
         displayName: server.displayName || '',
         name: server.name || '',
         region: server.region || '',
         color: server.color || null,
         icon: server.icon || null,
+        iconUrl: server.iconUrl || null,
         tags: server.tags || []
       });
     }
   }, [server]);
 
+  // Check if form has changes
+  const hasChanges = React.useMemo(() => {
+    if (!server) return false;
+    
+    return (
+      (formData.displayName || '') !== (server.displayName || '') ||
+      (formData.name || '') !== (server.name || '') ||
+      (formData.region || '') !== (server.region || '') ||
+      formData.color !== server.color ||
+      formData.icon !== server.icon ||
+      formData.iconUrl !== server.iconUrl ||
+      JSON.stringify(formData.tags || []) !== JSON.stringify(server.tags || [])
+    );
+  }, [formData, server]);
+
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    console.log('[ServerDetail] handleInputChange:', field, value);
+    // Handle icon object that contains both icon and iconUrl
+    if (field === 'icon' && typeof value === 'object') {
+      console.log('[ServerDetail] Icon object received:', value);
+      setFormData(prev => ({ 
+        ...prev, 
+        icon: value.icon || null, 
+        iconUrl: value.iconUrl || null 
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     setSaveSuccess(false);
   };
 
@@ -1006,14 +1034,20 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await serversService.updateServer(server.id, {
+      const payload = {
         displayName: formData.displayName || null,
         name: formData.name || null,
         region: formData.region || null,
         color: formData.color,
         icon: formData.icon,
+        icon_url: formData.iconUrl,
         tags: formData.tags
-      });
+      };
+      console.log('[ServerDetail] Saving with payload:', payload);
+      
+      const result = await serversService.updateServer(server.id, payload);
+      console.log('[ServerDetail] Save result:', result);
+      
       setSaveSuccess(true);
       onUpdate();
     } catch (error) {
@@ -1107,8 +1141,10 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
             <div className={styles.settingsField}>
               <IconSelector
                 value={formData.icon}
+                iconUrl={formData.iconUrl}
                 onChange={(icon) => handleInputChange('icon', icon)}
                 label="Server Icon"
+                showCustomUpload={true}
               />
             </div>
           </div>
@@ -1144,11 +1180,14 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
           </div>
 
           <div className={styles.settingsActions}>
-            <Button onClick={handleSave} disabled={isSaving}>
+            <Button onClick={handleSave} disabled={isSaving || !hasChanges}>
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
             {saveSuccess && (
               <span className={styles.saveSuccess}><CheckCircleIcon size={16} /> Settings saved!</span>
+            )}
+            {hasChanges && !saveSuccess && (
+              <span className={styles.unsavedChanges}>Unsaved changes</span>
             )}
           </div>
         </div>

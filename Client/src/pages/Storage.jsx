@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import AlertModal from '../components/AlertModal';
 import ConfirmModal from '../components/ConfirmModal';
 import Button from '../components/Button';
-import { TrashIcon, AlertIcon } from '../components/Icons';
+import { TrashIcon, AlertIcon, UploadIcon, EditIcon } from '../components/Icons';
 import { uploadsService } from '../api/uploads';
 import * as snapshotsService from '../api/snapshots';
 import api from '../api/axiosConfig';
@@ -15,6 +15,10 @@ const Storage = () => {
   const [alert, setAlert] = useState({ isOpen: false, type: 'info', title: '', message: '' });
   const [confirm, setConfirm] = useState({ isOpen: false, type: '', data: null });
   const [activeTab, setActiveTab] = useState('overview');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef(null);
+  const [renameModal, setRenameModal] = useState({ isOpen: false, iconUrl: null, currentName: '' });
+  const [newIconName, setNewIconName] = useState('');
 
   // Fetch storage info
   const { data: storageInfo, isLoading: loadingStorage } = useQuery({
@@ -42,6 +46,58 @@ const Storage = () => {
       };
     },
     staleTime: 30000,
+  });
+
+  // Upload icon mutation
+  const uploadIconMutation = useMutation({
+    mutationFn: (file) => uploadsService.uploadIcon(file, (progressEvent) => {
+      const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+      setUploadProgress(percentCompleted);
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['uploaded-icons']);
+      queryClient.invalidateQueries(['storage-info']);
+      setUploadProgress(0);
+      setAlert({
+        isOpen: true,
+        type: 'success',
+        title: 'Success',
+        message: 'Icon uploaded successfully',
+      });
+    },
+    onError: (error) => {
+      setUploadProgress(0);
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: error.response?.data?.error || 'Failed to upload icon',
+      });
+    },
+  });
+
+  // Rename icon mutation
+  const renameIconMutation = useMutation({
+    mutationFn: ({ oldIconUrl, newFilename }) => uploadsService.renameIcon(oldIconUrl, newFilename),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['uploaded-icons']);
+      setRenameModal({ isOpen: false, iconUrl: null, currentName: '' });
+      setNewIconName('');
+      setAlert({
+        isOpen: true,
+        type: 'success',
+        title: 'Success',
+        message: 'Icon renamed successfully',
+      });
+    },
+    onError: (error) => {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: error.response?.data?.error || 'Failed to rename icon',
+      });
+    },
   });
 
   // Delete icon mutation
@@ -89,6 +145,64 @@ const Storage = () => {
       });
     },
   });
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Invalid File Type',
+        message: 'Please upload an image file (JPEG, PNG, GIF, WebP, or SVG)',
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'File Too Large',
+        message: 'Icon must be less than 5MB',
+      });
+      return;
+    }
+
+    uploadIconMutation.mutate(file);
+  };
+
+  const handleRenameIcon = (iconUrl, fileName) => {
+    // Remove extension for editing
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+    setNewIconName(nameWithoutExt);
+    setRenameModal({
+      isOpen: true,
+      iconUrl,
+      currentName: fileName,
+    });
+  };
+
+  const handleConfirmRename = () => {
+    if (!newIconName.trim()) {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Filename cannot be empty',
+      });
+      return;
+    }
+    renameIconMutation.mutate({
+      oldIconUrl: renameModal.iconUrl,
+      newFilename: newIconName.trim(),
+    });
+  };
 
   const handleDeleteIcon = (iconUrl, fileName) => {
     setConfirm({
@@ -255,12 +369,32 @@ const Storage = () => {
           {/* Icons Tab */}
           {activeTab === 'icons' && (
             <div className={styles.listSection}>
-              <h2>Uploaded Icons</h2>
+              <div className={styles.sectionHeader}>
+                <h2>Uploaded Icons</h2>
+                <div className={styles.uploadSection}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                    onChange={handleFileSelect}
+                    style={{ display: 'none' }}
+                  />
+                  <Button
+                    variant="primary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadIconMutation.isPending}
+                  >
+                    <UploadIcon size={16} />
+                    {uploadIconMutation.isPending ? `Uploading... ${uploadProgress}%` : 'Upload Icon'}
+                  </Button>
+                </div>
+              </div>
               {loadingIcons ? (
                 <div className={styles.loading}>Loading icons...</div>
               ) : icons.length === 0 ? (
                 <div className={styles.emptyState}>
                   <p>No icons uploaded yet</p>
+                  <p className={styles.emptyStateSubtext}>Click "Upload Icon" to add your first icon</p>
                 </div>
               ) : (
                 <div className={styles.iconsList}>
@@ -289,15 +423,26 @@ const Storage = () => {
                           <div className={styles.iconName}>{fileName}</div>
                           <div className={styles.iconPath}>{iconUrl}</div>
                         </div>
-                        <Button
-                          variant="danger"
-                          size="small"
-                          onClick={() => handleDeleteIcon(iconUrl, fileName)}
-                          disabled={deleteIconMutation.isPending}
-                        >
-                          <TrashIcon size={16} />
-                          Delete
-                        </Button>
+                        <div className={styles.iconActions}>
+                          <Button
+                            variant="outline"
+                            size="small"
+                            onClick={() => handleRenameIcon(iconUrl, fileName)}
+                            disabled={renameIconMutation.isPending}
+                          >
+                            <EditIcon size={16} />
+                            Rename
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="small"
+                            onClick={() => handleDeleteIcon(iconUrl, fileName)}
+                            disabled={deleteIconMutation.isPending}
+                          >
+                            <TrashIcon size={16} />
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -385,6 +530,45 @@ const Storage = () => {
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
+      />
+
+      {/* Rename Modal */}
+      <ConfirmModal
+        isOpen={renameModal.isOpen}
+        onClose={() => {
+          setRenameModal({ isOpen: false, iconUrl: null, currentName: '' });
+          setNewIconName('');
+        }}
+        onConfirm={handleConfirmRename}
+        title="Rename Icon"
+        message={
+          <div>
+            <p style={{ marginBottom: '16px' }}>Enter a new name for the icon:</p>
+            <input
+              type="text"
+              value={newIconName}
+              onChange={(e) => setNewIconName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleConfirmRename()}
+              placeholder="Icon name"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: '14px',
+                border: '1px solid #1a1f3a',
+                borderRadius: '4px',
+                background: '#0a0e27',
+                color: '#e0e0e0',
+              }}
+            />
+            <p style={{ marginTop: '8px', fontSize: '12px', color: '#888' }}>
+              Current: {renameModal.currentName}
+            </p>
+          </div>
+        }
+        confirmText="Rename"
+        cancelText="Cancel"
+        confirmVariant="primary"
       />
     </Layout>
   );
