@@ -1,5 +1,5 @@
 const { executeCommand } = require('../ssh/connectionManager');
-const { parseMetrics, parseWindowsMetrics } = require('./parser');
+const { parseMetrics, parseWindowsMetrics, parseGpuMetrics } = require('./parser');
 
 /**
  * Linux commands to collect server metrics
@@ -16,7 +16,12 @@ const LINUX_METRICS_COMMANDS = [
   // Get two CPU readings 1 second apart for accurate usage calculation
   'cat /proc/stat | grep "^cpu " | head -1 && sleep 1 && cat /proc/stat | grep "^cpu " | head -1',
   // Get detailed OS info (distro name, version, etc.)
-  'cat /etc/os-release 2>/dev/null || cat /etc/lsb-release 2>/dev/null || echo ""'
+  'cat /etc/os-release 2>/dev/null || cat /etc/lsb-release 2>/dev/null || echo ""',
+  // GPU detection - NVIDIA (nvidia-smi) or AMD (rocm-smi)
+  // Format: name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu (one line per GPU)
+  'nvidia-smi --query-gpu=gpu_name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || rocm-smi --showuse --showmemuse --showtemp --csv 2>/dev/null || echo ""',
+  // CPU temperature - try multiple sources (lm-sensors, thermal zones, etc.)
+  'cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -1 || sensors 2>/dev/null | grep -i "core 0" | grep -oP "\\+\\d+\\.\\d+" | head -1 || echo ""'
 ];
 
 /**
@@ -35,6 +40,48 @@ $uptime = (Get-Date) - $os.LastBootUpTime
 $cpuLoad = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
 if ($null -eq $cpuLoad) { $cpuLoad = 0 }
 
+# GPU detection via nvidia-smi
+$gpuInfo = $null
+try {
+  $nvidiaSmi = nvidia-smi --query-gpu=gpu_name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>$null
+  if ($nvidiaSmi -and $nvidiaSmi.Trim()) {
+    $gpuLines = $nvidiaSmi -split "\`n"
+    $gpus = @()
+    foreach ($line in $gpuLines) {
+      if ($line.Trim()) {
+        $parts = $line -split ','
+        if ($parts.Count -ge 6) {
+          $gpus += @{
+            name = $parts[0].Trim()
+            memory_total = [int]$parts[1].Trim()
+            memory_used = [int]$parts[2].Trim()
+            memory_free = [int]$parts[3].Trim()
+            utilization = [int]$parts[4].Trim()
+            temperature = [int]$parts[5].Trim()
+          }
+        }
+      }
+    }
+    if ($gpus.Count -gt 0) {
+      $gpuInfo = @{
+        vendor = 'nvidia'
+        count = $gpus.Count
+        gpus = $gpus
+      }
+    }
+  }
+} catch {}
+
+# CPU temperature via WMI (may require admin privileges)
+$cpuTemp = $null
+try {
+  $tempReading = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($tempReading -and $tempReading.CurrentTemperature) {
+    # WMI reports in tenths of Kelvin, convert to Celsius
+    $cpuTemp = [math]::Round(($tempReading.CurrentTemperature / 10) - 273.15, 0)
+  }
+} catch {}
+
 $result = @{
   os = $os.Caption + ' ' + $os.Version
   hostname = $env:COMPUTERNAME
@@ -43,6 +90,7 @@ $result = @{
     model = $cpu[0].Name
     cores = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
     usage = [math]::Round($cpuLoad, 1)
+    temperature = $cpuTemp
   }
   memory = @{
     total = [math]::Round($os.TotalVisibleMemorySize / 1024, 0)
@@ -56,8 +104,9 @@ $result = @{
     available = [string][math]::Round($disk.FreeSpace / 1GB, 1) + 'G'
     percentage = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 0)
   }
+  gpu = $gpuInfo
 }
-$result | ConvertTo-Json -Compress
+$result | ConvertTo-Json -Compress -Depth 4
 `;
   
   // Encode as Base64 (UTF-16LE as required by PowerShell)

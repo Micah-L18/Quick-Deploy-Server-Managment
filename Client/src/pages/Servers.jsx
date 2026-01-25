@@ -41,7 +41,7 @@ const Servers = () => {
     name: '',
     region: 'us-east',
     ip: '',
-    osType: 'ubuntu-debian',
+    osType: '',
   });
 
   const { data: servers, isLoading } = useQuery({
@@ -121,6 +121,11 @@ const Servers = () => {
 
   const handleAddServer = (e) => {
     e.preventDefault();
+    // Validate OS selection
+    if (!formData.osType) {
+      alert('Please select an operating system for your server.');
+      return;
+    }
     // Username defaults to 'nobase' on backend if not provided
     addServerMutation.mutate(formData);
   };
@@ -583,28 +588,23 @@ const Servers = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Operating System</label>
+            <label className={styles.formLabel}>Operating System <span style={{ color: 'var(--danger-color)' }}>*</span></label>
             <select
               className={styles.formSelect}
               value={formData.osType}
               onChange={(e) =>
                 setFormData({ ...formData, osType: e.target.value })
               }
+              required
             >
-              {osTypes?.map(os => (
-                <option key={os.id} value={os.id}>{os.name}</option>
-              )) || (
-                <>
-                  <option value="ubuntu-debian">Ubuntu / Debian</option>
-                  <option value="rhel-centos">RHEL / CentOS / Fedora</option>
-                  <option value="alpine">Alpine Linux</option>
-                  <option value="windows">Windows Server (PowerShell)</option>
-                  <option value="macos">macOS</option>
-                </>
-              )}
+              <option value="" disabled>-- Select Operating System --</option>
+              <option value="linux">Linux</option>
+              <option value="windows">Windows Server</option>
             </select>
             <p className={styles.formHint}>
-              {osTypes?.find(os => os.id === formData.osType)?.description || 'Select your server operating system'}
+              {formData.osType === 'linux' ? 'Ubuntu, Debian, RHEL, CentOS, Alpine, etc.' : 
+               formData.osType === 'windows' ? 'Windows Server with OpenSSH' : 
+               'Select your server operating system'}
             </p>
           </div>
 
@@ -616,12 +616,14 @@ const Servers = () => {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={addServerMutation.isPending}
-            >
-              {addServerMutation.isPending ? 'Adding...' : 'Add Server'}
-            </Button>
+            {formData.name && formData.ip && formData.osType && (
+              <Button
+                type="submit"
+                disabled={addServerMutation.isPending}
+              >
+                {addServerMutation.isPending ? 'Adding...' : 'Add Server'}
+              </Button>
+            )}
           </div>
         </form>
       </Modal>

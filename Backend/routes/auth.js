@@ -4,6 +4,15 @@ const { UserModel } = require('../models');
 const { asyncHandler } = require('../middleware');
 
 /**
+ * GET /api/auth/has-users
+ * Check if any users exist (for first-time setup redirect)
+ */
+router.get('/has-users', asyncHandler(async (req, res) => {
+  const hasUsers = await UserModel.hasUsers();
+  res.json({ hasUsers });
+}));
+
+/**
  * POST /api/auth/register
  * Register a new user
  */

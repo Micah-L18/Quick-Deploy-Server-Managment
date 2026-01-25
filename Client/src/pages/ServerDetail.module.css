@@ -494,6 +494,24 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+.selectableCard {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.selectableCard:hover {
+  border-color: var(--primary-color);
+}
+
+.selectedCard {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2), 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.selectedCard .metricTitle {
+  border-bottom-color: var(--primary-color);
+}
+
 .metricTitle {
   font-size: 1.1rem;
   color: var(--text-primary);
@@ -542,6 +560,11 @@
   background: linear-gradient(90deg, #00d4ff, #00a8cc);
   border-radius: 6px;
   transition: width 0.5s ease;
+}
+
+/* GPU-specific progress bar color */
+.progressFill.gpuFill {
+  background: linear-gradient(90deg, #10b981, #059669);
 }
 
 .metricsError {

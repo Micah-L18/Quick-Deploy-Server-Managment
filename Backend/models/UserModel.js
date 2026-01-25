@@ -50,6 +50,15 @@ async function verifyPassword(password, hashedPassword) {
 }
 
 /**
+ * Check if any users exist in the database
+ * @returns {Promise<boolean>}
+ */
+async function hasUsers() {
+  const result = await get('SELECT COUNT(*) as count FROM users');
+  return result && result.count > 0;
+}
+
+/**
  * Update user
  * @param {string} userId - User ID
  * @param {Object} updates - Fields to update
@@ -84,5 +93,6 @@ module.exports = {
   findByEmail,
   findById,
   verifyPassword,
+  hasUsers,
   updateUser
 };

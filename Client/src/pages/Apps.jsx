@@ -309,6 +309,23 @@ const Apps = () => {
                 <span className={styles.statLabel}>Container Status</span>
                 <span className={styles.statValue}>{stats.status}</span>
               </div>
+              {/* GPU stats - only shown if container is using GPU */}
+              {stats.gpu && (
+                <>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>GPU Memory</span>
+                    <span className={styles.statValue}>{stats.gpu.memory_used} MB</span>
+                  </div>
+                  {stats.gpu.name && (
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>GPU</span>
+                      <span className={styles.statValue} title={stats.gpu.name}>
+                        {stats.gpu.name.length > 20 ? stats.gpu.name.substring(0, 20) + '...' : stats.gpu.name}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ) : (
             <div className={styles.statsError}>Failed to load stats</div>

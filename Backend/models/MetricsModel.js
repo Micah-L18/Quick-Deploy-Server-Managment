@@ -11,13 +11,19 @@ async function store(serverId, metrics) {
   const id = uuidv4();
   const timestamp = new Date().toISOString();
 
+  // Prepare GPU data - serialize multi-GPU details to JSON if present
+  const gpuData = metrics.gpu?.gpus ? JSON.stringify(metrics.gpu.gpus) : null;
+
   await run(`
     INSERT INTO server_metrics (
       id, server_id, cpu_usage, cpu_cores, cpu_model, cpu_load_1min, cpu_load_5min, cpu_load_15min,
       memory_used, memory_total, memory_free, memory_percentage, 
       disk_total, disk_used, disk_available, disk_percentage,
-      os, hostname, uptime, timestamp
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      os, hostname, uptime, timestamp,
+      gpu_vendor, gpu_count, gpu_name, gpu_memory_total, gpu_memory_used, gpu_memory_free,
+      gpu_memory_percentage, gpu_utilization, gpu_temperature, gpu_data,
+      cpu_temperature
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     serverId,
@@ -38,7 +44,20 @@ async function store(serverId, metrics) {
     metrics.os || null,
     metrics.hostname || null,
     metrics.uptime || null,
-    timestamp
+    timestamp,
+    // GPU fields - use ?? instead of || to preserve 0 values
+    metrics.gpu?.vendor ?? null,
+    metrics.gpu?.count ?? null,
+    metrics.gpu?.name ?? null,
+    metrics.gpu?.memory_total ?? null,
+    metrics.gpu?.memory_used ?? null,
+    metrics.gpu?.memory_free ?? null,
+    metrics.gpu?.memory_percentage ?? null,
+    metrics.gpu?.utilization ?? null,
+    metrics.gpu?.temperature ?? null,
+    gpuData,
+    // CPU temperature - use ?? to preserve 0 values
+    metrics.cpu?.temperature ?? null
   ]);
 }
 
@@ -101,11 +120,12 @@ async function deleteForServer(serverId) {
 function toApiFormat(row) {
   if (!row) return null;
   
-  return {
+  const result = {
     cpu: {
       usage: row.cpu_usage,
       cores: row.cpu_cores,
-      model: row.cpu_model
+      model: row.cpu_model,
+      temperature: row.cpu_temperature
     },
     memory: {
       used: row.memory_used,
@@ -128,6 +148,32 @@ function toApiFormat(row) {
     hostname: row.hostname,
     uptime: row.uptime
   };
+
+  // Include GPU data if present
+  if (row.gpu_vendor || row.gpu_name) {
+    result.gpu = {
+      vendor: row.gpu_vendor,
+      count: row.gpu_count,
+      name: row.gpu_name,
+      memory_total: row.gpu_memory_total,
+      memory_used: row.gpu_memory_used,
+      memory_free: row.gpu_memory_free,
+      memory_percentage: row.gpu_memory_percentage,
+      utilization: row.gpu_utilization,
+      temperature: row.gpu_temperature
+    };
+
+    // Parse multi-GPU details if present
+    if (row.gpu_data) {
+      try {
+        result.gpu.gpus = JSON.parse(row.gpu_data);
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
+
+  return result;
 }
 
 module.exports = {

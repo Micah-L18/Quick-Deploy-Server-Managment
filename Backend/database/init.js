@@ -151,7 +151,20 @@ async function runMigrations() {
     { name: 'disk_available', type: 'TEXT' },
     { name: 'os', type: 'TEXT' },
     { name: 'hostname', type: 'TEXT' },
-    { name: 'uptime', type: 'TEXT' }
+    { name: 'uptime', type: 'TEXT' },
+    // GPU metrics columns
+    { name: 'gpu_vendor', type: 'TEXT' },           // nvidia, amd, intel
+    { name: 'gpu_count', type: 'INTEGER' },         // Number of GPUs
+    { name: 'gpu_name', type: 'TEXT' },             // GPU model name(s)
+    { name: 'gpu_memory_total', type: 'INTEGER' },  // Total GPU memory in MB
+    { name: 'gpu_memory_used', type: 'INTEGER' },   // Used GPU memory in MB
+    { name: 'gpu_memory_free', type: 'INTEGER' },   // Free GPU memory in MB
+    { name: 'gpu_memory_percentage', type: 'INTEGER' },  // GPU memory usage %
+    { name: 'gpu_utilization', type: 'REAL' },      // GPU utilization %
+    { name: 'gpu_temperature', type: 'REAL' },      // GPU temperature in Celsius
+    { name: 'gpu_data', type: 'TEXT' },             // JSON string for multi-GPU detailed data
+    // CPU temperature
+    { name: 'cpu_temperature', type: 'REAL' }       // CPU temperature in Celsius
   ];
 
   for (const column of metricsColumns) {

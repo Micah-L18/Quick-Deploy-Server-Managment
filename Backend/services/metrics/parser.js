@@ -122,7 +122,55 @@ function parseMetrics(results) {
     }
   }
 
+  // Parse GPU metrics from nvidia-smi or rocm-smi output
+  if (results[10] && !results[10].error && results[10].trim()) {
+    const gpuData = parseGpuMetrics(results[10]);
+    if (gpuData) {
+      metrics.gpu = gpuData;
+    }
+  }
+
+  // Parse CPU temperature
+  if (results[11] && !results[11].error && results[11].trim()) {
+    const cpuTemp = parseCpuTemperature(results[11]);
+    if (cpuTemp !== null) {
+      if (metrics.cpu) {
+        metrics.cpu.temperature = cpuTemp;
+      } else {
+        metrics.cpu = { temperature: cpuTemp };
+      }
+    }
+  }
+
   return metrics;
+}
+
+/**
+ * Parse CPU temperature from various sources
+ * @param {string} output - Temperature reading (may be in millidegrees or degrees)
+ * @returns {number|null} - Temperature in Celsius
+ */
+function parseCpuTemperature(output) {
+  if (!output || !output.trim()) {
+    return null;
+  }
+
+  const temp = output.trim();
+  
+  // If it's from /sys/class/thermal (millidegrees), convert to degrees
+  const numValue = parseFloat(temp.replace(/[^0-9.-]/g, ''));
+  
+  if (isNaN(numValue)) {
+    return null;
+  }
+
+  // /sys/class/thermal reports in millidegrees (e.g., 45000 = 45°C)
+  if (numValue > 1000) {
+    return Math.round(numValue / 1000);
+  }
+  
+  // Already in degrees (from lm-sensors)
+  return Math.round(numValue);
 }
 
 /**
@@ -228,14 +276,15 @@ function parseWindowsMetrics(output) {
     const data = JSON.parse(jsonStr);
     console.log('[Windows Parser] Parsed data:', JSON.stringify(data, null, 2));
     
-    return {
+    const result = {
       os: data.os || 'Windows',
       hostname: data.hostname || 'Unknown',
       uptime: data.uptime || 'Unknown',
       cpu: {
         model: data.cpu?.model || 'Unknown',
         cores: data.cpu?.cores || 0,
-        usage: data.cpu?.usage || 0
+        usage: data.cpu?.usage || 0,
+        temperature: data.cpu?.temperature || null
       },
       memory: {
         total: data.memory?.total || 0,
@@ -255,6 +304,53 @@ function parseWindowsMetrics(output) {
         '15min': data.cpu?.usage || 0
       }
     };
+
+    // Parse GPU data if present
+    if (data.gpu && data.gpu.gpus && data.gpu.gpus.length > 0) {
+      const gpus = data.gpu.gpus;
+      if (gpus.length === 1) {
+        result.gpu = {
+          vendor: data.gpu.vendor || 'nvidia',
+          count: 1,
+          name: gpus[0].name,
+          memory_total: gpus[0].memory_total,
+          memory_used: gpus[0].memory_used,
+          memory_free: gpus[0].memory_free,
+          memory_percentage: gpus[0].memory_total > 0 
+            ? Math.round((gpus[0].memory_used / gpus[0].memory_total) * 100) 
+            : 0,
+          utilization: gpus[0].utilization,
+          temperature: gpus[0].temperature
+        };
+      } else {
+        // Multi-GPU
+        const totalMemory = gpus.reduce((sum, g) => sum + (g.memory_total || 0), 0);
+        const usedMemory = gpus.reduce((sum, g) => sum + (g.memory_used || 0), 0);
+        const avgUtil = Math.round(gpus.reduce((sum, g) => sum + (g.utilization || 0), 0) / gpus.length);
+        const temps = gpus.filter(g => g.temperature != null).map(g => g.temperature);
+        const avgTemp = temps.length > 0 ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length) : null;
+
+        result.gpu = {
+          vendor: data.gpu.vendor || 'nvidia',
+          count: gpus.length,
+          name: gpus.map(g => g.name).join(', '),
+          memory_total: totalMemory,
+          memory_used: usedMemory,
+          memory_free: totalMemory - usedMemory,
+          memory_percentage: totalMemory > 0 ? Math.round((usedMemory / totalMemory) * 100) : 0,
+          utilization: avgUtil,
+          temperature: avgTemp,
+          gpus: gpus.map(g => ({
+            ...g,
+            memory_percentage: g.memory_total > 0 
+              ? Math.round((g.memory_used / g.memory_total) * 100) 
+              : 0
+          }))
+        };
+      }
+    }
+
+    return result;
   } catch (err) {
     console.error('Failed to parse Windows metrics:', err.message, 'Output:', output);
     return {
@@ -264,9 +360,140 @@ function parseWindowsMetrics(output) {
   }
 }
 
+/**
+ * Parse GPU metrics from nvidia-smi or rocm-smi output
+ * nvidia-smi format: gpu_name, memory.total, memory.used, memory.free, utilization.gpu, temperature.gpu
+ * @param {string} output - Raw output from GPU query command
+ * @returns {Object|null} - Parsed GPU data or null if no GPU detected
+ */
+function parseGpuMetrics(output) {
+  if (!output || !output.trim()) {
+    return null;
+  }
+
+  const lines = output.trim().split('\n').filter(line => line.trim());
+  if (lines.length === 0) {
+    return null;
+  }
+
+  // Detect NVIDIA format (CSV: name, memory.total, memory.used, memory.free, utilization.gpu, temperature.gpu)
+  // Example: "NVIDIA GeForce RTX 4090, 24564, 1234, 23330, 45, 65"
+  const gpus = [];
+  let vendor = 'unknown';
+
+  for (const line of lines) {
+    const parts = line.split(',').map(p => p.trim());
+    
+    // NVIDIA nvidia-smi format has 6 comma-separated values
+    if (parts.length >= 6) {
+      vendor = 'nvidia';
+      const name = parts[0];
+      const memoryTotal = parseInt(parts[1]) || 0;  // MB
+      const memoryUsed = parseInt(parts[2]) || 0;   // MB
+      const memoryFree = parseInt(parts[3]) || 0;   // MB
+      const utilization = parseInt(parts[4]) || 0;  // %
+      const temperature = parseInt(parts[5]) || null;  // Celsius
+
+      gpus.push({
+        name,
+        memory_total: memoryTotal,
+        memory_used: memoryUsed,
+        memory_free: memoryFree,
+        utilization,
+        temperature,
+        memory_percentage: memoryTotal > 0 ? Math.round((memoryUsed / memoryTotal) * 100) : 0
+      });
+    }
+  }
+
+  // If no GPUs parsed (could be AMD rocm-smi or other format), try AMD parsing
+  if (gpus.length === 0) {
+    const amdGpu = parseAmdGpuMetrics(output);
+    if (amdGpu) {
+      return amdGpu;
+    }
+    return null;
+  }
+
+  // Return single GPU data or multi-GPU data
+  if (gpus.length === 1) {
+    return {
+      vendor,
+      count: 1,
+      name: gpus[0].name,
+      memory_total: gpus[0].memory_total,
+      memory_used: gpus[0].memory_used,
+      memory_free: gpus[0].memory_free,
+      memory_percentage: gpus[0].memory_percentage,
+      utilization: gpus[0].utilization,
+      temperature: gpus[0].temperature
+    };
+  }
+
+  // Multi-GPU: aggregate metrics
+  const totalMemory = gpus.reduce((sum, g) => sum + g.memory_total, 0);
+  const usedMemory = gpus.reduce((sum, g) => sum + g.memory_used, 0);
+  const avgUtilization = Math.round(gpus.reduce((sum, g) => sum + g.utilization, 0) / gpus.length);
+  const temps = gpus.filter(g => g.temperature !== null).map(g => g.temperature);
+  const avgTemperature = temps.length > 0 ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length) : null;
+
+  return {
+    vendor,
+    count: gpus.length,
+    name: gpus.map(g => g.name).join(', '),
+    memory_total: totalMemory,
+    memory_used: usedMemory,
+    memory_free: totalMemory - usedMemory,
+    memory_percentage: totalMemory > 0 ? Math.round((usedMemory / totalMemory) * 100) : 0,
+    utilization: avgUtilization,
+    temperature: avgTemperature,
+    gpus  // Include individual GPU data for detailed view
+  };
+}
+
+/**
+ * Parse AMD GPU metrics from rocm-smi output
+ * This is a fallback for AMD GPUs using rocm-smi
+ * @param {string} output - Raw rocm-smi output
+ * @returns {Object|null}
+ */
+function parseAmdGpuMetrics(output) {
+  // rocm-smi output varies, try to extract basic info
+  // Common format includes lines like:
+  // GPU[0]: AMD Radeon RX 7900 XTX
+  // GPU[0] use(%): 45
+  // GPU[0] memory use(%): 23
+  // GPU[0] temperature (c): 65
+  
+  const gpuNameMatch = output.match(/GPU\[\d+\]:\s*(.+)/);
+  const useMatch = output.match(/use\s*\(%?\)\s*:\s*(\d+)/i);
+  const memUseMatch = output.match(/memory\s*use\s*\(%?\)\s*:\s*(\d+)/i);
+  const tempMatch = output.match(/temperature\s*\(?c?\)?\s*:\s*(\d+)/i);
+
+  if (gpuNameMatch) {
+    return {
+      vendor: 'amd',
+      count: 1,
+      name: gpuNameMatch[1].trim(),
+      utilization: useMatch ? parseInt(useMatch[1]) : null,
+      memory_percentage: memUseMatch ? parseInt(memUseMatch[1]) : null,
+      temperature: tempMatch ? parseInt(tempMatch[1]) : null,
+      // AMD rocm-smi doesn't always provide absolute memory values
+      memory_total: null,
+      memory_used: null,
+      memory_free: null
+    };
+  }
+
+  return null;
+}
+
 module.exports = {
   parseMetrics,
   parseCpuUsage,
+  parseCpuTemperature,
   parseOsRelease,
-  parseWindowsMetrics
+  parseWindowsMetrics,
+  parseGpuMetrics,
+  parseAmdGpuMetrics
 };

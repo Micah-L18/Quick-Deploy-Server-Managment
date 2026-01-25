@@ -30,6 +30,30 @@ const ServerDetail = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [editingDeployment, setEditingDeployment] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, deployment: null });
+  const [selectedMetricCard, setSelectedMetricCard] = useState('cpu'); // 'cpu', 'memory', 'disk', 'gpu'
+  const deleteServerRef = useRef(null);
+
+  // Sync activeTab with URL search params when they change
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  // Handle scrollTo query param for scrolling to delete section
+  useEffect(() => {
+    const scrollTo = searchParams.get('scrollTo');
+    if (scrollTo === 'delete' && activeTab === 'settings') {
+      // Longer delay to ensure content is rendered after tab switch
+      const timer = setTimeout(() => {
+        if (deleteServerRef.current) {
+          deleteServerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, activeTab]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -222,6 +246,23 @@ const ServerDetail = () => {
                 <span className={styles.statLabel}>Container Status</span>
                 <span className={styles.statValue}>{stats.status}</span>
               </div>
+              {/* GPU stats - only shown if container is using GPU */}
+              {stats.gpu && (
+                <>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>GPU Memory</span>
+                    <span className={styles.statValue}>{stats.gpu.memory_used} MB</span>
+                  </div>
+                  {stats.gpu.name && (
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>GPU</span>
+                      <span className={styles.statValue} title={stats.gpu.name}>
+                        {stats.gpu.name.length > 20 ? stats.gpu.name.substring(0, 20) + '...' : stats.gpu.name}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ) : (
             <div className={styles.statsError}>Failed to load stats</div>
@@ -493,7 +534,10 @@ const ServerDetail = () => {
               ) : metrics ? (
                 <div className={styles.metricsGrid}>
               {metrics.cpu && (
-                <div className={styles.metricCard}>
+                <div 
+                  className={`${styles.metricCard} ${styles.selectableCard} ${selectedMetricCard === 'cpu' ? styles.selectedCard : ''}`}
+                  onClick={() => setSelectedMetricCard('cpu')}
+                >
                   <h3 className={styles.metricTitle}>CPU</h3>
                   <div className={styles.metricContent}>
                     {metrics.cpu.usage !== undefined && (
@@ -512,12 +556,21 @@ const ServerDetail = () => {
                         <span className={styles.metricValue}>{metrics.cpu.model}</span>
                       </div>
                     )}
+                    {metrics.cpu.temperature != null && (
+                      <div className={styles.metricDetail}>
+                        <span className={styles.metricLabel}>Temperature</span>
+                        <span className={styles.metricValue}>{metrics.cpu.temperature}°C</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {metrics.memory && (
-                <div className={styles.metricCard}>
+                <div 
+                  className={`${styles.metricCard} ${styles.selectableCard} ${selectedMetricCard === 'memory' ? styles.selectedCard : ''}`}
+                  onClick={() => setSelectedMetricCard('memory')}
+                >
                   <h3 className={styles.metricTitle}>Memory</h3>
                   <div className={styles.metricContent}>
                     <div className={styles.progressBar}>
@@ -545,7 +598,10 @@ const ServerDetail = () => {
               )}
 
               {metrics.disk && (
-                <div className={styles.metricCard}>
+                <div 
+                  className={`${styles.metricCard} ${styles.selectableCard} ${selectedMetricCard === 'disk' ? styles.selectedCard : ''}`}
+                  onClick={() => setSelectedMetricCard('disk')}
+                >
                   <h3 className={styles.metricTitle}>Disk (Root)</h3>
                   <div className={styles.metricContent}>
                     <div className={styles.progressBar}>
@@ -571,6 +627,66 @@ const ServerDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* GPU Metrics Card - only shown if GPU is detected */}
+              {metrics.gpu && (
+                <div 
+                  className={`${styles.metricCard} ${styles.selectableCard} ${selectedMetricCard === 'gpu' ? styles.selectedCard : ''}`}
+                  onClick={() => setSelectedMetricCard('gpu')}
+                >
+                  <h3 className={styles.metricTitle}>
+                    GPU{metrics.gpu.count > 1 ? ` (${metrics.gpu.count}x)` : ''}
+                  </h3>
+                  <div className={styles.metricContent}>
+                    {/* GPU Utilization Progress Bar */}
+                    {metrics.gpu.utilization != null && (
+                      <div className={styles.progressBar}>
+                        <div
+                          className={`${styles.progressFill} ${styles.gpuFill}`}
+                          style={{ width: `${metrics.gpu.utilization}%` }}
+                        ></div>
+                      </div>
+                    )}
+                    <div className={styles.metricDetail}>
+                      <span className={styles.metricLabel}>Model</span>
+                      <span className={styles.metricValue} title={metrics.gpu.name}>
+                        {metrics.gpu.name?.length > 30 
+                          ? metrics.gpu.name.substring(0, 30) + '...' 
+                          : metrics.gpu.name}
+                      </span>
+                    </div>
+                    {metrics.gpu.utilization != null && (
+                      <div className={styles.metricDetail}>
+                        <span className={styles.metricLabel}>GPU Usage</span>
+                        <span className={styles.metricValue}>{metrics.gpu.utilization}%</span>
+                      </div>
+                    )}
+                    {metrics.gpu.memory_total != null && (
+                      <div className={styles.metricDetail}>
+                        <span className={styles.metricLabel}>VRAM</span>
+                        <span className={styles.metricValue}>
+                          {metrics.gpu.memory_used} MB / {metrics.gpu.memory_total} MB
+                          {metrics.gpu.memory_percentage != null && ` (${metrics.gpu.memory_percentage}%)`}
+                        </span>
+                      </div>
+                    )}
+                    {metrics.gpu.temperature != null && (
+                      <div className={styles.metricDetail}>
+                        <span className={styles.metricLabel}>Temperature</span>
+                        <span className={styles.metricValue}>{metrics.gpu.temperature}°C</span>
+                      </div>
+                    )}
+                    {metrics.gpu.vendor && (
+                      <div className={styles.metricDetail}>
+                        <span className={styles.metricLabel}>Vendor</span>
+                        <span className={styles.metricValue} style={{ textTransform: 'capitalize' }}>
+                          {metrics.gpu.vendor}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -582,14 +698,87 @@ const ServerDetail = () => {
                   </h2>
                   
                   <div className={styles.chartsGrid}>
-                    {/* CPU Usage Chart */}
-                    {metricsHistory.some(m => m.cpu_usage != null) && (
+                    {/* CPU Charts - shown when CPU card is selected */}
+                    {selectedMetricCard === 'cpu' && (
+                      <>
+                        {/* CPU Usage Chart */}
+                        {metricsHistory.some(m => m.cpu_usage != null) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>CPU Usage</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.cpu_usage != null).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'CPU %': m.cpu_usage,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                  domain={[0, 100]}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="CPU %" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+
+                        {/* CPU Temperature Chart - only shown if CPU temp data exists in history */}
+                        {metricsHistory.some(m => m.cpu_temperature !== null && m.cpu_temperature !== undefined) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>CPU Temperature</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.cpu_temperature !== null && m.cpu_temperature !== undefined).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'CPU °C': m.cpu_temperature,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                  domain={[0, 100]}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="CPU °C" stroke="#f97316" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Memory Charts - shown when Memory card is selected */}
+                    {selectedMetricCard === 'memory' && (
                       <div className={styles.chartCard}>
-                        <h3 className={styles.chartTitle}>CPU Usage</h3>
+                        <h3 className={styles.chartTitle}>Memory Usage</h3>
                         <ResponsiveContainer width="100%" height={250}>
-                          <LineChart data={metricsHistory.filter(m => m.cpu_usage != null).map(m => ({
+                          <LineChart data={metricsHistory.map(m => ({
                             time: new Date(m.timestamp).toLocaleTimeString(),
-                            'CPU %': m.cpu_usage,
+                            'Usage %': m.memory_percentage,
                           }))}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                             <XAxis 
@@ -610,75 +799,152 @@ const ServerDetail = () => {
                               }}
                             />
                             <Legend />
-                            <Line type="monotone" dataKey="CPU %" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="Usage %" stroke="#f59e0b" strokeWidth={2} dot={false} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
                     )}
 
-                    {/* Memory Usage Chart */}
-                    <div className={styles.chartCard}>
-                      <h3 className={styles.chartTitle}>Memory Usage</h3>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <LineChart data={metricsHistory.map(m => ({
-                          time: new Date(m.timestamp).toLocaleTimeString(),
-                          'Usage %': m.memory_percentage,
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                          <XAxis 
-                            dataKey="time" 
-                            stroke="var(--text-medium)"
-                            tick={{ fontSize: 12 }}
-                          />
-                          <YAxis 
-                            stroke="var(--text-medium)" 
-                            tick={{ fontSize: 12 }}
-                            domain={[0, 100]}
-                          />
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: 'var(--card-bg)',
-                              border: '1px solid var(--border-color)',
-                              borderRadius: '8px',
-                            }}
-                          />
-                          <Legend />
-                          <Line type="monotone" dataKey="Usage %" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
+                    {/* Disk Charts - shown when Disk card is selected */}
+                    {selectedMetricCard === 'disk' && (
+                      <div className={styles.chartCard}>
+                        <h3 className={styles.chartTitle}>Disk Usage</h3>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <LineChart data={metricsHistory.map(m => ({
+                            time: new Date(m.timestamp).toLocaleTimeString(),
+                            'Usage %': m.disk_percentage,
+                          }))}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                            <XAxis 
+                              dataKey="time" 
+                              stroke="var(--text-medium)"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis 
+                              stroke="var(--text-medium)" 
+                              tick={{ fontSize: 12 }}
+                              domain={[0, 100]}
+                            />
+                            <Tooltip 
+                              contentStyle={{
+                                backgroundColor: 'var(--card-bg)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                              }}
+                            />
+                            <Legend />
+                            <Line type="monotone" dataKey="Usage %" stroke="#ef4444" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
 
-                    {/* Disk Usage Chart */}
-                    <div className={styles.chartCard}>
-                      <h3 className={styles.chartTitle}>Disk Usage</h3>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <LineChart data={metricsHistory.map(m => ({
-                          time: new Date(m.timestamp).toLocaleTimeString(),
-                          'Usage %': m.disk_percentage,
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                          <XAxis 
-                            dataKey="time" 
-                            stroke="var(--text-medium)"
-                            tick={{ fontSize: 12 }}
-                          />
-                          <YAxis 
-                            stroke="var(--text-medium)" 
-                            tick={{ fontSize: 12 }}
-                            domain={[0, 100]}
-                          />
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: 'var(--card-bg)',
-                              border: '1px solid var(--border-color)',
-                              borderRadius: '8px',
-                            }}
-                          />
-                          <Legend />
-                          <Line type="monotone" dataKey="Usage %" stroke="#ef4444" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
+                    {/* GPU Charts - shown when GPU card is selected */}
+                    {selectedMetricCard === 'gpu' && (
+                      <>
+                        {/* GPU Usage Chart - only shown if GPU data exists in history */}
+                        {metricsHistory.some(m => m.gpu_utilization !== null && m.gpu_utilization !== undefined) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>GPU Usage</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.gpu_utilization !== null && m.gpu_utilization !== undefined).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'GPU %': m.gpu_utilization,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                  domain={[0, 100]}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="GPU %" stroke="#10b981" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+
+                        {/* GPU Memory Chart - only shown if GPU memory data exists in history */}
+                        {metricsHistory.some(m => m.gpu_memory_percentage !== null && m.gpu_memory_percentage !== undefined) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>GPU Memory</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.gpu_memory_percentage !== null && m.gpu_memory_percentage !== undefined).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'VRAM %': m.gpu_memory_percentage,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                  domain={[0, 100]}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="VRAM %" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+
+                        {/* GPU Temperature Chart - only shown if GPU temp data exists in history */}
+                        {metricsHistory.some(m => m.gpu_temperature !== null && m.gpu_temperature !== undefined) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>GPU Temperature</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.gpu_temperature !== null && m.gpu_temperature !== undefined).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'GPU °C': m.gpu_temperature,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                  domain={[0, 100]}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="GPU °C" stroke="#ec4899" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -922,6 +1188,7 @@ const ServerDetail = () => {
           onDelete={(serverId, force) => deleteServerMutation.mutate({ serverId, force })}
           isDeleting={deleteServerMutation.isPending}
           deleteWarning={deleteWarning}
+          deleteServerRef={deleteServerRef}
         />
       )}
 
@@ -949,7 +1216,7 @@ const ServerDetail = () => {
 };
 
 // Server Settings Tab Component
-const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarning }) => {
+const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarning, deleteServerRef }) => {
   const [formData, setFormData] = useState({
     displayName: '',
     name: '',
@@ -1197,7 +1464,10 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
       <div className={styles.settingsSection}>
         <h3 className={styles.settingsTitle}>SSH Setup Command</h3>
         <p className={styles.settingsDescription}>
-          Run this command on your server <strong>{server.ip}</strong> to set up SSH access:
+          Run this command on your server <strong>{server.ip}</strong> to set up SSH access.
+          <strong style={{ display: 'block', marginTop: '8px', color: 'var(--warning-color)' }}>
+            ⚠️ Make sure you are running as root (use <code style={{ background: 'var(--background)', padding: '2px 6px', borderRadius: '4px' }}>sudo su</code> first) before executing this command.
+          </strong>
         </p>
         <div className={styles.codeBlock}>
           {server.setupCommand || 'No setup command available'}
@@ -1208,7 +1478,10 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
       </div>
 
       {/* Delete Server Section */}
-      <div className={`${styles.settingsSection} ${styles.deleteServerSection}`}>
+      <div 
+        ref={deleteServerRef}
+        className={`${styles.settingsSection} ${styles.deleteServerSection}`}
+      >
         <h3 className={styles.settingsTitle}>Delete Server</h3>
         <p className={styles.settingsDescription}>
           This action cannot be undone. This will permanently delete the server 

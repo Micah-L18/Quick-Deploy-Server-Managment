@@ -627,13 +627,63 @@ router.get('/:appId/deployments/:deploymentId/stats', requireAuth, asyncHandler(
     // Parse stats
     const parts = stdout.trim().split('|');
     if (parts.length >= 4) {
-      res.json({
+      const result = {
         cpu: parts[0],
         memory: parts[1],
         network: parts[2],
         blockIO: parts[3],
         status: 'running'
-      });
+      };
+
+      // Try to get GPU stats for containers using NVIDIA GPU
+      // Uses docker inspect to get container ID, then checks nvidia-smi for processes in that container
+      try {
+        // Get container ID and check for GPU usage in a single command
+        const gpuCheckCmd = `
+          CONTAINER_ID=$(docker inspect --format '{{.Id}}' ${containerRef} 2>/dev/null | cut -c1-12)
+          if [ -n "$CONTAINER_ID" ] && command -v nvidia-smi &>/dev/null; then
+            # Get all GPU processes and check if any belong to this container
+            nvidia-smi --query-compute-apps=pid,used_gpu_memory,gpu_name --format=csv,noheader,nounits 2>/dev/null | while IFS=',' read pid mem name; do
+              if cat /proc/$pid/cgroup 2>/dev/null | grep -q "$CONTAINER_ID"; then
+                echo "$mem|$name"
+              fi
+            done
+          fi
+        `;
+        const { stdout: gpuOutput } = await connectionManager.executeCommand(
+          {
+            host: deployment.ip,
+            username: deployment.username,
+            privateKeyPath: deployment.private_key_path
+          },
+          gpuCheckCmd
+        );
+
+        if (gpuOutput && gpuOutput.trim()) {
+          // Sum up GPU memory from all processes in this container
+          const lines = gpuOutput.trim().split('\n');
+          let totalGpuMem = 0;
+          let gpuName = null;
+          
+          for (const line of lines) {
+            const [mem, name] = line.split('|').map(s => s.trim());
+            totalGpuMem += parseInt(mem) || 0;
+            if (!gpuName && name) gpuName = name;
+          }
+
+          if (totalGpuMem > 0 || gpuName) {
+            result.gpu = {
+              memory_used: totalGpuMem,
+              name: gpuName
+            };
+          }
+        }
+      } catch (gpuErr) {
+        // GPU stats are optional, don't fail if nvidia-smi isn't available
+        console.log('GPU stats not available for container:', gpuErr.message);
+      }
+
+      res.json(result);
     } else {
       res.json({ error: 'Invalid stats format', status: 'unknown' });
     }

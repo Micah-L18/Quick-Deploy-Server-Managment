@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../api/auth';
 import Button from '../components/Button';
 import styles from './Auth.module.css';
 
@@ -13,9 +14,61 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingUsers, setCheckingUsers] = useState(true);
+
+  // Check if any users exist - if not, redirect to register
+  useEffect(() => {
+    const checkUsers = async () => {
+      try {
+        const { hasUsers } = await authService.hasUsers();
+        if (!hasUsers) {
+          navigate('/register', { replace: true });
+        }
+      } catch (err) {
+        // If check fails, just show login page
+        console.error('Failed to check users:', err);
+      } finally {
+        setCheckingUsers(false);
+      }
+    };
+    checkUsers();
+  }, [navigate]);
 
   if (user) {
     return <Navigate to="/" replace />;
+  }
+
+  if (checkingUsers) {
+    return (
+      <div className={styles.authContainer}>
+        <div className={styles.authBox}>
+          <div className={styles.authHeader}>
+            <div className={styles.authLogo}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="40" height="40">
+                <defs>
+                  <linearGradient id="authGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{stopColor:'#00d4ff',stopOpacity:1}} />
+                    <stop offset="100%" style={{stopColor:'#00a8cc',stopOpacity:1}} />
+                  </linearGradient>
+                </defs>
+                <circle cx="32" cy="32" r="30" fill="url(#authGradient)"/>
+                <ellipse cx="32" cy="20" rx="16" ry="5" fill="#ffffff" opacity="0.9"/>
+                <ellipse cx="32" cy="32" rx="16" ry="5" fill="#ffffff" opacity="0.9"/>
+                <ellipse cx="32" cy="44" rx="16" ry="5" fill="#ffffff" opacity="0.9"/>
+                <rect x="16" y="20" width="2" height="24" fill="#ffffff" opacity="0.9"/>
+                <rect x="46" y="20" width="2" height="24" fill="#ffffff" opacity="0.9"/>
+                <circle cx="32" cy="20" r="2.5" fill="#ffffff"/>
+                <circle cx="32" cy="32" r="2.5" fill="#ffffff"/>
+                <circle cx="32" cy="44" r="2.5" fill="#ffffff"/>
+                <path d="M 40 28 L 44 32 L 40 36 L 36 32 Z" fill="#ffffff" opacity="0.6"/>
+              </svg>
+              <span>NoBase</span>
+            </div>
+            <p className={styles.authSubtitle}>Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const handleChange = (e) => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from './Modal';
 import Button from './Button';
 import ColorPicker from './ColorPicker';
@@ -7,6 +8,7 @@ import { XIcon } from './Icons';
 import styles from './ServerSettingsModal.module.css';
 
 const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     displayName: '',
     name: '',
@@ -239,6 +241,16 @@ const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => 
 
         {/* Actions */}
         <div className={styles.actions}>
+          <Button 
+            variant="danger" 
+            onClick={() => {
+              onClose();
+              navigate(`/servers/${server.id}?tab=settings&scrollTo=delete`);
+            }}
+          >
+            Remove Server
+          </Button>
+          <div style={{ flex: 1 }} />
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
