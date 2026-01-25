@@ -1,28 +1,42 @@
 # Multi-Server SSH Manager
 
-A modern web-based application for managing SSH connections to multiple servers with real-time metrics, terminal access, and file browsing.
+A modern web-based application for managing SSH connections to multiple servers with real-time metrics, terminal access, file browsing, and deployment management.
 
 ## Features
 
 - **Server Management**: Add, monitor, and manage multiple SSH servers
 - **Real-time Metrics**: CPU, Memory, and Disk usage with historical data visualization
 - **Integrated Terminal**: Full SSH terminal access directly in the browser
-- **File Browser**: Navigate and view server files through the web interface
+- **File Browser**: Navigate, edit, upload, and download server files through the web interface
+- **App Deployments**: Deploy and manage Docker containers across your servers
+- **Snapshots & Migrations**: Backup deployments and migrate between servers
 - **Auto-monitoring**: Background metrics collection every 30 seconds
 - **Secure Authentication**: User authentication with session management
-- **Modern UI**: React-based interface with responsive design
+- **Modern UI**: React-based interface with dark theme and responsive design
 
 ## Project Structure
 
 ```
-neo-multi/
-├── backend/          # Express API server
-│   ├── server.js     # Main server file
-│   ├── servers.db    # SQLite database
-│   └── ssh_keys/     # Generated SSH keys
-├── client/           # React frontend
-│   └── src/          # React components and pages
-└── package.json      # Root package with dev scripts
+Quick-Deploy-Server-Managment/
+├── Backend/              # Express API server (port 3044)
+│   ├── server.js         # Entry point - routes, Socket.IO, startup
+│   ├── config/           # Configuration constants
+│   ├── database/         # SQLite connection and schema
+│   ├── models/           # Database operations (User, Server, App, etc.)
+│   ├── routes/           # API route handlers
+│   ├── services/         # SSH, metrics, snapshots, migrations
+│   ├── websocket/        # Terminal session handlers
+│   ├── ssh_keys/         # Generated SSH key pairs
+│   └── uploads/          # Uploaded icons and files
+├── Client/               # React frontend (port 3000)
+│   ├── src/
+│   │   ├── api/          # Axios service modules
+│   │   ├── components/   # Reusable UI components
+│   │   ├── contexts/     # React Context providers
+│   │   ├── pages/        # Page components
+│   │   └── styles/       # Global CSS
+│   └── build/            # Production build output
+└── package.json          # Root package with orchestration scripts
 ```
 
 ## Installation
@@ -35,8 +49,8 @@ npm run install:all
 Or install individually:
 ```bash
 npm install           # Root dependencies
-cd backend && npm install
-cd ../client && npm install
+cd Backend && npm install
+cd ../Client && npm install
 ```
 
 ## Usage
@@ -151,6 +165,24 @@ Navigate to **Settings → System Update** to:
 
 ### Files
 - `GET /api/servers/:id/files?path=/` - List files and directories
+- `GET /api/servers/:id/files/read?path=/file` - Read file contents
+- `POST /api/servers/:id/files/write` - Write file contents
+- `POST /api/servers/:id/files/upload` - Upload files to server
+- `GET /api/servers/:id/files/download?path=/file` - Download file
+
+### Apps & Deployments
+- `GET /api/apps` - Get all apps
+- `POST /api/apps` - Create a new app
+- `GET /api/apps/:id` - Get app details with deployments
+- `POST /api/apps/:id/deploy` - Deploy app to a server
+
+### Snapshots
+- `GET /api/deployments/:id/snapshots` - Get snapshots for a deployment
+- `POST /api/deployments/:id/snapshots` - Create a snapshot
+- `POST /api/snapshots/:id/restore` - Restore from snapshot
+
+### Migrations
+- `POST /api/migrations` - Migrate deployment to another server
 
 ### Terminal
 - WebSocket connection on `/` - Real-time SSH terminal sessions
@@ -162,18 +194,15 @@ Navigate to **Settings → System Update** to:
 - Socket.IO for WebSocket communication
 - SQLite for data persistence
 - SSH2 for server connections
-- bcryptjs for authentication
+- bcryptjs for password hashing
 
 ### Frontend
-- React 19
-- React Router v7
-- TanStack Query (React Query)
+- React 19 with React Router v7
+- TanStack Query for data fetching
 - Recharts for data visualization
 - xterm.js for terminal emulation
-- Vanilla JavaScript (Frontend)
-- ssh2 library (SSH connections)
-- JSON file storage
+- CSS Modules for component styling
 
 ## Port
 
-The server runs on port **3044**
+The backend server runs on port **3044**, the React dev server runs on port **3000**.

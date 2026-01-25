@@ -2,185 +2,162 @@
 
 ## Architecture Overview
 
-This is a full-stack monorepo with **separate frontend and backend** that communicate via REST API + WebSocket:
+Full-stack monorepo with **separate frontend and backend** communicating via REST API + WebSocket:
 
-- **Backend**: Modular Express server (`backend/`) on port 3044 - handles SSH connections, metrics collection, SQLite database
-- **Frontend**: React 19 SPA (`client/`) on port 3000 - uses React Router v7, TanStack Query, CSS Modules
-- **Root**: Orchestration package with `concurrently` to run both services
+- **Backend** (`Backend/`): Express server on port 3044 - SSH connections, SQLite database, metrics, snapshots, migrations
+- **Frontend** (`Client/`): React SPA on port 3000 - React Router, TanStack Query, CSS Modules
+- **Root**: Orchestration with `concurrently` to run both services
 
-### Critical: Backend is NOT serving the frontend
-The backend has no `express.static` - it's a pure API server. The React dev server proxies API requests to localhost:3044.
+**Critical**: Backend is a pure API server (no `express.static` for frontend). React dev server proxies `/api` to localhost:3044.
 
 ## Development Commands
 
 ```bash
-# First time setup
-npm run install:all
-
-# Run both frontend + backend with hot-reload
-npm run dev
-
-# Run individually
-npm run dev:backend   # nodemon on :3044
-npm run dev:client    # react-scripts on :3000
+npm run install:all      # First time setup
+npm run dev              # Both frontend + backend with hot-reload
+npm run dev:backend      # Backend only (nodemon on :3044)
+npm run dev:client       # Frontend only (react-scripts on :3000)
 ```
 
-**Common mistake**: Running `npm start` in root starts production mode (no hot-reload). Use `npm run dev` for development.
+**Common mistake**: `npm start` runs production mode. Use `npm run dev` for development.
 
-## Backend Structure
+## Backend Structure (`Backend/`)
 
 ```
-backend/
-├── server.js           # Entry point (~100 lines) - mounts routes, starts server
-├── config/
-│   └── index.js        # Configuration constants (PORT, DB_FILE, SSH_KEYS_DIR, etc)
+Backend/
+├── server.js              # Entry point - mounts routes, Socket.IO, startup
+├── config/index.js        # All configuration (PORT, DB, SSH, CORS, etc.)
 ├── database/
-│   ├── connection.js   # Promise-based SQLite wrapper (run, get, all, transaction)
-│   └── init.js         # Schema creation and migrations
-├── models/
-│   ├── UserModel.js    # User CRUD operations
-│   ├── ServerModel.js  # Server CRUD operations
-│   ├── ActivityModel.js# Activity logging
-│   ├── AppModel.js     # Apps and deployments
-│   └── MetricsModel.js # Server metrics storage
+│   ├── connection.js      # Promise-based SQLite wrapper (run, get, all)
+│   └── init.js            # Schema creation and migrations
+├── models/                # Database operations (index.js re-exports all)
+│   ├── ServerModel.js     # Server CRUD + toCamelCase conversion
+│   ├── AppModel.js        # Apps and deployments
+│   ├── SnapshotModel.js   # Backup snapshots
+│   └── ...
 ├── middleware/
-│   ├── auth.js         # requireAuth, optionalAuth, attachUser
-│   ├── ownership.js    # checkServerOwnership, checkAppOwnership
-│   └── errorHandler.js # asyncHandler, errorHandler, notFoundHandler
-├── routes/
-│   ├── auth.js         # /api/auth/* routes
-│   ├── servers.js      # /api/servers/* routes
-│   ├── activities.js   # /api/activities/* routes
-│   ├── apps.js         # /api/apps/* routes
-│   ├── files.js        # /api/servers/:id/files/* routes
-│   ├── metrics.js      # /api/servers/:id/metrics/* routes
-│   └── services.js     # /api/servers/:id/services/* routes
+│   ├── auth.js            # requireAuth, optionalAuth, attachUser
+│   ├── ownership.js       # checkServerOwnership, checkAppOwnership
+│   └── errorHandler.js    # asyncHandler wrapper, errorHandler, notFoundHandler
+├── routes/                # API route handlers (index.js re-exports all)
+│   ├── servers.js         # /api/servers/*
+│   ├── files.js           # /api/servers/:id/files/*
+│   ├── metrics.js         # /api/servers/:id/metrics/*
+│   ├── snapshots.js       # /api/snapshots/*, /api/deployments/:id/snapshots/*
+│   ├── migrations.js      # /api/migrations/* (server-to-server)
+│   └── ...
 ├── services/
-│   ├── ssh/
-│   │   ├── connectionPool.js  # SSH connection pooling with 5-min idle timeout
-│   │   ├── connectionManager.js # testConnection, executeCommand, createShell
-│   │   ├── keyManager.js      # generateKeyPair, deleteKeyPair
-│   │   └── sftpService.js     # listDirectory, readFile, writeFile, etc.
-│   └── metrics/
-│       ├── collector.js       # collectMetrics, getOsInfo, getServiceStatus
-│       ├── parser.js          # parseMetrics, parseCpuUsage
-│       └── scheduler.js       # Background metrics collection (30s interval)
-└── websocket/
-    └── terminal.js     # Socket.IO terminal session handlers
+│   ├── ssh/               # connectionPool, connectionManager, keyManager, sftpService
+│   ├── metrics/           # collector, parser, scheduler (30s interval)
+│   ├── snapshots/         # snapshotService for backups
+│   └── migration/         # migrationService for cross-server transfers
+└── websocket/terminal.js  # Socket.IO terminal + service installation handlers
 ```
 
-### Database Layer
-- **SQLite** with Promise-based wrapper in `database/connection.js`
-- Use `run()`, `get()`, `all()` for queries - all return Promises
-- 6 tables: `users`, `servers`, `activities`, `apps`, `server_metrics`, `app_deployments`
-- All tables use TEXT id fields (UUID v4 or timestamp-based)
-- Schema + migrations in `database/init.js`
+### Key Backend Patterns
 
-### Models Pattern
-- Each model file exports async functions
-- Functions like `findById()`, `findAll()`, `create()`, `update()`, `remove()`
-- Convert snake_case DB columns to camelCase in model layer
+**Route handlers**: Always use `asyncHandler()` + `requireAuth` middleware:
+```javascript
+router.get('/', requireAuth, asyncHandler(async (req, res) => {
+  const servers = await ServerModel.findAll(req.session.userId);
+  res.json(servers);
+}));
+```
 
-### SSH Operations
-- **Connection Pool**: Reuses SSH connections with 5-minute idle timeout
-- SSH keys stored in `backend/ssh_keys/` as `server_<timestamp>` and `.pub`
-- Key generation via `ssh-keygen` in `services/ssh/keyManager.js`
-- Command execution via `services/ssh/connectionManager.js`
-- SFTP operations via `services/ssh/sftpService.js`
+**Database queries**: Use Promise wrappers from `database/connection.js`:
+```javascript
+const { run, get, all } = require('../database/connection');
+const row = await get('SELECT * FROM servers WHERE id = ?', [serverId]);
+```
 
-### Metrics Collection
-- Background scheduler in `services/metrics/scheduler.js` (30s interval)
-- Parsing logic isolated in `services/metrics/parser.js`
-- Endpoint `/api/servers/:id/metrics/history?hours=24` returns time-series data
-- Fresh metrics fetched if cache > 2 minutes old
+**SSH operations**: Get pooled connection, execute commands:
+```javascript
+const { connectionManager } = require('../services/ssh');
+const result = await connectionManager.executeCommand(serverConfig, 'ls -la');
+```
 
-### WebSocket (Socket.IO)
-- Terminal handlers in `websocket/terminal.js`
-- Client emits `start-terminal` with `{ serverId }` → server creates SSH shell
-- One Socket.IO connection per terminal instance
+**Socket.IO for real-time**: Access via `req.app.get('io')`:
+```javascript
+const io = req.app.get('io');
+io.emit('migration-progress', { step: 'transferring', progress: 50 });
+```
 
-## Frontend Patterns (`client/src/`)
+## Frontend Structure (`Client/src/`)
 
-### API Layer (`src/api/`)
-- Centralized axios instance in `axiosConfig.js` with `withCredentials: true`
-- Response interceptor redirects to `/login` on 401 (except when on auth pages)
-- Service modules: `authService`, `serversService`, `filesService`, `appsService`, `activitiesService`
-- Example: `serversService.getAll()` → `GET /api/servers` → returns Promise
+```
+Client/src/
+├── App.jsx                # Routes, QueryClient, context providers
+├── api/                   # Service modules (axiosConfig.js + feature services)
+├── contexts/              # AuthContext, ThemeContext, SnapshotProgressContext, BackgroundJobsContext
+├── pages/                 # Full pages (each has .jsx + .module.css)
+├── components/            # Reusable components (Layout, Modal, FileBrowser, Terminal, etc.)
+└── styles/global.css      # CSS variables (--primary, --background, etc.)
+```
 
-### State Management
-- **Auth**: React Context (`AuthContext.jsx`) wraps entire app, provides `{ user, login, logout, checkAuth }`
-- **Server data**: TanStack Query with `useQuery(['servers'], serversService.getAll)`
-- **Local UI**: useState/useReducer in components
-- No Redux/Zustand - intentionally simple
+### Key Frontend Patterns
 
-### Routing & Layout
-- Protected routes wrapped in `<Layout>` component which:
-  1. Checks `useAuth().user` 
-  2. Redirects to `/login` if not authenticated
-  3. Renders `<Sidebar>` + children
-- All pages (except Login/Register) must render inside `<Layout>`
+**API service pattern** (`api/servers.js`):
+```javascript
+export const serversService = {
+  getServers: async () => (await api.get('/servers')).data,
+  addServer: async (data) => (await api.post('/servers', data)).data,
+};
+```
 
-### Styling Convention
-- **CSS Modules** for component styles (`.module.css` files)
-- Import as `import styles from './Component.module.css'`
-- Global CSS variables in `styles/global.css`: `--primary: #00d4ff`, `--background: #0a0e27`, etc.
-- Every component has its own `.module.css` file - no shared component styles
+**Protected routes**: Wrap pages in `<Layout>`:
+```jsx
+const MyPage = () => (
+  <Layout>
+    <div className={styles.container}>...</div>
+  </Layout>
+);
+```
 
-### Terminal Component
-- Uses `xterm.js` (`@xterm/xterm`) with `FitAddon` from `@xterm/addon-fit`
-- Socket.IO client connects on mount, emits `createTerminal`, listens for `terminalData`
-- **Important**: Must call `fitAddon.fit()` after terminal container is rendered to size correctly
+**Data fetching**: Use TanStack Query:
+```javascript
+const { data: servers } = useQuery({ queryKey: ['servers'], queryFn: serversService.getServers });
+```
 
-## Common Workflows
+**Styling**: CSS Modules only - every component has matching `.module.css`:
+```jsx
+import styles from './Component.module.css';
+<div className={styles.container}>
+```
 
-### Adding a New Server Feature
-1. Create route handler in appropriate `routes/*.js` file
-2. Use `asyncHandler()` wrapper and `requireAuth` middleware
-3. Use models for database operations, SSH services for remote operations
-4. Create service method in `client/src/api/servers.js`
-5. Use in React with TanStack Query
+## Adding New Features
 
-### Adding a New Route File
-1. Create `backend/routes/newFeature.js`
-2. Export Express router with handlers
-3. Import and mount in `server.js`: `app.use('/api/newFeature', newFeatureRoutes)`
+### New Backend Route
+1. Create `Backend/routes/newFeature.js` with Express router
+2. Export from `Backend/routes/index.js`
+3. Mount in `Backend/server.js`: `app.use('/api/newFeature', newFeatureRoutes)`
+4. Add corresponding API service in `Client/src/api/newFeature.js`
 
-### Adding a New Page
-1. Create `client/src/pages/NewPage.jsx` + `NewPage.module.css`
-2. Import `Layout` and wrap content: `<Layout><div>...</div></Layout>`
+### New Frontend Page
+1. Create `Client/src/pages/NewPage.jsx` + `NewPage.module.css`
+2. Wrap content in `<Layout>` component
 3. Add route in `App.jsx`: `<Route path="/newpage" element={<NewPage />} />`
 4. Add nav link in `Sidebar.jsx` with icon from `Icons.jsx`
 
 ### Database Schema Changes
-1. Add table creation in `database/init.js` inside `initDatabase()`
-2. Add migrations for new columns in `runMigrations()`
-3. Create/update model in `models/` directory
+1. Add CREATE TABLE in `Backend/database/init.js` → `initDatabase()`
+2. Add migrations in `runMigrations()` for existing databases
+3. Create/update model in `Backend/models/`
+4. Export from `Backend/models/index.js`
 
-## Project-Specific Quirks
+## Project-Specific Notes
 
-- **SSH key format**: Backend expects keys WITHOUT passphrase (automated connections)
-- **SSH Connection Pooling**: Connections reused with 5-minute idle timeout (configurable in `config/index.js`)
-- **Session secret**: Randomly generated on server start (sessions lost on restart)
-- **Metrics interval**: Configurable in `config/index.js` - default 30 seconds
-- **File paths**: Backend uses absolute paths from `__dirname`, React uses workspace-relative
-- **Port conflict**: If port 3044 is taken, update `backend/config/index.js` AND `client/package.json` proxy
-- **CORS**: Both `http://localhost:3000` and `http://localhost:3044` allowed - update in `config/index.js`
+- **SSH keys**: Stored in `Backend/ssh_keys/` as `server_<timestamp>` and `.pub` (no passphrase)
+- **Connection pooling**: 5-min idle timeout, max 8 channels per connection before reconnect
+- **Session**: Secret randomly generated on start (sessions lost on restart in dev)
+- **Environment**: Uses `url.env` in root for `FRONTEND_URL`, `BACKEND_URL` configuration
+- **Uploads**: Stored in `Backend/uploads/`, served statically at `/uploads`
+- **Health check**: `GET /api/health` returns server status + SSH pool stats
 
-## Testing Context
+## Key Files Reference
 
-- No test suite currently implemented (boilerplate from CRA exists)
-- Manual testing workflow: `npm run dev` → test in browser → check backend logs in terminal
-- Socket.IO debugging: Enable client logs with `socket.io-client/debug`
-- Health check endpoint: `GET /api/health` returns server status and SSH pool stats
-
-## Key Files to Reference
-
-- [backend/server.js](backend/server.js) - Entry point, route mounting, startup
-- [backend/config/index.js](backend/config/index.js) - All configuration constants
-- [backend/routes/](backend/routes/) - API route handlers
-- [backend/models/](backend/models/) - Database operations
-- [backend/services/ssh/](backend/services/ssh/) - SSH connection pool, SFTP, key management
-- [client/src/App.jsx](client/src/App.jsx) - React Router setup, QueryClient config
-- [client/src/api/axiosConfig.js](client/src/api/axiosConfig.js) - Axios instance, auth interceptor
-- [client/src/contexts/AuthContext.jsx](client/src/contexts/AuthContext.jsx) - Session management
-- [client/src/components/Layout.jsx](client/src/components/Layout.jsx) - Protected route wrapper pattern
+- [Backend/config/index.js](Backend/config/index.js) - All configuration constants
+- [Backend/middleware/errorHandler.js](Backend/middleware/errorHandler.js) - asyncHandler pattern
+- [Backend/services/ssh/connectionPool.js](Backend/services/ssh/connectionPool.js) - SSH connection reuse
+- [Client/src/api/axiosConfig.js](Client/src/api/axiosConfig.js) - Axios instance with 401 redirect
+- [Client/src/components/Layout.jsx](Client/src/components/Layout.jsx) - Auth guard + layout wrapper
+- [Client/src/contexts/AuthContext.jsx](Client/src/contexts/AuthContext.jsx) - Auth state management
