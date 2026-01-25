@@ -1,6 +1,6 @@
 # Multi-Server SSH Manager
 
-# hi
+# hi - hello
 
 A modern web-based application for managing SSH connections to multiple servers with real-time metrics, terminal access, file browsing, and deployment management.
 
