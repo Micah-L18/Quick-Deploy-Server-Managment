@@ -1,0 +1,65 @@
+.content {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.successIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--success);
+}
+
+.message {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.versionInfo {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.versionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.versionLabel {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.versionValue {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.commitHash {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.875rem;
+  background: var(--background-tertiary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.restartNote {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}

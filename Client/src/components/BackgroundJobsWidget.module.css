@@ -117,6 +117,19 @@
   display: none;
 }
 
+.systemUpdateJob {
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.systemUpdateJob:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.jobIcon {
+  color: var(--primary, #3b82f6);
+  flex-shrink: 0;
+}
+
 .jobInfo {
   display: flex;
   justify-content: space-between;

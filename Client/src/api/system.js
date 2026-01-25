@@ -30,7 +30,24 @@ export const systemService = {
   },
 
   /**
+   * Get current update status (for polling/restoring state)
+   */
+  getUpdateStatus: async () => {
+    const response = await api.get('/system/update-status');
+    return response.data;
+  },
+
+  /**
+   * Clear update status (reset to idle)
+   */
+  clearUpdateStatus: async () => {
+    const response = await api.post('/system/update-status/clear');
+    return response.data;
+  },
+
+  /**
    * Trigger system update (git pull + npm install + build)
+   * Update now runs in background - returns immediately
    */
   triggerUpdate: async () => {
     const response = await api.post('/system/update');

@@ -6,6 +6,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { SnapshotProgressProvider } from './contexts/SnapshotProgressContext';
 import { BackgroundJobsProvider } from './contexts/BackgroundJobsContext';
 import BackgroundJobsWidget from './components/BackgroundJobsWidget';
+import UpdatePromptModal from './components/UpdatePromptModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -50,6 +51,7 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                 </Routes>
                 <BackgroundJobsWidget />
+                <UpdatePromptModal />
               </BrowserRouter>
             </BackgroundJobsProvider>
           </SnapshotProgressProvider>

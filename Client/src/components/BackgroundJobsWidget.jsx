@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBackgroundJobs } from '../contexts/BackgroundJobsContext';
-import { ChevronUpIcon, ChevronDownIcon, CheckIcon, AlertIcon, RefreshIcon, XIcon } from './Icons';
+import { ChevronUpIcon, ChevronDownIcon, CheckIcon, AlertIcon, RefreshIcon, XIcon, SettingsIcon } from './Icons';
 import migrationsService from '../api/migrations';
 import styles from './BackgroundJobsWidget.module.css';
 
 const BackgroundJobsWidget = () => {
-  const { jobs, jobCount } = useBackgroundJobs();
+  const { jobs, jobCount, systemUpdate } = useBackgroundJobs();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState({});
@@ -29,6 +31,13 @@ const BackgroundJobsWidget = () => {
       alert(error.response?.data?.error || 'Failed to cancel migration');
     } finally {
       setCancelling(prev => ({ ...prev, [job.deploymentId]: false }));
+    }
+  };
+
+  const handleJobClick = (job) => {
+    // Navigate to Settings page if it's a system update job
+    if (job.id === 'system-update') {
+      navigate('/settings');
     }
   };
 
@@ -85,12 +94,17 @@ const BackgroundJobsWidget = () => {
             {jobs.map((job, index) => (
               <div 
                 key={job.id} 
-                className={`${styles.jobItem} ${!expanded && index > 0 ? styles.hidden : ''}`}
+                className={`${styles.jobItem} ${!expanded && index > 0 ? styles.hidden : ''} ${job.id === 'system-update' ? styles.systemUpdateJob : ''}`}
+                onClick={() => handleJobClick(job)}
+                style={{ cursor: job.id === 'system-update' ? 'pointer' : 'default' }}
               >
                 <div className={styles.jobInfo}>
                   <div className={styles.jobLeft}>
+                    {job.id === 'system-update' && <SettingsIcon size={12} className={styles.jobIcon} />}
                     <span className={styles.jobType}>{cancelled[job.deploymentId] ? 'Cancelled' : job.type}</span>
-                    <span className={styles.jobName}>{job.containerName || job.appName}</span>
+                    <span className={styles.jobName}>
+                      {job.id === 'system-update' ? 'NoBase' : (job.containerName || job.appName || job.fileName)}
+                    </span>
                   </div>
                   <div className={styles.jobRight}>
                     <span className={styles.jobPercent} style={{ color: getStatusColor(job.stage, job.deploymentId) }}>

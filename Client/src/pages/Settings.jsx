@@ -1,21 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { io } from 'socket.io-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useBackgroundJobs } from '../contexts/BackgroundJobsContext';
 import { SettingsIcon, RefreshIcon, ServerIcon, CheckCircleIcon, AlertIcon, MoonIcon, SunIcon } from '../components/Icons';
 import { systemService } from '../api/system';
 import styles from './Settings.module.css';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
-
 const Settings = () => {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { systemUpdate, startSystemUpdate, restartServer } = useBackgroundJobs();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -25,12 +24,9 @@ const Settings = () => {
     notifications: true,
   });
   
-  // System update state
-  const [updateLogs, setUpdateLogs] = useState([]);
-  const [isUpdating, setIsUpdating] = useState(false);
+  // Changelog visibility
   const [showChangelog, setShowChangelog] = useState(false);
   const updateLogsRef = useRef(null);
-  const socketRef = useRef(null);
 
   // Fetch version info
   const { data: versionInfo, isLoading: versionLoading, refetch: refetchVersion } = useQuery({
@@ -53,75 +49,35 @@ const Settings = () => {
     enabled: versionInfo?.updateAvailable,
   });
 
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: systemService.triggerUpdate,
-    onSuccess: (data) => {
-      if (data.success) {
-        queryClient.invalidateQueries(['system-version']);
-        addUpdateLog('Update completed successfully!', 'success');
-      }
-      setIsUpdating(false);
-    },
-    onError: (error) => {
-      addUpdateLog(`Update failed: ${error.message}`, 'error');
-      setIsUpdating(false);
-    }
-  });
-
-  // Restart mutation
-  const restartMutation = useMutation({
-    mutationFn: systemService.restartServer,
-    onSuccess: () => {
-      addUpdateLog('Server restart initiated. Please wait...', 'warning');
-    }
-  });
-
-  // Socket.IO for update progress
-  useEffect(() => {
-    const socket = io(API_URL);
-    socketRef.current = socket;
-
-    socket.on('system-update-progress', ({ message, type }) => {
-      addUpdateLog(message, type);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
-  // Auto-scroll update logs
+  // Auto-scroll update logs when they change
   useEffect(() => {
     if (updateLogsRef.current) {
       updateLogsRef.current.scrollTop = updateLogsRef.current.scrollHeight;
     }
-  }, [updateLogs]);
-
-  const addUpdateLog = (message, type = 'info') => {
-    setUpdateLogs(prev => [...prev, { message, type, timestamp: new Date().toISOString() }]);
-  };
+  }, [systemUpdate.logs]);
 
   const handleCheckForUpdates = () => {
     refetchVersion();
   };
 
   const handleStartUpdate = () => {
-    if (!window.confirm('This will update the server to the latest version. Continue?')) {
+    if (!window.confirm('This will update the server to the latest version. You can continue working while the update runs in the background. Continue?')) {
       return;
     }
-    setUpdateLogs([]);
-    setIsUpdating(true);
-    addUpdateLog('Starting update process...', 'info');
-    updateMutation.mutate();
+    startSystemUpdate();
   };
 
   const handleRestartServer = () => {
     if (!window.confirm('This will restart the server. All active connections will be temporarily interrupted. Continue?')) {
       return;
     }
-    restartMutation.mutate();
+    restartServer();
   };
+
+  // Derived state from context
+  const isUpdating = systemUpdate.status === 'updating';
+  const updateComplete = systemUpdate.status === 'complete';
+  const updateError = systemUpdate.status === 'error';
 
   useEffect(() => {
     // Load preferences from localStorage
@@ -240,9 +196,9 @@ const Settings = () => {
         )}
 
         {/* Update Logs */}
-        {updateLogs.length > 0 && (
+        {systemUpdate.logs.length > 0 && (
           <div className={styles.updateLogs} ref={updateLogsRef}>
-            {updateLogs.map((log, idx) => (
+            {systemUpdate.logs.map((log, idx) => (
               <div key={idx} className={`${styles.logEntry} ${styles[log.type]}`}>
                 <span className={styles.logTime}>
                   {new Date(log.timestamp).toLocaleTimeString()}
@@ -253,19 +209,60 @@ const Settings = () => {
           </div>
         )}
 
+        {/* Update Progress Indicator */}
+        {isUpdating && (
+          <div className={styles.updateProgress}>
+            <div className={styles.progressBar}>
+              <div 
+                className={styles.progressFill} 
+                style={{ width: `${systemUpdate.percent}%` }}
+              />
+            </div>
+            <span className={styles.progressText}>
+              {systemUpdate.stage ? `${systemUpdate.stage}...` : 'Updating...'} ({systemUpdate.percent}%)
+            </span>
+          </div>
+        )}
+
+        {/* Update Complete Banner */}
+        {updateComplete && systemUpdate.requiresRestart && (
+          <div className={`${styles.updateBanner} ${styles.successBanner}`}>
+            <div className={styles.updateBannerIcon}>
+              <CheckCircleIcon size={24} />
+            </div>
+            <div className={styles.updateBannerContent}>
+              <strong>Update Complete!</strong>
+              <span>Restart required to apply changes</span>
+            </div>
+          </div>
+        )}
+
+        {/* Update Error Banner */}
+        {updateError && (
+          <div className={`${styles.updateBanner} ${styles.errorBanner}`}>
+            <div className={styles.updateBannerIcon}>
+              <AlertIcon size={24} />
+            </div>
+            <div className={styles.updateBannerContent}>
+              <strong>Update Failed</strong>
+              <span>{systemUpdate.error}</span>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className={styles.updateActions}>
           <Button
             variant="outline"
             size="small"
             onClick={handleCheckForUpdates}
-            disabled={versionLoading}
+            disabled={versionLoading || isUpdating}
           >
             <RefreshIcon size={16} />
             Check for Updates
           </Button>
           
-          {versionInfo?.updateAvailable && (
+          {versionInfo?.updateAvailable && !updateComplete && (
             <Button
               variant="primary"
               size="small"
@@ -276,13 +273,13 @@ const Settings = () => {
             </Button>
           )}
 
-          {updateMutation.isSuccess && (
+          {(updateComplete && systemUpdate.requiresRestart) && (
             <Button
               variant="warning"
               size="small"
               onClick={handleRestartServer}
-              disabled={restartMutation.isPending}
             >
+              <RefreshIcon size={16} />
               Restart Server
             </Button>
           )}

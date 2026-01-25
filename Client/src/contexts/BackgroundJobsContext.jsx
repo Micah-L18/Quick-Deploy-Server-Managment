@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { appsService } from '../api/apps';
+import { systemService } from '../api/system';
 
 const BackgroundJobsContext = createContext(null);
 
@@ -16,6 +17,20 @@ export const BackgroundJobsProvider = ({ children }) => {
   const [jobs, setJobs] = useState({});
   const [progress, setProgress] = useState({}); // Track progress from socket events
   const [fileJobs, setFileJobs] = useState({}); // Track file operation jobs
+  
+  // System update state - persists across navigation
+  const [systemUpdate, setSystemUpdate] = useState({
+    status: 'idle', // 'idle' | 'updating' | 'complete' | 'error'
+    logs: [],
+    percent: 0,
+    stage: null,
+    requiresRestart: false,
+    newVersion: null,
+    newCommit: null,
+    error: null
+  });
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  
   const socketRef = useRef(null);
 
   // Poll for deployments with active statuses
@@ -61,6 +76,46 @@ export const BackgroundJobsProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [progress]);
 
+  // Fetch update status on mount and periodically when updating
+  useEffect(() => {
+    const fetchUpdateStatus = async () => {
+      try {
+        const status = await systemService.getUpdateStatus();
+        
+        // Update local state from server state
+        setSystemUpdate(prev => ({
+          ...prev,
+          status: status.status,
+          logs: status.logs || [],
+          requiresRestart: status.requiresRestart,
+          newVersion: status.newVersion,
+          newCommit: status.newCommit,
+          error: status.error
+        }));
+
+        // Show modal if update just completed
+        if (status.status === 'complete' && status.requiresRestart) {
+          setShowUpdateModal(true);
+        }
+      } catch (error) {
+        // Silently fail - user might not be logged in
+        console.debug('[BackgroundJobs] Failed to fetch update status:', error.message);
+      }
+    };
+
+    // Initial fetch
+    fetchUpdateStatus();
+
+    // Poll every 5 seconds while updating, less frequently otherwise
+    const interval = setInterval(() => {
+      if (systemUpdate.status === 'updating') {
+        fetchUpdateStatus();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [systemUpdate.status]);
+
   // Initialize socket connection for progress updates
   useEffect(() => {
     const socketInstance = io(window.location.origin.replace(':3000', ':3044'), {
@@ -93,6 +148,48 @@ export const BackgroundJobsProvider = ({ children }) => {
           message: data.message
         }
       }));
+    });
+
+    // Listen for system update progress logs
+    socketInstance.on('system-update-progress', (data) => {
+      setSystemUpdate(prev => ({
+        ...prev,
+        logs: [...prev.logs, data]
+      }));
+    });
+
+    // Listen for system update stage changes (with percent)
+    socketInstance.on('system-update-stage', (data) => {
+      setSystemUpdate(prev => ({
+        ...prev,
+        status: 'updating',
+        percent: data.percent,
+        stage: data.stage
+      }));
+    });
+
+    // Listen for system update completion
+    socketInstance.on('system-update-complete', (data) => {
+      setSystemUpdate(prev => ({
+        ...prev,
+        status: data.success ? 'complete' : 'error',
+        requiresRestart: data.requiresRestart || false,
+        newVersion: data.newVersion || null,
+        newCommit: data.newCommit || null,
+        error: data.error || null,
+        percent: data.success ? 100 : prev.percent
+      }));
+      
+      // Show the restart modal
+      if (data.success && data.requiresRestart) {
+        setShowUpdateModal(true);
+      }
+    });
+
+    // Listen for server restart
+    socketInstance.on('system-restart', () => {
+      // Could show a reconnecting indicator here
+      console.log('[BackgroundJobs] Server is restarting...');
     });
 
     // Listen for file operation progress
@@ -167,8 +264,87 @@ export const BackgroundJobsProvider = ({ children }) => {
     return socketRef.current?.id || null;
   }, []);
 
+  // Start a system update
+  const startSystemUpdate = useCallback(async () => {
+    try {
+      setSystemUpdate(prev => ({
+        ...prev,
+        status: 'updating',
+        logs: [],
+        percent: 0,
+        stage: 'starting',
+        error: null
+      }));
+      await systemService.triggerUpdate();
+    } catch (error) {
+      setSystemUpdate(prev => ({
+        ...prev,
+        status: 'error',
+        error: error.message
+      }));
+    }
+  }, []);
+
+  // Restart server after update
+  const restartServer = useCallback(async () => {
+    try {
+      await systemService.restartServer();
+      // Clear update state
+      setSystemUpdate({
+        status: 'idle',
+        logs: [],
+        percent: 0,
+        stage: null,
+        requiresRestart: false,
+        newVersion: null,
+        newCommit: null,
+        error: null
+      });
+      setShowUpdateModal(false);
+    } catch (error) {
+      console.error('[BackgroundJobs] Failed to restart server:', error);
+    }
+  }, []);
+
+  // Dismiss the update modal (restart later)
+  const dismissUpdateModal = useCallback(() => {
+    setShowUpdateModal(false);
+  }, []);
+
+  // Clear update status
+  const clearUpdateStatus = useCallback(async () => {
+    try {
+      await systemService.clearUpdateStatus();
+      setSystemUpdate({
+        status: 'idle',
+        logs: [],
+        percent: 0,
+        stage: null,
+        requiresRestart: false,
+        newVersion: null,
+        newCommit: null,
+        error: null
+      });
+    } catch (error) {
+      console.error('[BackgroundJobs] Failed to clear update status:', error);
+    }
+  }, []);
+
   // Combine deployment jobs and file jobs
   const allJobs = { ...jobs, ...fileJobs };
+  
+  // Add system update as a job if active
+  if (systemUpdate.status === 'updating') {
+    allJobs['system-update'] = {
+      id: 'system-update',
+      type: 'System Update',
+      percent: systemUpdate.percent,
+      stage: systemUpdate.stage,
+      message: systemUpdate.stage ? `${systemUpdate.stage}...` : 'Updating...',
+      timestamp: Date.now()
+    };
+  }
+  
   const jobsList = Object.values(allJobs).sort((a, b) => b.timestamp - a.timestamp);
   const jobCount = jobsList.length;
 
@@ -176,7 +352,14 @@ export const BackgroundJobsProvider = ({ children }) => {
     <BackgroundJobsContext.Provider value={{
       jobs: jobsList,
       jobCount,
-      getSocketId
+      getSocketId,
+      // System update specific
+      systemUpdate,
+      showUpdateModal,
+      startSystemUpdate,
+      restartServer,
+      dismissUpdateModal,
+      clearUpdateStatus
     }}>
       {children}
     </BackgroundJobsContext.Provider>
