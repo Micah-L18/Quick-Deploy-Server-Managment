@@ -5,6 +5,7 @@ import Button from './Button';
 import ConfirmModal from './ConfirmModal';
 import SnapshotContent from './SnapshotContent';
 import MigrationContent from './MigrationContent';
+import IconSelector from './IconSelector';
 import { appsService } from '../api/apps';
 import { generateDockerRun } from '../utils/dockerParser';
 import { generateDockerComposeYaml } from '../utils/yamlParser';
@@ -30,7 +31,9 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     network_mode: '',
     command: '',
     custom_args: '',
-    web_ui_port: ''
+    web_ui_port: '',
+    icon: '',
+    icon_url: ''
   });
 
   // Fetch fresh deployment data when modal opens
@@ -70,7 +73,9 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
         network_mode: freshDeployment.network_mode || appConfig.network_mode || '',
         command: freshDeployment.command || appConfig.command || '',
         custom_args: freshDeployment.custom_args || appConfig.custom_args || '',
-        web_ui_port: freshDeployment.web_ui_port || appConfig.web_ui_port || ''
+        web_ui_port: freshDeployment.web_ui_port || appConfig.web_ui_port || '',
+        icon: freshDeployment.icon || appConfig.icon || '',
+        icon_url: freshDeployment.icon_url || appConfig.icon_url || ''
       });
       setError('');
       setIsSaving(false);
@@ -187,10 +192,24 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     }
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
     setError('');
+    
+    // Update deployment config (including icon fields)
     updateMutation.mutate(formData);
+  };
+
+  // Save icon only (doesn't require stopping the app)
+  const handleSaveIcon = async () => {
+    setIsSaving(true);
+    setError('');
+    
+    // Only send icon fields
+    updateMutation.mutate({
+      icon: formData.icon,
+      icon_url: formData.icon_url
+    });
   };
 
   const handleStop = () => {
@@ -200,6 +219,12 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
 
   // Check if deployment is running
   const isRunning = (freshDeployment?.status || deployment?.status) === 'running';
+
+  // Check if only the icon has changed
+  const iconChanged = freshDeployment && (
+    formData.icon !== (freshDeployment.icon || '') || 
+    formData.icon_url !== (freshDeployment.icon_url || '')
+  );
 
   // Port mapping handlers
   const addPort = () => {
@@ -391,6 +416,36 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
             The container will be recreated with the new configuration.
           </div>
         )}
+
+        {/* Deployment Icon */}
+        <div className={styles.configSection}>
+          <h3>Deployment Icon</h3>
+          <p className={styles.hint}>This icon is specific to this deployment and won't affect the parent app or other deployments.</p>
+          <IconSelector
+            value={formData.icon}
+            iconUrl={formData.icon_url}
+            onChange={(data) => {
+              console.log('Icon changed:', data);
+              setFormData(prev => ({
+                ...prev,
+                icon: data.icon || '',
+                icon_url: data.iconUrl || data.icon_url || ''
+              }));
+            }}
+            label=""
+            showCustomUpload={true}
+          />
+          {iconChanged && (
+            <Button
+              variant="primary"
+              onClick={handleSaveIcon}
+              disabled={isSaving}
+              style={{ marginTop: '12px' }}
+            >
+              {isSaving ? 'Saving...' : 'Save Icon'}
+            </Button>
+          )}
+        </div>
 
         {/* Port Mappings */}
         <div className={styles.configSection}>

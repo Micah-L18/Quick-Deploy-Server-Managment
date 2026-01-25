@@ -49,6 +49,13 @@
   height: 100%;
 }
 
+.customIcon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
 .noIcon {
   font-size: 14px;
   color: var(--text-muted);
@@ -138,6 +145,20 @@
   color: var(--primary-gradient);
 }
 
+.customSection {
+  padding: 16px;
+  margin: 16px 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
 .clearButton {
   width: 100%;
   padding: 8px 12px;
@@ -154,4 +175,11 @@
   background: var(--bg-tertiary);
   color: var(--error-color);
   border-color: var(--error-color);
+}
+
+.uploadedIconPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
 }

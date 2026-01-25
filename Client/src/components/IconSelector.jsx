@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import IconUploader from './IconUploader';
+import { uploadsService } from '../api/uploads';
 import styles from './IconSelector.module.css';
+
+// Helper to get full icon URL
+const getIconUrl = (iconUrl) => {
+  if (!iconUrl) return null;
+  if (iconUrl.startsWith('http')) return iconUrl;
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
+  return `${backendUrl}${iconUrl}`;
+};
 
 // Custom SVG icons for server types
 const SERVER_ICONS = {
@@ -98,27 +108,48 @@ const SERVER_ICONS = {
   }
 };
 
-const IconSelector = ({ value, onChange, label = 'Icon' }) => {
+const IconSelector = ({ value, iconUrl, onChange, label = 'Icon', showCustomUpload = false }) => {
   const [showSelector, setShowSelector] = useState(false);
+  const [uploadedIcons, setUploadedIcons] = useState([]);
+
+  // Fetch uploaded icons when selector opens
+  useEffect(() => {
+    if (showSelector && showCustomUpload) {
+      uploadsService.listIcons().then(setUploadedIcons).catch(console.error);
+    }
+  }, [showSelector, showCustomUpload]);
 
   const handleIconSelect = (iconKey) => {
-    onChange(iconKey);
+    onChange({ icon: iconKey, iconUrl: null });
+    setShowSelector(false);
+  };
+
+  const handleUploadedIconSelect = (iconUrl) => {
+    onChange({ icon: 'custom', iconUrl });
     setShowSelector(false);
   };
 
   const handleClear = () => {
-    onChange(null);
+    onChange({ icon: null, iconUrl: null });
     setShowSelector(false);
   };
 
-  const selectedIcon = value ? SERVER_ICONS[value] : null;
+  const handleCustomIconChange = (data) => {
+    onChange(data);
+  };
+
+  // If iconUrl is provided, it's a custom icon
+  const isCustomIcon = iconUrl && iconUrl.startsWith('/uploads/');
+  const selectedIcon = value && !isCustomIcon ? SERVER_ICONS[value] : null;
 
   return (
     <div className={styles.iconSelectorContainer}>
       <label className={styles.label}>{label}</label>
       <div className={styles.iconDisplay} onClick={() => setShowSelector(!showSelector)}>
         <div className={styles.iconPreview}>
-          {selectedIcon ? (
+          {isCustomIcon ? (
+            <img src={getIconUrl(iconUrl)} alt="Custom icon" className={styles.customIcon} />
+          ) : selectedIcon ? (
             <div 
               className={styles.iconSvg} 
               dangerouslySetInnerHTML={{ __html: selectedIcon.svg }}
@@ -128,7 +159,7 @@ const IconSelector = ({ value, onChange, label = 'Icon' }) => {
           )}
         </div>
         <span className={styles.iconName}>
-          {selectedIcon ? selectedIcon.name : 'Select icon...'}
+          {isCustomIcon ? 'Custom Icon' : selectedIcon ? selectedIcon.name : 'Select icon...'}
         </span>
         <svg className={styles.chevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="6 9 12 15 18 9"/>
@@ -141,7 +172,7 @@ const IconSelector = ({ value, onChange, label = 'Icon' }) => {
             {Object.entries(SERVER_ICONS).map(([key, icon]) => (
               <button
                 key={key}
-                className={`${styles.iconOption} ${value === key ? styles.selected : ''}`}
+                className={`${styles.iconOption} ${value === key && !isCustomIcon ? styles.selected : ''}`}
                 onClick={() => handleIconSelect(key)}
                 title={icon.name}
               >
@@ -153,6 +184,40 @@ const IconSelector = ({ value, onChange, label = 'Icon' }) => {
               </button>
             ))}
           </div>
+          
+          {showCustomUpload && uploadedIcons.length > 0 && (
+            <div className={styles.customSection}>
+              <h4 className={styles.sectionTitle}>Uploaded Icons</h4>
+              <div className={styles.iconGrid}>
+                {uploadedIcons.map((url) => (
+                  <button
+                    key={url}
+                    className={`${styles.iconOption} ${iconUrl === url ? styles.selected : ''}`}
+                    onClick={() => handleUploadedIconSelect(url)}
+                    title="Custom uploaded icon"
+                  >
+                    <img 
+                      src={getIconUrl(url)} 
+                      alt="Custom icon"
+                      className={styles.uploadedIconPreview}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {showCustomUpload && (
+            <div className={styles.customSection}>
+              <h4 className={styles.sectionTitle}>Upload New Icon</h4>
+              <IconUploader
+                currentIcon={value}
+                currentIconUrl={iconUrl}
+                onIconChange={handleCustomIconChange}
+              />
+            </div>
+          )}
+          
           <button className={styles.clearButton} onClick={handleClear}>
             Clear Icon
           </button>

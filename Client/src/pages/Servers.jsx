@@ -11,6 +11,14 @@ import { getRegionFlag } from '../utils/formatters';
 import { RefreshIcon, PlusIcon, ServersIcon, EyeIcon, EyeOffIcon, SettingsIcon, ClipboardIcon, AlertIcon } from '../components/Icons';
 import styles from './Servers.module.css';
 
+// Helper to get full icon URL
+const getIconUrl = (iconUrl) => {
+  if (!iconUrl) return null;
+  if (iconUrl.startsWith('http')) return iconUrl;
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
+  return `${backendUrl}${iconUrl}`;
+};
+
 const Servers = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
@@ -146,6 +154,31 @@ const Servers = () => {
 
   // Helper to render server icon
   const renderServerIcon = (server) => {
+    if (server.icon_url) {
+      return (
+        <>
+          <img 
+            src={getIconUrl(server.icon_url)} 
+            alt="Server icon"
+            className={styles.serverIcon}
+            onError={(e) => {
+              // If custom icon fails to load, show default icon
+              e.target.style.display = 'none';
+              if (e.target.nextSibling) {
+                e.target.nextSibling.style.display = 'block';
+              }
+            }}
+          />
+          {server.icon && SERVER_ICONS[server.icon] ? (
+            <div 
+              className={styles.serverIcon}
+              style={{ color: server.color || 'var(--primary-gradient)', display: 'none' }}
+              dangerouslySetInnerHTML={{ __html: SERVER_ICONS[server.icon].svg }}
+            />
+          ) : null}
+        </>
+      );
+    }
     if (server.icon && SERVER_ICONS[server.icon]) {
       return (
         <div 

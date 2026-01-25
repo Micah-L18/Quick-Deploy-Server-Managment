@@ -20,6 +20,12 @@ url.env
 # SSH keys
 /Backend/ssh_keys/*
 /backend/ssh_keys/*
+/Backend/ssh_keys
+
+# Uploaded files
+/Backend/uploads/icons/*
+!Backend/uploads/icons/.gitkeep
+/Backend/services/storage/uploads/
 
 # Build output
 /Client/build
@@ -33,7 +39,6 @@ url.env
 
 # Other
 /ssh
-
 
 /dev-docks
 

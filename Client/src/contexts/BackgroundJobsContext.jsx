@@ -15,6 +15,7 @@ export const useBackgroundJobs = () => {
 export const BackgroundJobsProvider = ({ children }) => {
   const [jobs, setJobs] = useState({});
   const [progress, setProgress] = useState({}); // Track progress from socket events
+  const [fileJobs, setFileJobs] = useState({}); // Track file operation jobs
   const socketRef = useRef(null);
 
   // Poll for deployments with active statuses
@@ -94,6 +95,66 @@ export const BackgroundJobsProvider = ({ children }) => {
       }));
     });
 
+    // Listen for file operation progress
+    socketInstance.on('file-operation-progress', (data) => {
+      setFileJobs(prev => ({
+        ...prev,
+        [data.jobId]: {
+          id: data.jobId,
+          type: data.type, // 'Uploading' or 'Deleting'
+          fileName: data.fileName,
+          serverName: data.serverName,
+          percent: data.percent,
+          stage: data.stage || 'in-progress',
+          message: data.message || '',
+          timestamp: Date.now()
+        }
+      }));
+    });
+
+    // Listen for file operation complete/error
+    socketInstance.on('file-operation-complete', (data) => {
+      setFileJobs(prev => {
+        const updated = { ...prev };
+        if (updated[data.jobId]) {
+          updated[data.jobId] = {
+            ...updated[data.jobId],
+            stage: 'complete',
+            percent: 100
+          };
+          // Remove after 3 seconds
+          setTimeout(() => {
+            setFileJobs(current => {
+              const { [data.jobId]: removed, ...rest } = current;
+              return rest;
+            });
+          }, 3000);
+        }
+        return updated;
+      });
+    });
+
+    socketInstance.on('file-operation-error', (data) => {
+      setFileJobs(prev => {
+        const updated = { ...prev };
+        if (updated[data.jobId]) {
+          updated[data.jobId] = {
+            ...updated[data.jobId],
+            stage: 'error',
+            message: data.error || 'Operation failed'
+          };
+          // Remove after 5 seconds
+          setTimeout(() => {
+            setFileJobs(current => {
+              const { [data.jobId]: removed, ...rest } = current;
+              return rest;
+            });
+          }, 5000);
+        }
+        return updated;
+      });
+    });
+
     socketRef.current = socketInstance;
 
     return () => {
@@ -106,7 +167,9 @@ export const BackgroundJobsProvider = ({ children }) => {
     return socketRef.current?.id || null;
   }, []);
 
-  const jobsList = Object.values(jobs).sort((a, b) => b.timestamp - a.timestamp);
+  // Combine deployment jobs and file jobs
+  const allJobs = { ...jobs, ...fileJobs };
+  const jobsList = Object.values(allJobs).sort((a, b) => b.timestamp - a.timestamp);
   const jobCount = jobsList.length;
 
   return (

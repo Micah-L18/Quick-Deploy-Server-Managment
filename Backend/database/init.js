@@ -174,6 +174,7 @@ async function runMigrations() {
     { name: 'display_name', type: 'TEXT' },
     { name: 'color', type: 'TEXT' },
     { name: 'icon', type: 'TEXT' },
+    { name: 'icon_url', type: 'TEXT' },  // URL to custom uploaded icon
     { name: 'tags', type: 'TEXT' },  // JSON array of tags
     { name: 'first_connected_at', type: 'TEXT' },  // Timestamp of first successful connection
     { name: 'os_type', type: 'TEXT DEFAULT \'ubuntu-debian\'' }  // Operating system type for setup commands
@@ -198,7 +199,9 @@ async function runMigrations() {
     { name: 'network_mode', type: 'TEXT' },
     { name: 'command', type: 'TEXT' },
     { name: 'custom_args', type: 'TEXT' },
-    { name: 'web_ui_port', type: 'TEXT' }  // Host port that has web UI (null = no web UI)
+    { name: 'web_ui_port', type: 'TEXT' },  // Host port that has web UI (null = no web UI)
+    { name: 'icon', type: 'TEXT' },         // Icon type (predefined key or 'custom') - deployment-specific
+    { name: 'icon_url', type: 'TEXT' }      // URL to custom uploaded icon - deployment-specific
   ];
 
   for (const column of deploymentColumns) {
@@ -224,7 +227,9 @@ async function runMigrations() {
     { name: 'registry_url', type: 'TEXT' },
     { name: 'registry_username', type: 'TEXT' },
     { name: 'registry_password', type: 'TEXT' },
-    { name: 'web_ui_port', type: 'TEXT' }      // Host port that has web UI (null = no web UI)
+    { name: 'web_ui_port', type: 'TEXT' },     // Host port that has web UI (null = no web UI)
+    { name: 'icon', type: 'TEXT' },            // Icon type (predefined key or 'custom')
+    { name: 'icon_url', type: 'TEXT' }         // URL to custom uploaded icon
   ];
 
   for (const column of appsColumns) {
@@ -234,6 +239,22 @@ async function runMigrations() {
     } catch (err) {
       // Ignore duplicate column errors
     }
+  }
+
+  // Data migration: Copy app icons to existing deployments that don't have icons
+  try {
+    const result = await run(`
+      UPDATE app_deployments 
+      SET icon = (SELECT icon FROM apps WHERE apps.id = app_deployments.app_id),
+          icon_url = (SELECT icon_url FROM apps WHERE apps.id = app_deployments.app_id)
+      WHERE (icon IS NULL OR icon = '') 
+        AND EXISTS (SELECT 1 FROM apps WHERE apps.id = app_deployments.app_id AND (apps.icon IS NOT NULL OR apps.icon_url IS NOT NULL))
+    `);
+    if (result.changes > 0) {
+      console.log(`Copied app icons to ${result.changes} existing deployments`);
+    }
+  } catch (err) {
+    console.error('Error copying icons to deployments:', err.message);
   }
 
   // Create unique index on (user_id, ip) to prevent duplicate servers

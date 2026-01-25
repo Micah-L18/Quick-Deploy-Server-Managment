@@ -137,6 +137,16 @@ async function update(appId, updates) {
     fields.push('web_ui_port = ?');
     values.push(updates.web_ui_port || null);
   }
+  
+  // Icon fields
+  if (updates.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(updates.icon);
+  }
+  if (updates.icon_url !== undefined) {
+    fields.push('icon_url = ?');
+    values.push(updates.icon_url);
+  }
 
   if (fields.length === 0) return;
 
@@ -228,8 +238,8 @@ async function createDeployment(deployment) {
     : null;
 
   await run(`
-    INSERT INTO app_deployments (id, app_id, server_id, container_id, container_name, status, port_mappings, deployed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO app_deployments (id, app_id, server_id, container_id, container_name, status, port_mappings, deployed_at, icon, icon_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     deployment.appId,
@@ -238,7 +248,9 @@ async function createDeployment(deployment) {
     deployment.containerName || null,
     deployment.status,
     portMappingsJson,
-    deployedAt
+    deployedAt,
+    deployment.icon || null,
+    deployment.iconUrl || null
   ]);
 
   return { id, ...deployment, deployed_at: deployedAt };
@@ -314,6 +326,14 @@ async function updateDeploymentConfig(deploymentId, config) {
     fields.push('web_ui_port = ?');
     values.push(config.web_ui_port || null);
   }
+  if (config.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(config.icon);
+  }
+  if (config.icon_url !== undefined) {
+    fields.push('icon_url = ?');
+    values.push(config.icon_url);
+  }
 
   if (fields.length === 0) return;
 
@@ -335,7 +355,9 @@ async function findAllDeployments(userId) {
       a.name as app_name,
       a.image as app_image,
       a.tag as app_tag,
-      a.web_ui_port
+      a.web_ui_port,
+      d.icon as app_icon,
+      d.icon_url as app_icon_url
     FROM app_deployments d
     LEFT JOIN servers s ON d.server_id = s.id
     LEFT JOIN apps a ON d.app_id = a.id

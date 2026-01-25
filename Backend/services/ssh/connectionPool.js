@@ -8,7 +8,7 @@ const { SSH_POOL_CONFIG } = require('../../config');
  */
 class SSHConnectionPool {
   constructor() {
-    // Map of serverId -> { connection, lastUsed, shell, refCount }
+    // Map of serverId -> { connection, lastUsed, shell, refCount, channelCount }
     this.connections = new Map();
     
     // Start cleanup interval
@@ -33,11 +33,19 @@ class SSHConnectionPool {
     
     const existing = this.connections.get(key);
     
-    // Return existing connection if still valid
+    // Check if existing connection is valid and not overloaded
     if (existing && existing.connection && existing.connection._sock && !existing.connection._sock.destroyed) {
-      existing.lastUsed = Date.now();
-      existing.refCount++;
-      return existing.connection;
+      // If channel count is getting high (close to SSH's typical limit of 10), close and reconnect
+      if (existing.channelCount >= 8) {
+        console.log(`Connection to ${key} has ${existing.channelCount} channels, forcing reconnection...`);
+        existing.connection.end();
+        this.connections.delete(key);
+      } else {
+        existing.lastUsed = Date.now();
+        existing.refCount++;
+        existing.channelCount++;
+        return existing.connection;
+      }
     }
 
     // Create new connection
@@ -47,6 +55,7 @@ class SSHConnectionPool {
       connection,
       lastUsed: Date.now(),
       refCount: 1,
+      channelCount: 1,
       host,
       username,
       privateKeyPath
@@ -113,6 +122,7 @@ class SSHConnectionPool {
     
     if (entry) {
       entry.refCount = Math.max(0, entry.refCount - 1);
+      entry.channelCount = Math.max(0, entry.channelCount - 1);
       entry.lastUsed = Date.now();
     }
   }
@@ -165,6 +175,7 @@ class SSHConnectionPool {
       stats.connections.push({
         key,
         refCount: entry.refCount,
+        channelCount: entry.channelCount,
         idleTime: Date.now() - entry.lastUsed,
         active: entry.connection && entry.connection._sock && !entry.connection._sock.destroyed
       });

@@ -101,7 +101,7 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     return res.status(check.status).json({ error: check.error });
   }
 
-  const { name, region, displayName, color, icon, tags } = req.body;
+  const { name, region, displayName, color, icon, icon_url, tags } = req.body;
   const updates = {};
   
   if (name !== undefined) updates.name = name || null;
@@ -109,6 +109,7 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
   if (displayName !== undefined) updates.displayName = displayName || null;
   if (color !== undefined) updates.color = color || null;
   if (icon !== undefined) updates.icon = icon || null;
+  if (icon_url !== undefined) updates.icon_url = icon_url || null;
   if (tags !== undefined) updates.tags = tags || [];
 
   await ServerModel.update(req.params.id, updates);

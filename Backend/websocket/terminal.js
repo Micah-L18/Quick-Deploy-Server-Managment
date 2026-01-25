@@ -229,7 +229,9 @@ function initTerminalHandlers(io) {
           containerId,
           containerName: actualContainerName,
           status: 'running',
-          portMappings: portMappings || app.ports
+          portMappings: portMappings || app.ports,
+          icon: app.icon,
+          iconUrl: app.icon_url
         });
         
         socket.emit('deploy-output', { data: '\n>>> Deployment complete!\n' });

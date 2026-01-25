@@ -13,6 +13,7 @@ const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => 
     region: '',
     color: null,
     icon: null,
+    icon_url: null,
     tags: []
   });
   const [tagInput, setTagInput] = useState('');
@@ -26,6 +27,7 @@ const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => 
         region: server.region || '',
         color: server.color || null,
         icon: server.icon || null,
+        icon_url: server.icon_url || null,
         tags: server.tags || []
       });
     }
@@ -68,6 +70,7 @@ const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => 
       region: formData.region || null,
       color: formData.color,
       icon: formData.icon,
+      icon_url: formData.icon_url,
       tags: formData.tags
     });
   };
@@ -152,8 +155,16 @@ const ServerSettingsModal = ({ isOpen, onClose, server, onSave, isLoading }) => 
         <div className={styles.formGroup}>
           <IconSelector
             value={formData.icon}
-            onChange={(icon) => handleInputChange('icon', icon)}
+            iconUrl={formData.icon_url}
+            onChange={(data) => {
+              setFormData(prev => ({
+                ...prev,
+                icon: data.icon || null,
+                icon_url: data.iconUrl || null
+              }));
+            }}
             label="Server Icon"
+            showCustomUpload={true}
           />
         </div>
 

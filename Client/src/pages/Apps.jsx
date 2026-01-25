@@ -36,7 +36,16 @@ import {
   GlobeAltIcon,
   SettingsIcon
 } from '../components/Icons';
+import { SERVER_ICONS } from '../components/IconSelector';
 import styles from './Apps.module.css';
+
+// Helper function to get full icon URL
+const getIconUrl = (iconUrl) => {
+  if (!iconUrl) return null;
+  if (iconUrl.startsWith('http')) return iconUrl;
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
+  return `${backendUrl}${iconUrl}`;
+};
 
 // Helper function to get category icon
 const getCategoryIcon = (categoryId, size = 14) => {
@@ -422,10 +431,47 @@ const Apps = () => {
                         <div className={`${styles.tableRow} ${isOrphaned ? styles.orphanedRow : ''}`}>
                           <div className={styles.appCell}>
                             <Link to={`/apps/${deployment.app_id}`} className={styles.appLink}>
-                              <strong>{deployment.app_name}</strong>
-                              <span className={styles.appImage}>
-                                <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
-                              </span>
+                              {deployment.app_icon_url ? (
+                                <img 
+                                  src={getIconUrl(deployment.app_icon_url)} 
+                                  alt={deployment.app_name}
+                                  className={styles.appCellIcon}
+                                  onError={(e) => {
+                                    // If custom icon fails to load, show default icon
+                                    e.target.style.display = 'none';
+                                    if (e.target.nextSibling) {
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              {!deployment.app_icon_url || !deployment.app_icon_url ? (
+                                deployment.app_icon && SERVER_ICONS[deployment.app_icon] ? (
+                                  <div 
+                                    dangerouslySetInnerHTML={{ __html: SERVER_ICONS[deployment.app_icon].svg }} 
+                                    className={styles.appCellIcon}
+                                  />
+                                ) : (
+                                  <AppsIcon size={16} className={styles.appCellIcon} />
+                                )
+                              ) : (
+                                <div style={{ display: 'none', alignItems: 'center', justifyContent: 'center' }}>
+                                  {deployment.app_icon && SERVER_ICONS[deployment.app_icon] ? (
+                                    <div 
+                                      dangerouslySetInnerHTML={{ __html: SERVER_ICONS[deployment.app_icon].svg }} 
+                                      className={styles.appCellIcon}
+                                    />
+                                  ) : (
+                                    <AppsIcon size={16} className={styles.appCellIcon} />
+                                  )}
+                                </div>
+                              )}
+                              <div>
+                                <strong>{deployment.app_name}</strong>
+                                <span className={styles.appImage}>
+                                  <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
+                                </span>
+                              </div>
                             </Link>
                           </div>
                           <div className={styles.containerCell}>
@@ -768,7 +814,35 @@ const Apps = () => {
                 <div key={app.id} className={styles.appCard}>
                   <div className={styles.appHeader}>
                     <div className={styles.appIcon}>
-                      <AppsIcon size={28} color="white" />
+                      {app.icon_url ? (
+                        <img 
+                          src={getIconUrl(app.icon_url)} 
+                          alt={app.name} 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                          onError={(e) => {
+                            // If custom icon fails to load, show default icon
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      {!app.icon_url || !app.icon_url ? (
+                        app.icon && SERVER_ICONS[app.icon] ? (
+                          <div dangerouslySetInnerHTML={{ __html: SERVER_ICONS[app.icon].svg }} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                        ) : (
+                          <AppsIcon size={28} color="white" />
+                        )
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'none', alignItems: 'center', justifyContent: 'center' }}>
+                          {app.icon && SERVER_ICONS[app.icon] ? (
+                            <div dangerouslySetInnerHTML={{ __html: SERVER_ICONS[app.icon].svg }} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                          ) : (
+                            <AppsIcon size={28} color="white" />
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className={styles.appInfo}>
                       <div className={styles.appName}>{app.name}</div>

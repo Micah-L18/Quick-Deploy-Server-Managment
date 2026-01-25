@@ -385,7 +385,9 @@ async function migrateDeployment({
       containerId: newContainerId,
       containerName: newContainerName,
       status: 'stopped',
-      portMappings: portMappings
+      portMappings: portMappings,
+      icon: deployment.icon,
+      iconUrl: deployment.icon_url
     });
     
     // Update deployment with full config

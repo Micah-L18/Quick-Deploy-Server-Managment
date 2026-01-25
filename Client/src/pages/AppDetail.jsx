@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import SnapshotModal from '../components/SnapshotModal';
+import IconSelector from '../components/IconSelector';
 import { appsService } from '../api/apps';
 import { serversService } from '../api/servers';
 import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon, LayersIcon, HardDriveIcon, XIcon } from '../components/Icons';
@@ -38,7 +39,9 @@ const AppDetail = () => {
     registry_username: '',
     registry_password: '',
     use_custom_registry: false,
-    web_ui_port: ''
+    web_ui_port: '',
+    icon: '',
+    icon_url: ''
   });
   const [hasChanges, setHasChanges] = useState(false);
   
@@ -129,7 +132,9 @@ const AppDetail = () => {
         registry_username: app.registry_username || '',
         registry_password: '',
         use_custom_registry: !!(app.registry_url || app.registry_username),
-        web_ui_port: app.web_ui_port || ''
+        web_ui_port: app.web_ui_port || '',
+        icon: app.icon || '',
+        icon_url: app.icon_url || ''
       });
       setCustomPorts(app.ports || []);
     }
@@ -590,6 +595,34 @@ const AppDetail = () => {
                     onChange={(e) => handleFormChange('description', e.target.value)}
                     placeholder="Optional description"
                   />
+                </div>
+              </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <IconSelector
+                    value={formData.icon}
+                    iconUrl={formData.icon_url}
+                    onChange={(data) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        icon: data.icon || '',
+                        icon_url: data.iconUrl || ''
+                      }));
+                      setHasChanges(true);
+                    }}
+                    label="App Icon"
+                    showCustomUpload={true}
+                  />
+                  {hasChanges && (formData.icon !== app?.icon || formData.icon_url !== app?.icon_url) && (
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={handleSaveConfig}
+                      style={{ marginTop: '8px' }}
+                    >
+                      Save Icon
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

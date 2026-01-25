@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon, BookOpenIcon } from './Icons';
+import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon, BookOpenIcon, HardDriveIcon } from './Icons';
 import styles from './Sidebar.module.css';
 
 const Sidebar = () => {
@@ -12,6 +12,7 @@ const Sidebar = () => {
     { path: '/', icon: DashboardIcon, label: 'Dashboard' },
     { path: '/servers', icon: ServersIcon, label: 'Servers' },
     { path: '/apps', icon: AppsIcon, label: 'Apps' },
+    { path: '/storage', icon: HardDriveIcon, label: 'Storage' },
     // { path: '/connections', icon: ConnectionsIcon, label: 'Connections' },
   ];
 

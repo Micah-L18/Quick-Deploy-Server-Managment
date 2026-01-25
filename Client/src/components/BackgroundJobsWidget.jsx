@@ -6,6 +6,7 @@ import styles from './BackgroundJobsWidget.module.css';
 
 const BackgroundJobsWidget = () => {
   const { jobs, jobCount } = useBackgroundJobs();
+  const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState({});
   const [cancelled, setCancelled] = useState({});
@@ -54,8 +55,8 @@ const BackgroundJobsWidget = () => {
   };
 
   return (
-    <div className={styles.widget}>
-      <div className={styles.header} onClick={() => jobCount > 1 && setExpanded(!expanded)}>
+    <div className={`${styles.widget} ${collapsed ? styles.collapsed : ''}`}>
+      <div className={styles.header} onClick={() => setCollapsed(!collapsed)}>
         <div className={styles.headerLeft}>
           <div className={styles.spinnerContainer}>
             <RefreshIcon size={14} className={styles.spinner} />
@@ -64,55 +65,66 @@ const BackgroundJobsWidget = () => {
             {jobCount} job{jobCount !== 1 ? 's' : ''} running
           </span>
         </div>
-        {jobCount > 1 && (
-          <button className={styles.expandBtn}>
-            {expanded ? <ChevronDownIcon size={16} /> : <ChevronUpIcon size={16} />}
-          </button>
-        )}
+        <button className={styles.collapseBtn} title={collapsed ? 'Expand' : 'Collapse'}>
+          {collapsed ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
+        </button>
       </div>
       
-      <div className={`${styles.jobsList} ${expanded ? styles.expanded : ''}`}>
-        {jobs.map((job, index) => (
-          <div 
-            key={job.id} 
-            className={`${styles.jobItem} ${!expanded && index > 0 ? styles.hidden : ''}`}
-          >
-            <div className={styles.jobInfo}>
-              <div className={styles.jobLeft}>
-                <span className={styles.jobType}>{cancelled[job.deploymentId] ? 'Cancelled' : job.type}</span>
-                <span className={styles.jobName}>{job.containerName || job.appName}</span>
-              </div>
-              <div className={styles.jobRight}>
-                <span className={styles.jobPercent} style={{ color: getStatusColor(job.stage, job.deploymentId) }}>
-                  {getStatusIcon(job.stage, job.deploymentId) || `${job.percent}%`}
-                </span>
-                {canCancel(job) && !cancelled[job.deploymentId] && (
-                  <button 
-                    className={styles.cancelBtn}
-                    onClick={() => handleCancel(job)}
-                    disabled={cancelling[job.deploymentId]}
-                    title="Cancel migration"
-                  >
-                    <XIcon size={12} />
-                  </button>
+      {!collapsed && (
+        <div className={styles.jobsContainer}>
+          {jobCount > 1 && (
+            <button 
+              className={styles.expandJobsBtn}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? 'Show less' : `Show all ${jobCount} jobs`}
+              {expanded ? <ChevronUpIcon size={12} /> : <ChevronDownIcon size={12} />}
+            </button>
+          )}
+          <div className={`${styles.jobsList} ${expanded ? styles.expanded : ''}`}>
+            {jobs.map((job, index) => (
+              <div 
+                key={job.id} 
+                className={`${styles.jobItem} ${!expanded && index > 0 ? styles.hidden : ''}`}
+              >
+                <div className={styles.jobInfo}>
+                  <div className={styles.jobLeft}>
+                    <span className={styles.jobType}>{cancelled[job.deploymentId] ? 'Cancelled' : job.type}</span>
+                    <span className={styles.jobName}>{job.containerName || job.appName}</span>
+                  </div>
+                  <div className={styles.jobRight}>
+                    <span className={styles.jobPercent} style={{ color: getStatusColor(job.stage, job.deploymentId) }}>
+                      {getStatusIcon(job.stage, job.deploymentId) || `${job.percent}%`}
+                    </span>
+                    {canCancel(job) && !cancelled[job.deploymentId] && (
+                      <button 
+                        className={styles.cancelBtn}
+                        onClick={() => handleCancel(job)}
+                        disabled={cancelling[job.deploymentId]}
+                        title="Cancel migration"
+                      >
+                        <XIcon size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.progressBar}>
+                  <div 
+                    className={styles.progressFill} 
+                    style={{ 
+                      width: `${job.percent}%`, 
+                      backgroundColor: getStatusColor(job.stage) 
+                    }}
+                  />
+                </div>
+                {job.message && (
+                  <div className={styles.jobMessage}>{job.message}</div>
                 )}
               </div>
-            </div>
-            <div className={styles.progressBar}>
-              <div 
-                className={styles.progressFill} 
-                style={{ 
-                  width: `${job.percent}%`, 
-                  backgroundColor: getStatusColor(job.stage) 
-                }}
-              />
-            </div>
-            {job.message && (
-              <div className={styles.jobMessage}>{job.message}</div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 const { Client } = require('ssh2');
 const fs = require('fs');
 const connectionPool = require('./connectionPool');
+const { executeCommand } = require('./connectionManager');
 const { SSH_POOL_CONFIG } = require('../../config');
 
 /**
@@ -10,21 +11,67 @@ const { SSH_POOL_CONFIG } = require('../../config');
  */
 async function getSftpSession(serverConfig) {
   const { host, username, privateKeyPath } = serverConfig;
-  const conn = await connectionPool.getConnection({ host, username, privateKeyPath });
+  
+  // Try to get connection, with retry on channel failure
+  let retries = 2;
+  let lastError = null;
+  
+  while (retries > 0) {
+    try {
+      const conn = await connectionPool.getConnection({ host, username, privateKeyPath });
 
-  return new Promise((resolve, reject) => {
-    conn.sftp((err, sftp) => {
-      if (err) {
-        connectionPool.releaseConnection(host, username);
-        return reject(err);
+      return await new Promise((resolve, reject) => {
+        conn.sftp((err, sftp) => {
+          if (err) {
+            connectionPool.releaseConnection(host, username);
+            
+            // If we get a channel error, force close and retry
+            if (err.message && err.message.includes('Channel open failure') && retries > 1) {
+              console.log(`Channel failure for ${host}, forcing reconnection...`);
+              connectionPool.closeConnection(host, username);
+              return reject(err);
+            }
+            
+            return reject(err);
+          }
+          
+          // Add error handler to SFTP session to catch any protocol errors
+          sftp.on('error', (sftpErr) => {
+            console.error(`SFTP protocol error for ${host}:`, sftpErr.message);
+          });
+          
+          resolve({
+            sftp,
+            release: () => {
+              // Remove error handler
+              sftp.removeAllListeners('error');
+              
+              // Close the SFTP channel to prevent channel exhaustion
+              // Use setImmediate to ensure the operation callback completes first
+              setImmediate(() => {
+                if (sftp && typeof sftp.end === 'function') {
+                  sftp.end();
+                }
+              });
+              connectionPool.releaseConnection(host, username);
+            }
+          });
+        });
+      });
+    } catch (err) {
+      lastError = err;
+      retries--;
+      
+      if (retries === 0) {
+        throw lastError;
       }
       
-      resolve({
-        sftp,
-        release: () => connectionPool.releaseConnection(host, username)
-      });
-    });
-  });
+      // Wait a bit before retrying
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  
+  throw lastError;
 }
 
 /**
@@ -41,18 +88,24 @@ async function listDirectory(serverConfig, dirPath = '/') {
       release();
 
       if (err) {
-        return reject(err);
+        // Provide more context for SFTP errors
+        const errorMsg = err.message === 'Failure' 
+          ? `Cannot access directory: ${dirPath} (Permission denied or directory does not exist)`
+          : err.message;
+        return reject(new Error(errorMsg));
       }
 
-      const items = list.map(item => ({
-        name: item.filename,
-        type: item.longname.startsWith('d') ? 'directory' : 'file',
-        size: item.attrs.size,
-        permissions: item.attrs.mode,
-        modified: item.attrs.mtime * 1000, // Convert to milliseconds
-        isDirectory: item.longname.startsWith('d'),
-        isFile: !item.longname.startsWith('d')
-      }));
+      const items = list
+        .filter(item => item.filename !== '.' && item.filename !== '..') // Filter out . and ..
+        .map(item => ({
+          name: item.filename,
+          type: item.longname.startsWith('d') ? 'directory' : 'file',
+          size: item.attrs.size,
+          permissions: item.attrs.mode,
+          modified: item.attrs.mtime * 1000, // Convert to milliseconds
+          isDirectory: item.longname.startsWith('d'),
+          isFile: !item.longname.startsWith('d')
+        }));
 
       // Sort: directories first, then alphabetically
       items.sort((a, b) => {
@@ -80,7 +133,10 @@ async function readFile(serverConfig, filePath) {
       release();
 
       if (err) {
-        return reject(err);
+        const errorMsg = err.message === 'Failure' 
+          ? `Cannot read file: ${filePath} (Permission denied or file does not exist)`
+          : err.message;
+        return reject(new Error(errorMsg));
       }
 
       resolve(data);
@@ -103,7 +159,10 @@ async function writeFile(serverConfig, filePath, content) {
       release();
 
       if (err) {
-        return reject(err);
+        const errorMsg = err.message === 'Failure' 
+          ? `Cannot write to file: ${filePath} (Permission denied or invalid path)`
+          : err.message;
+        return reject(new Error(errorMsg));
       }
 
       resolve();
@@ -174,7 +233,10 @@ async function deleteFile(serverConfig, filePath) {
       release();
 
       if (err) {
-        return reject(err);
+        const errorMsg = err.message === 'Failure' 
+          ? `Cannot delete file: ${filePath} (Permission denied or file does not exist)`
+          : err.message;
+        return reject(new Error(errorMsg));
       }
 
       resolve();
@@ -183,25 +245,35 @@ async function deleteFile(serverConfig, filePath) {
 }
 
 /**
- * Delete directory via SFTP
+ * Delete directory via SSH command (much faster than SFTP recursive delete)
  * @param {Object} serverConfig - Server configuration
  * @param {string} dirPath - Directory path
  * @returns {Promise<void>}
  */
 async function deleteDirectory(serverConfig, dirPath) {
-  const { sftp, release } = await getSftpSession(serverConfig);
-
-  return new Promise((resolve, reject) => {
-    sftp.rmdir(dirPath, (err) => {
-      release();
-
-      if (err) {
-        return reject(err);
+  console.log(`Attempting to delete directory: ${dirPath}`);
+  
+  // Use rm -rf for fast, recursive deletion
+  // This is MUCH faster than SFTP recursive deletion for large directories
+  try {
+    const command = `rm -rf "${dirPath.replace(/"/g, '\\"')}"`;
+    console.log(`Executing: ${command}`);
+    
+    const result = await executeCommand(serverConfig, command);
+    
+    if (result.stderr && !result.stderr.includes('No such file')) {
+      console.error(`Delete directory stderr: ${result.stderr}`);
+      // Only throw if there's a real error (not just "file not found")
+      if (result.code !== 0) {
+        throw new Error(result.stderr || 'Failed to delete directory');
       }
-
-      resolve();
-    });
-  });
+    }
+    
+    console.log(`Successfully deleted directory: ${dirPath}`);
+  } catch (err) {
+    console.error(`Failed to delete directory ${dirPath}:`, err.message);
+    throw new Error(`Cannot delete directory: ${dirPath} (${err.message})`);
+  }
 }
 
 /**
@@ -611,6 +683,63 @@ async function uploadFile(serverConfig, localPath, remotePath) {
   });
 }
 
+/**
+ * Download file from remote server to buffer (for HTTP responses)
+ * @param {Object} serverConfig - Server configuration
+ * @param {string} remotePath - Remote file path
+ * @returns {Promise<Buffer>} - File contents as buffer
+ */
+async function downloadFileToBuffer(serverConfig, remotePath) {
+  const { sftp, release } = await getSftpSession(serverConfig);
+  
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const readStream = sftp.createReadStream(remotePath);
+    
+    readStream.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+    
+    readStream.on('error', (err) => {
+      release();
+      reject(err);
+    });
+    
+    readStream.on('end', () => {
+      release();
+      resolve(Buffer.concat(chunks));
+    });
+  });
+}
+
+/**
+ * Upload file from buffer to remote server (for HTTP uploads)
+ * @param {Object} serverConfig - Server configuration
+ * @param {Buffer} fileBuffer - File contents as buffer
+ * @param {string} remotePath - Remote file path
+ * @returns {Promise<void>}
+ */
+async function uploadFileFromBuffer(serverConfig, fileBuffer, remotePath) {
+  const { sftp, release } = await getSftpSession(serverConfig);
+  
+  return new Promise((resolve, reject) => {
+    const writeStream = sftp.createWriteStream(remotePath);
+    
+    writeStream.on('error', (err) => {
+      release();
+      reject(err);
+    });
+    
+    writeStream.on('close', () => {
+      release();
+      resolve();
+    });
+    
+    writeStream.write(fileBuffer);
+    writeStream.end();
+  });
+}
+
 module.exports = {
   listDirectory,
   readFile,
@@ -631,5 +760,7 @@ module.exports = {
   listDirectorySmart,
   // File transfer operations
   downloadFile,
-  uploadFile
+  uploadFile,
+  downloadFileToBuffer,
+  uploadFileFromBuffer
 };

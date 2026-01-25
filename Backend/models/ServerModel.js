@@ -43,6 +43,7 @@ function toCamelCase(row) {
     displayName: row.display_name,
     color: row.color,
     icon: row.icon,
+    iconUrl: row.icon_url,
     tags: row.tags ? JSON.parse(row.tags) : []
   };
 }
@@ -149,8 +150,8 @@ async function update(serverId, updates) {
 
   await run(`
     INSERT OR REPLACE INTO servers 
-    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked, display_name, color, icon, tags)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, user_id, name, region, ip, username, private_key_path, public_key, setup_command, status, error, added_at, last_checked, display_name, color, icon, icon_url, tags)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     updatedServer.id,
     updatedServer.userId || null,
@@ -168,6 +169,7 @@ async function update(serverId, updates) {
     updatedServer.displayName || null,
     updatedServer.color || null,
     updatedServer.icon || null,
+    updatedServer.iconUrl || null,
     tagsValue
   ]);
 }

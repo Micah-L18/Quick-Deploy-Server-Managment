@@ -107,12 +107,20 @@
   text-decoration: none;
   color: var(--text-dark);
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
 }
 
 .appLink:hover {
   color: #00a8cc;
+}
+
+.appCellIcon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  object-fit: contain;
 }
 
 .appImage {

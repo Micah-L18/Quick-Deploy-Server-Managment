@@ -1,0 +1,52 @@
+.alertContent {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.iconWrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 32px;
+}
+
+.iconWrapper.success {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+
+.iconWrapper.error {
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+}
+
+.iconWrapper.warning {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+}
+
+.iconWrapper.info {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--primary-color);
+}
+
+.icon {
+  font-weight: bold;
+  font-size: 32px;
+}
+
+.message {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.buttonWrapper {
+  display: flex;
+  justify-content: center;
+}

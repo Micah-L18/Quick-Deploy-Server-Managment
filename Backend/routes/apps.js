@@ -99,7 +99,9 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     registry_url,
     registry_username,
     registry_password,
-    web_ui_port
+    web_ui_port,
+    icon,
+    icon_url
   } = req.body;
   
   await AppModel.update(req.params.id, { 
@@ -117,7 +119,9 @@ router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
     registry_url,
     registry_username,
     registry_password,
-    web_ui_port
+    web_ui_port,
+    icon,
+    icon_url
   });
 
   const updatedApp = await AppModel.findById(req.params.id, req.session.userId);
@@ -693,11 +697,6 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     return res.status(404).json({ error: 'Deployment not found' });
   }
 
-  // Only allow editing stopped containers
-  if (deployment.status === 'running') {
-    return res.status(400).json({ error: 'Cannot edit a running deployment. Stop the container first.' });
-  }
-
   const {
     port_mappings,
     env_vars,
@@ -706,8 +705,21 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     network_mode,
     command,
     custom_args,
-    web_ui_port
+    web_ui_port,
+    icon,
+    icon_url
   } = req.body;
+
+  // Check if this is only an icon update (no container config changes)
+  const isIconOnlyUpdate = icon !== undefined && icon_url !== undefined &&
+    port_mappings === undefined && env_vars === undefined && volumes === undefined &&
+    restart_policy === undefined && network_mode === undefined && 
+    command === undefined && custom_args === undefined && web_ui_port === undefined;
+
+  // Only allow editing container config on stopped containers
+  if (!isIconOnlyUpdate && deployment.status === 'running') {
+    return res.status(400).json({ error: 'Cannot edit a running deployment. Stop the container first.' });
+  }
 
   // Validate port conflicts before saving
   if (port_mappings && Array.isArray(port_mappings) && port_mappings.length > 0) {
@@ -760,7 +772,9 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     network_mode,
     command,
     custom_args,
-    web_ui_port
+    web_ui_port,
+    icon,
+    icon_url
   });
 
   // Log activity

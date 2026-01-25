@@ -12,9 +12,6 @@
   border: 1px solid var(--border-color);
   border-radius: 2px;
   overflow: hidden;
-  /* flex: 0 0 350px; */
-  /* min-width: 300px; */
-  /* max-width: 500px; */
   display: flex;
   flex-direction: column;
   width: 50%;
@@ -23,7 +20,6 @@
 .editorPanel {
   flex: 1;
   min-width: 0;
-  /* display: flex; */
   overflow: hidden;
   border-radius: 2px;
 }
@@ -65,39 +61,18 @@
   opacity: 0.8;
 }
 
+/* Header Styles */
 .header {
   background: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
-  padding: 12px;
+  padding: 16px;
 }
 
-.pathBar {
+.pathNav {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.navButton,
-.refreshButton {
-  background: var(--button-bg);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 6px 12px;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.2s;
-}
-
-.navButton:hover:not(:disabled),
-.refreshButton:hover {
-  background: var(--button-hover-bg);
-  border-color: var(--primary-color);
-}
-
-.navButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  margin-bottom: 12px;
 }
 
 .currentPath {
@@ -105,7 +80,7 @@
   color: var(--text-primary);
   font-family: 'Courier New', monospace;
   font-size: 0.85rem;
-  padding: 6px 10px;
+  padding: 8px 12px;
   background: var(--input-bg);
   border-radius: 2px;
   border: 1px solid var(--border-color);
@@ -114,11 +89,30 @@
   text-overflow: ellipsis;
 }
 
+.actionsBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.uploadProgress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
 .searchBar {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
   position: relative;
 }
 
@@ -162,7 +156,6 @@
   color: var(--text-primary);
 }
 
-/* Search whole system toggle */
 .searchToggle {
   display: flex;
   align-items: center;
@@ -221,19 +214,43 @@
 
 .loading,
 .error {
-  padding: 40px 20px;
+  padding: 60px 20px;
   text-align: center;
   color: var(--text-medium);
+  background: var(--bg-secondary);
+  margin: 20px;
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+}
+
+.loading {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.error {
+  color: var(--error-color);
+}
+
+.error p {
+  margin: 0 0 16px 0;
+  font-size: 0.95rem;
 }
 
 .error button {
-  margin-top: 12px;
-  background: var(--primary-color);
+  background: var(--primary-gradient);
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 2px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.error button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .fileList {
@@ -244,31 +261,42 @@
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1fr 100px 160px 100px;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  grid-template-columns: 1fr 100px 160px 120px;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-tertiary);
+  border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-medium);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .fileRow {
   display: grid;
-  grid-template-columns: 1fr 100px 160px 100px;
-  gap: 8px;
-  padding: 8px 12px;
+  grid-template-columns: 1fr 100px 160px 120px;
+  gap: 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
-  transition: background 0.2s;
+  transition: all 0.2s;
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  align-items: center;
 }
 
 .fileRow:hover {
   background: var(--hover-bg);
+}
+
+.fileRow.dropTarget {
+  background: rgba(0, 212, 255, 0.2);
+  border: 2px dashed var(--primary-color);
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
 }
 
 .directory {
@@ -346,17 +374,83 @@
 
 .sizeColumn,
 .dateColumn,
-.permColumn {
+.permColumn,
+.actionsColumn {
   display: flex;
   align-items: center;
   color: var(--text-medium);
   font-size: 0.85rem;
 }
 
+.actionsColumn {
+  justify-content: flex-end;
+  display: flex;
+  gap: 6px;
+  padding-right: 8px;
+}
+
+.downloadBtn,
+.deleteBtn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-medium);
+  padding: 4px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.fileRow:hover .downloadBtn,
+.fileRow:hover .deleteBtn {
+  opacity: 1;
+}
+
+.downloadBtn:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.deleteBtn:hover {
+  background: var(--error-color);
+  color: white;
+  border-color: var(--error-color);
+  transform: translateY(-1px);
+}
+
 .emptyState {
-  padding: 60px 20px;
+  padding: 80px 20px;
   text-align: center;
   color: var(--text-medium);
+  background: var(--bg-secondary);
+  margin: 20px;
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+}
+
+.emptyState p {
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+.clearSearchBtn {
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.clearSearchBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 768px) {
@@ -447,3 +541,48 @@
     height: 600px;
   }
 }
+
+/* Modal styles */
+.modalContent {
+  padding: 0;
+}
+
+.modalDescription {
+  margin-bottom: 20px;
+  color: var(--text-medium);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modalDescription strong {
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.modalInput {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 24px;
+  transition: all 0.2s;
+}
+
+.modalInput:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: var(--card-bg);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.modalButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+

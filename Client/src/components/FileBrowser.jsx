@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { serversService } from '../api/servers';
 import { filesService } from '../api/files';
 import FileEditor from './FileEditor';
 import Modal from './Modal';
+import Button from './Button';
+import AlertModal from './AlertModal';
+import ConfirmModal from './ConfirmModal';
+import { useBackgroundJobs } from '../contexts/BackgroundJobsContext';
 import { FolderIcon, FileIcon } from './Icons';
 import styles from './FileBrowser.module.css';
 
 const FileBrowser = ({ serverId }) => {
+  const { getSocketId } = useBackgroundJobs();
   const [currentPath, setCurrentPath] = useState('/home');
   const [selectedFile, setSelectedFile] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +21,19 @@ const FileBrowser = ({ serverId }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchWholeSystem, setSearchWholeSystem] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showCreateFileModal, setShowCreateFileModal] = useState(false);
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
+  const [alert, setAlert] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [confirm, setConfirm] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+  const [cancelTokenSource, setCancelTokenSource] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const fileInputRef = React.useRef(null);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -113,6 +132,363 @@ const FileBrowser = ({ serverId }) => {
     return selectedFile === currentFilePath;
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleCancelUpload = async () => {
+    if (cancelTokenSource) {
+      cancelTokenSource.cancel('Upload cancelled by user');
+      setCancelTokenSource(null);
+      
+      // Clean up any uploaded files
+      if (uploadedFiles.length > 0) {
+        try {
+          await filesService.deleteMultipleFiles(serverId, uploadedFiles);
+          console.log(`Cleaned up ${uploadedFiles.length} partially uploaded files`);
+        } catch (error) {
+          console.error('Failed to clean up uploaded files:', error);
+        }
+      }
+      
+      setUploadedFiles([]);
+      setIsUploading(false);
+      setUploadProgress(null);
+      
+      setAlert({
+        isOpen: true,
+        title: 'Upload Cancelled',
+        message: 'Upload cancelled and partial files removed.',
+        type: 'info'
+      });
+    }
+  };
+
+  const handleFileSelect = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const CancelToken = axios.CancelToken;
+    const source = CancelToken.source();
+
+    try {
+      setIsUploading(true);
+      setUploadProgress(0);
+      setCancelTokenSource(source);
+      setUploadedFiles([]);
+
+      const remotePath = currentPath === '/' 
+        ? `/${file.name}` 
+        : `${currentPath}/${file.name}`;
+
+      const socketId = getSocketId();
+      await filesService.uploadFile(
+        serverId,
+        remotePath,
+        file,
+        (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+        },
+        socketId,
+        source.token
+      );
+
+      // Refresh file list after successful upload
+      refetch();
+      setAlert({
+        isOpen: true,
+        title: 'Upload Successful',
+        message: `File "${file.name}" uploaded successfully!`,
+        type: 'success'
+      });
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('Upload cancelled:', error.message);
+        // Cancel handler already showed the alert
+      } else {
+        console.error('Upload failed:', error);
+        setAlert({
+          isOpen: true,
+          title: 'Upload Failed',
+          message: `Failed to upload file: ${error.message}`,
+          type: 'error'
+        });
+      }
+    } finally {
+      setCancelTokenSource(null);
+      setUploadedFiles([]);
+      setIsUploading(false);
+      setUploadProgress(null);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDownloadFile = async (file, event) => {
+    event.stopPropagation(); // Prevent file opening in editor
+    
+    if (file.isDirectory) {
+      setAlert({
+        isOpen: true,
+        title: 'Invalid Selection',
+        message: 'Cannot download directories. Please select a file.',
+        type: 'warning'
+      });
+      return;
+    }
+
+    try {
+      const filePath = file.path || (currentPath === '/' 
+        ? `/${file.name}` 
+        : `${currentPath}/${file.name}`);
+      
+      await filesService.downloadFile(serverId, filePath);
+    } catch (error) {
+      console.error('Download failed:', error);
+      setAlert({
+        isOpen: true,
+        title: 'Download Failed',
+        message: `Failed to download file: ${error.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  const handleDeleteFile = async (file, event) => {
+    event.stopPropagation(); // Prevent file opening in editor
+    
+    const filePath = file.path || (currentPath === '/' 
+      ? `/${file.name}` 
+      : `${currentPath}/${file.name}`);
+    
+    const itemType = file.isDirectory ? 'folder' : 'file';
+    
+    setConfirm({
+      isOpen: true,
+      title: `Delete ${itemType}?`,
+      message: `Are you sure you want to delete this ${itemType}?\n\n${file.name}\n\nThis action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const socketId = getSocketId();
+          await filesService.deleteFile(serverId, filePath, file.isDirectory, socketId);
+          refetch();
+        } catch (error) {
+          console.error('Delete failed:', error);
+          setAlert({
+            isOpen: true,
+            title: 'Delete Failed',
+            message: `Failed to delete ${itemType}: ${error.message}`,
+            type: 'error'
+          });
+        }
+      }
+    });
+  };
+
+  const handleCreateFile = async () => {
+    if (!newFileName.trim()) {
+      setAlert({
+        isOpen: true,
+        title: 'Invalid Input',
+        message: 'Please enter a file name',
+        type: 'warning'
+      });
+      return;
+    }
+
+    try {
+      const filePath = currentPath === '/' 
+        ? `/${newFileName}` 
+        : `${currentPath}/${newFileName}`;
+      
+      await filesService.createFile(serverId, filePath, '');
+      refetch();
+      setShowCreateFileModal(false);
+      setNewFileName('');
+      
+      // Open the new file in editor
+      setSelectedFile(filePath);
+    } catch (error) {
+      console.error('File creation failed:', error);
+      setAlert({
+        isOpen: true,
+        title: 'Creation Failed',
+        message: `Failed to create file: ${error.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      setAlert({
+        isOpen: true,
+        title: 'Invalid Input',
+        message: 'Please enter a folder name',
+        type: 'warning'
+      });
+      return;
+    }
+
+    try {
+      const folderPath = currentPath === '/' 
+        ? `/${newFolderName}` 
+        : `${currentPath}/${newFolderName}`;
+      
+      await filesService.createDirectory(serverId, folderPath);
+      refetch();
+      setShowCreateFolderModal(false);
+      setNewFolderName('');
+    } catch (error) {
+      console.error('Folder creation failed:', error);
+      setAlert({
+        isOpen: true,
+        title: 'Creation Failed',
+        message: `Failed to create folder: ${error.message}`,
+        type: 'error'
+      });
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, file) => {
+    const filePath = file.path || (currentPath === '/' 
+      ? `/${file.name}` 
+      : `${currentPath}/${file.name}`);
+    
+    setDraggedItem({
+      name: file.name,
+      path: filePath,
+      isDirectory: file.isDirectory
+    });
+    
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, file) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only allow drop on directories
+    if (file.isDirectory) {
+      e.dataTransfer.dropEffect = 'move';
+      const targetPath = file.path || (currentPath === '/' 
+        ? `/${file.name}` 
+        : `${currentPath}/${file.name}`);
+      setDropTarget(targetPath);
+    } else {
+      e.dataTransfer.dropEffect = 'none';
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDropTarget(null);
+  };
+
+  const handleDrop = async (e, targetFile) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItem || !targetFile.isDirectory) {
+      setDraggedItem(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const targetPath = targetFile.path || (currentPath === '/' 
+      ? `/${targetFile.name}` 
+      : `${currentPath}/${targetFile.name}`);
+
+    // Don't allow dropping on itself
+    if (draggedItem.path === targetPath) {
+      setDraggedItem(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Don't allow dropping a parent into its child
+    if (targetPath.startsWith(draggedItem.path + '/')) {
+      setAlert({
+        isOpen: true,
+        title: 'Invalid Operation',
+        message: 'Cannot move a folder into itself',
+        type: 'warning'
+      });
+      setDraggedItem(null);
+      setDropTarget(null);
+      return;
+    }
+
+    try {
+      const newPath = `${targetPath}/${draggedItem.name}`;
+      
+      await filesService.moveFile(serverId, draggedItem.path, newPath);
+      refetch();
+    } catch (error) {
+      console.error('Move failed:', error);
+      setAlert({
+        isOpen: true,
+        title: 'Move Failed',
+        message: `Failed to move: ${error.message}`,
+        type: 'error'
+      });
+    } finally {
+      setDraggedItem(null);
+      setDropTarget(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDropTarget(null);
+  };
+
+  // Drop on "Up" button to move to parent directory
+  const handleDropOnUp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItem || currentPath === '/') {
+      setDraggedItem(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
+    const newPath = parentPath === '/' 
+      ? `/${draggedItem.name}` 
+      : `${parentPath}/${draggedItem.name}`;
+
+    // Don't move if already in parent
+    if (draggedItem.path === newPath) {
+      setDraggedItem(null);
+      setDropTarget(null);
+      return;
+    }
+
+    try {
+      await filesService.moveFile(serverId, draggedItem.path, newPath);
+      refetch();
+    } catch (error) {
+      console.error('Move failed:', error);
+      setAlert({
+        isOpen: true,
+        title: 'Move Failed',
+        message: `Failed to move: ${error.message}`,
+        type: 'error'
+      });
+    } finally {
+      setDraggedItem(null);
+      setDropTarget(null);
+    }
+  };
+
   // Filter files based on search query
   const displayFiles = searchResults 
     ? searchResults 
@@ -126,22 +502,84 @@ const FileBrowser = ({ serverId }) => {
     <div className={styles.fileBrowserContainer}>
       <div className={styles.fileBrowser}>
       <div className={styles.header}>
-        <div className={styles.pathBar}>
-          <button
-            className={styles.navButton}
+        {/* Path Navigation */}
+        <div className={styles.pathNav}>
+          <Button
+            variant="outline"
+            size="small"
             onClick={handleGoUp}
             disabled={currentPath === '/'}
+            onDragOver={(e) => {
+              if (currentPath !== '/') {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+              }
+            }}
+            onDrop={handleDropOnUp}
+            title="Go up one directory (or drop here to move to parent)"
           >
             ↑ Up
-          </button>
+          </Button>
           <span className={styles.currentPath}>{displayPath}</span>
-          <button
-            className={styles.refreshButton}
+          <Button
+            variant="outline"
+            size="small"
             onClick={() => refetch()}
+            title="Refresh file list"
           >
             ↻ Refresh
-          </button>
+          </Button>
         </div>
+
+        {/* Actions Bar */}
+        <div className={styles.actionsBar}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+          />
+          {!isUploading ? (
+            <Button
+              variant="outline"
+              size="small"
+              onClick={handleUploadClick}
+              title="Upload file to current directory"
+            >
+              📄 Upload File
+            </Button>
+          ) : (
+            <div className={styles.uploadProgress}>
+              <span>↑ {uploadProgress}% uploading...</span>
+              <Button
+                variant="danger"
+                size="small"
+                onClick={handleCancelUpload}
+                title="Cancel upload and remove partial files"
+              >
+                ✕ Cancel
+              </Button>
+            </div>
+          )}
+          <Button
+            variant="primary"
+            size="small"
+            onClick={() => setShowCreateFileModal(true)}
+            title="Create new file"
+          >
+            ＋ New File
+          </Button>
+          <Button
+            variant="primary"
+            size="small"
+            onClick={() => setShowCreateFolderModal(true)}
+            title="Create new folder"
+          >
+            ＋ New Folder
+          </Button>
+        </div>
+
+        {/* Search Bar */}
         <div className={styles.searchBar}>
           <input
             type="text"
@@ -198,14 +636,28 @@ const FileBrowser = ({ serverId }) => {
             </div>
             <div className={styles.sizeColumn}>Size</div>
             <div className={styles.dateColumn}>Modified</div>
+            <div className={styles.actionsColumn}>Actions</div>
             {/* <div className={styles.permColumn}>Permissions</div> */}
           </div>
-          {filteredFiles.map((file, index) => (
+          {filteredFiles.map((file, index) => {
+            const filePath = file.path || (currentPath === '/' 
+              ? `/${file.name}` 
+              : `${currentPath}/${file.name}`);
+            const isDroppable = file.isDirectory;
+            const isDraggedOver = dropTarget === filePath;
+            
+            return (
             <div
               key={index}
-              className={`${styles.fileRow} ${file.isDirectory ? styles.directory : styles.file} ${!file.isDirectory && isFileSelected(file.name) ? styles.selected : ''}`}
+              className={`${styles.fileRow} ${file.isDirectory ? styles.directory : styles.file} ${!file.isDirectory && isFileSelected(file.name) ? styles.selected : ''} ${isDraggedOver ? styles.dropTarget : ''}`}
               onClick={() => handleNavigate(file)}
-              title={file.isDirectory ? 'Open directory' : 'Open file in editor'}
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, file)}
+              onDragEnd={handleDragEnd}
+              onDragOver={isDroppable ? (e) => handleDragOver(e, file) : undefined}
+              onDragLeave={isDroppable ? handleDragLeave : undefined}
+              onDrop={isDroppable ? (e) => handleDrop(e, file) : undefined}
+              title={file.isDirectory ? 'Open directory (or drag files here)' : 'Open file in editor'}
             >
               <div className={styles.nameColumn}>
                 <span className={styles.icon}>
@@ -224,11 +676,30 @@ const FileBrowser = ({ serverId }) => {
               <div className={styles.dateColumn}>
                 {formatDate(file.modified)}
               </div>
+              <div className={styles.actionsColumn}>
+                {!file.isDirectory && (
+                  <button
+                    className={styles.downloadBtn}
+                    onClick={(e) => handleDownloadFile(file, e)}
+                    title="Download file"
+                  >
+                    ↓
+                  </button>
+                )}
+                <button
+                  className={styles.deleteBtn}
+                  onClick={(e) => handleDeleteFile(file, e)}
+                  title={`Delete ${file.isDirectory ? 'folder' : 'file'}`}
+                >
+                  🗑️
+                </button>
+              </div>
               {/* <div className={styles.permColumn}>
                 {file.permissions || '-'}
               </div> */}
             </div>
-          ))}
+            );
+          })}
           {filteredFiles.length === 0 && (
             <div className={styles.emptyState}>
               {searchQuery ? (
@@ -288,6 +759,112 @@ const FileBrowser = ({ serverId }) => {
           </div>
         </Modal>
       )}
+
+      {/* Create File Modal */}
+      <Modal
+        isOpen={showCreateFileModal}
+        onClose={() => {
+          setShowCreateFileModal(false);
+          setNewFileName('');
+        }}
+        title="Create New File"
+        size="small"
+      >
+        <div className={styles.modalContent}>
+          <p className={styles.modalDescription}>
+            Create a new file in <strong>{currentPath}</strong>
+          </p>
+          <input
+            type="text"
+            className={styles.modalInput}
+            placeholder="filename.txt"
+            value={newFileName}
+            onChange={(e) => setNewFileName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleCreateFile()}
+            autoFocus
+          />
+          <div className={styles.modalButtons}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateFileModal(false);
+                setNewFileName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateFile}
+            >
+              Create File
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Folder Modal */}
+      <Modal
+        isOpen={showCreateFolderModal}
+        onClose={() => {
+          setShowCreateFolderModal(false);
+          setNewFolderName('');
+        }}
+        title="Create New Folder"
+        size="small"
+      >
+        <div className={styles.modalContent}>
+          <p className={styles.modalDescription}>
+            Create a new folder in <strong>{currentPath}</strong>
+          </p>
+          <input
+            type="text"
+            className={styles.modalInput}
+            placeholder="folder-name"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+            autoFocus
+          />
+          <div className={styles.modalButtons}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateFolderModal(false);
+                setNewFolderName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateFolder}
+            >
+              Create Folder
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alert.isOpen}
+        onClose={() => setAlert({ ...alert, isOpen: false })}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirm.isOpen}
+        onClose={() => setConfirm({ ...confirm, isOpen: false })}
+        onConfirm={confirm.onConfirm}
+        title={confirm.title}
+        message={confirm.message}
+        confirmText="Delete"
+        type="danger"
+      />
     </div>
   );
 };

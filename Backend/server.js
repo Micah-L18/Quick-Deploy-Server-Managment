@@ -31,6 +31,7 @@ const {
   migrationRoutes
 } = require('./routes');
 const templateRoutes = require('./routes/templates');
+const uploadsRoutes = require('./routes/uploads');
 
 // Middleware
 const { errorHandler, notFoundHandler } = require('./middleware');
@@ -68,6 +69,11 @@ app.use(cors({
 // Body parsing
 app.use(express.json());
 
+// Serve static files for uploaded content
+const uploadsPath = require('path').join(__dirname, 'uploads');
+console.log('📁 Serving static uploads from:', uploadsPath);
+app.use('/uploads', express.static(uploadsPath));
+
 // Session
 app.use(session(SESSION_CONFIG));
 
@@ -87,12 +93,13 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api', snapshotRoutes);  // /api/snapshots/*, /api/deployments/:id/snapshots/*
 app.use('/api/migrations', migrationRoutes);  // /api/migrations/*
+app.use('/api/uploads', uploadsRoutes);  // /api/uploads/*
 
 // Set Socket.IO for routes that need real-time progress
 migrationRoutes.setSocketIO(io);
 
-// Store io reference for access in routes (e.g., system update progress)
-app.set('io', { io });
+// Store io reference for access in routes (e.g., file operations, system update progress)
+app.set('io', io);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

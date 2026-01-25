@@ -11,6 +11,15 @@ module.exports = function(app) {
     })
   );
   
+  // Proxy uploads (static files like icons)
+  app.use(
+    '/uploads',
+    createProxyMiddleware({
+      target: target,
+      changeOrigin: true,
+    })
+  );
+  
   // Also proxy socket.io for WebSocket connections
   app.use(
     '/socket.io',
