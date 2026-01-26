@@ -4,6 +4,7 @@ const { AppModel, ActivityModel } = require('../models');
 const { requireAuth, asyncHandler, checkServerOwnership } = require('../middleware');
 const { connectionManager } = require('../services/ssh');
 const { checkPortsAvailable } = require('../services/metrics/collector');
+const containerFileService = require('../services/containerFileService');
 
 /**
  * GET /api/apps
@@ -874,6 +875,82 @@ router.get('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
       custom_args: app.custom_args
     } : null
   });
+}));
+
+/**
+ * GET /api/apps/:appId/deployments/:deploymentId/files
+ * List files in container directory
+ */
+router.get('/:appId/deployments/:deploymentId/files', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+  const path = req.query.path || '/';
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  try {
+    const result = await containerFileService.listContainerFiles(
+      { 
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      containerRef,
+      path
+    );
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to list files' });
+  }
+}));
+
+/**
+ * GET /api/apps/:appId/deployments/:deploymentId/files/read
+ * Read file content from container
+ */
+router.get('/:appId/deployments/:deploymentId/files/read', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+  const filePath = req.query.path;
+
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required' });
+  }
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  try {
+    const content = await containerFileService.readContainerFile(
+      { 
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      containerRef,
+      filePath
+    );
+
+    res.json({ content, path: filePath });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to read file' });
+  }
 }));
 
 module.exports = router;

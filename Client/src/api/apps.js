@@ -95,4 +95,19 @@ export const appsService = {
     const response = await api.put(`/apps/${appId}/deployments/${deploymentId}`, config);
     return response.data;
   },
+
+  // Container file browsing
+  getContainerFiles: async (appId, deploymentId, path = '/') => {
+    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}/files`, {
+      params: { path }
+    });
+    return response.data;
+  },
+
+  readContainerFile: async (appId, deploymentId, path) => {
+    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}/files/read`, {
+      params: { path }
+    });
+    return response.data;
+  },
 };

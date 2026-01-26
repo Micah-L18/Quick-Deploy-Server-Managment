@@ -1,0 +1,284 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 400px;
+}
+
+/* Not Running Message */
+.notRunningMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-medium);
+  gap: 16px;
+}
+
+.notRunningMessage h3 {
+  margin: 0;
+  color: var(--text-dark);
+  font-size: 1.3rem;
+}
+
+.notRunningMessage p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.breadcrumbItem {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.breadcrumbItem:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.breadcrumbItem:disabled {
+  color: var(--text-dark);
+  cursor: default;
+  font-weight: 600;
+}
+
+.breadcrumbSeparator {
+  color: var(--text-light);
+}
+
+.breadcrumbActions {
+  margin-left: auto;
+}
+
+/* Info and Error Messages */
+.infoMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+  border-radius: 2px;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+  border-radius: 2px;
+  color: #ef4444;
+  font-size: 0.9rem;
+}
+
+/* File List */
+.fileList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.fileHeader {
+  display: grid;
+  grid-template-columns: 1fr 120px 180px 140px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-medium);
+}
+
+.fileHeaderName { grid-column: 1; }
+.fileHeaderSize { grid-column: 2; text-align: right; }
+.fileHeaderModified { grid-column: 3; }
+.fileHeaderPermissions { grid-column: 4; }
+
+.fileRow {
+  display: grid;
+  grid-template-columns: 1fr 120px 180px 140px;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.fileRow:hover {
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.fileRow:last-child {
+  border-bottom: none;
+}
+
+.fileName {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.folderIcon {
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.fileIcon {
+  color: var(--text-medium);
+  flex-shrink: 0;
+}
+
+.symlinkBadge {
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.fileSize {
+  text-align: right;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+}
+
+.fileModified {
+  color: var(--text-medium);
+  font-size: 0.9rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.filePermissions {
+  color: var(--text-medium);
+  font-size: 0.85rem;
+}
+
+.filePermissions code {
+  background: rgba(0, 212, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* Empty States */
+.emptyDirectory {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-medium);
+  gap: 12px;
+}
+
+.emptyDirectory p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Loading/Error States */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-medium);
+  font-size: 0.95rem;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 2px;
+  color: #f87171;
+  font-size: 0.9rem;
+}
+
+/* File Viewer Modal */
+.fileViewer {
+  max-height: 600px;
+  overflow-y: auto;
+  background: #1a1d2e;
+  border-radius: 2px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.fileContent {
+  margin: 0;
+  color: #d1d5db;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.loadingContent,
+.emptyContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-medium);
+  font-size: 0.95rem;
+}
+
+.fileViewerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .fileHeader,
+  .fileRow {
+    grid-template-columns: 1fr 80px;
+  }
+
+  .fileHeaderSize,
+  .fileHeaderModified,
+  .fileHeaderPermissions,
+  .fileSize,
+  .fileModified,
+  .filePermissions {
+    display: none;
+  }
+
+  .fileHeaderName { grid-column: 1; }
+  .fileName { grid-column: 1; }
+}

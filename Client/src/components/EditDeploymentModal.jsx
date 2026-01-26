@@ -6,10 +6,11 @@ import ConfirmModal from './ConfirmModal';
 import SnapshotContent from './SnapshotContent';
 import MigrationContent from './MigrationContent';
 import IconSelector from './IconSelector';
+import ContainerFileBrowser from './ContainerFileBrowser';
 import { appsService } from '../api/apps';
 import { generateDockerRun } from '../utils/dockerParser';
 import { generateDockerComposeYaml } from '../utils/yamlParser';
-import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon, HardDriveIcon, StopCircleIcon, CopyIcon, MoveIcon } from './Icons';
+import { SettingsIcon, EyeIcon, XIcon, ClipboardIcon, CheckIcon, AlertIcon, HardDriveIcon, StopCircleIcon, CopyIcon, MoveIcon, FolderIcon } from './Icons';
 import styles from './EditDeploymentModal.module.css';
 
 const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) => {
@@ -360,7 +361,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
       footer={
         <div className={styles.modalFooter}>
           <Button variant="outline" onClick={onClose} disabled={isSaving || isStopping}>
-            {activeTab === 'snapshots' ? 'Close' : 'Cancel'}
+            {(activeTab === 'snapshots' || activeTab === 'files') ? 'Close' : 'Cancel'}
           </Button>
           {activeTab === 'config' && (
             isRunning ? (
@@ -402,6 +403,12 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           onClick={() => setActiveTab('snapshots')}
         >
           <HardDriveIcon size={16} /> Snapshots
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'files' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('files')}
+        >
+          <FolderIcon size={16} /> Files
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'preview' ? styles.activeTab : ''}`}
@@ -731,6 +738,14 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           server={server}
           isVisible={isOpen && activeTab === 'snapshots'}
           showFooter={false}
+        />
+      )}
+
+      {activeTab === 'files' && (
+        <ContainerFileBrowser 
+          appId={deployment?.app_id}
+          deploymentId={deployment?.id}
+          containerStatus={freshDeployment?.status || deployment?.status}
         />
       )}
 
