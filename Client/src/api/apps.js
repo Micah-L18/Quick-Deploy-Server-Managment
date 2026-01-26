@@ -53,6 +53,11 @@ export const appsService = {
     return response.data;
   },
 
+  getDeployment: async (appId, deploymentId) => {
+    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}`);
+    return response.data;
+  },
+
   checkPorts: async (appId, serverId, ports) => {
     const response = await api.post(`/apps/${appId}/check-ports`, { serverId, ports });
     return response.data;

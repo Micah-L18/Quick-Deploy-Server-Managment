@@ -152,6 +152,19 @@ const Settings = () => {
                     <div className={styles.updateStatusDetail}>
                       {versionInfo.behindBy} commit{versionInfo.behindBy > 1 ? 's' : ''} behind
                     </div>
+                    {/* Changelog */}
+                    {showChangelog && changelog?.commits?.length > 0 && (
+                      <div className={styles.changelog}>
+                        <h4>Incoming Changes:</h4>
+                        <ul>
+                          {changelog.commits.map((commit, idx) => (
+                            <li key={idx}>
+                              <code>{commit.hash}</code> {commit.message}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className={styles.updateStatusActions}>
@@ -163,6 +176,15 @@ const Settings = () => {
                   >
                     {isUpdating ? 'Updating...' : 'Update Now'}
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="small"
+                    onClick={handleCheckForUpdates}
+                    disabled={versionLoading || isUpdating}
+                    title="Check for updates"
+                  >
+                    <RefreshIcon size={16} />
+                  </Button>
                   <button 
                     className={styles.changelogToggle}
                     onClick={() => setShowChangelog(!showChangelog)}
@@ -172,19 +194,8 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Changelog */}
-              {showChangelog && changelog?.commits?.length > 0 && (
-                <div className={styles.changelog}>
-                  <h4>Incoming Changes:</h4>
-                  <ul>
-                    {changelog.commits.map((commit, idx) => (
-                      <li key={idx}>
-                        <code>{commit.hash}</code> {commit.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Changelog - removed, now inside updateStatusCard */}
+
             </div>
 
             {/* Right: Version Info */}
@@ -328,17 +339,19 @@ const Settings = () => {
 
         {/* Actions */}
         <div className={styles.updateActions}>
-          <Button
-            variant="outline"
-            size="small"
-            onClick={handleCheckForUpdates}
-            disabled={versionLoading || isUpdating}
-          >
-            <RefreshIcon size={16} />
-            Check for Updates
-          </Button>
+          {!versionInfo?.updateAvailable && (
+            <Button
+              variant="outline"
+              size="small"
+              onClick={handleCheckForUpdates}
+              disabled={versionLoading || isUpdating}
+            >
+              <RefreshIcon size={16} />
+              Check for Updates
+            </Button>
+          )}
           
-          {versionInfo?.updateAvailable && !updateComplete && (
+          {!versionInfo?.updateAvailable && !updateComplete && (
             <Button
               variant="primary"
               size="small"

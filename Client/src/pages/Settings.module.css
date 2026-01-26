@@ -402,10 +402,14 @@
 }
 
 .updateStatusCard {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.04));
+  background: rgba(245, 158, 11, 0.08);
   border: 2px solid rgba(245, 158, 11, 0.3);
   border-radius: 2px;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
 }
 
 .updateStatusHeader {
