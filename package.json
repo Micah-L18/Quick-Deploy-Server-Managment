@@ -1,6 +1,6 @@
 {
   "name": "quick-deploy-server-manager",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Multi-server SSH connection management application",
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
     "start:backend": "cd Backend && node server.js",
     "start:client": "cd Client && npx serve -s build -l 3000",
     "dev:backend": "cd Backend && npx nodemon server.js",
-    "dev:client": "bash scripts/build.sh && cd Client && PORT=3000 npm start",
+    "dev:client": "cd Client && PORT=3000 npm start",
     "install:all": "npm install && cd Backend && npm install && cd ../Client && npm install",
     "build": "bash scripts/build.sh",
     "pm2:start": "npm run install:all && npm run build && pm2 start ecosystem.config.js",

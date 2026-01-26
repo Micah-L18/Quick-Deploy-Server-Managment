@@ -28,6 +28,8 @@ import {
   GamepadIcon,
   CodeIcon,
   ActivityIcon,
+  DocumentTextIcon,
+  MoreVerticalIcon,
   FilmIcon,
   ToolIcon,
   LayersIcon,
@@ -469,7 +471,7 @@ const Apps = () => {
                                     className={styles.appCellIcon}
                                   />
                                 ) : (
-                                  <AppsIcon size={16} className={styles.appCellIcon} />
+                                  <AppsIcon size={32} className={styles.appCellIcon} />
                                 )
                               ) : (
                                 <div style={{ display: 'none', alignItems: 'center', justifyContent: 'center' }}>
@@ -479,11 +481,11 @@ const Apps = () => {
                                       className={styles.appCellIcon}
                                     />
                                   ) : (
-                                    <AppsIcon size={16} className={styles.appCellIcon} />
+                                    <AppsIcon size={32} className={styles.appCellIcon} />
                                   )}
                                 </div>
                               )}
-                              <div>
+                              <div className={styles.appNameContainer}>
                                 <strong>{deployment.app_name}</strong>
                                 <span className={styles.appImage}>
                                   <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
@@ -581,8 +583,9 @@ const Apps = () => {
                                     size="small"
                                     onClick={() => stopDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id })}
                                     disabled={stopDeploymentMutation.isPending}
+                                    title="Stop"
                                   >
-                                    <StopCircleIcon size={14} /> Stop
+                                    <StopCircleIcon size={14} />
                                   </Button>
                                 ) : (
                                   <Button
@@ -590,42 +593,45 @@ const Apps = () => {
                                     size="small"
                                     onClick={() => startDeploymentMutation.mutate({ appId: deployment.app_id, deploymentId: deployment.id })}
                                     disabled={startDeploymentMutation.isPending}
+                                    title="Start"
                                   >
-                                    <PlayIcon size={14} /> Start
-                                  </Button>
-                                )}
-                                {deployment.status === 'running' && (
-                                  <Button
-                                    variant="outline"
-                                    size="small"
-                                    onClick={() => toggleDeploymentStats(deployment.id)}
-                                  >
-                                    {isExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
-                                    Stats
+                                    <PlayIcon size={14} />
                                   </Button>
                                 )}
                                 <Button
                                   variant="outline"
                                   size="small"
-                                  onClick={() => toggleDeploymentLogs(deployment.id)}
+                                  onClick={() => toggleDeploymentStats(deployment.id)}
+                                  disabled={deployment.status !== 'running'}
+                                  title="Stats"
                                 >
-                                  {isLogsExpanded ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
-                                  Logs
+                                  <MoreVerticalIcon size={14} />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="small"
+                                  onClick={() => toggleDeploymentLogs(deployment.id)}
+                                  disabled={deployment.status !== 'running'}
+                                  title="Logs"
+                                >
+                                  <DocumentTextIcon size={14} />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="small"
                                   onClick={() => setEditingDeployment(deployment)}
+                                  title="Config"
                                 >
-                                  <SettingsIcon size={14} /> Config
+                                  <SettingsIcon size={14} />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="small"
                                   onClick={() => handleRemoveDeployment(deployment)}
                                   disabled={removeDeploymentMutation.isPending}
+                                  title="Remove"
                                 >
-                                  <TrashIcon size={14} /> Remove
+                                  <TrashIcon size={14} />
                                 </Button>
                               </>
                             )}

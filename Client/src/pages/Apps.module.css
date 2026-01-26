@@ -84,6 +84,7 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: center;
 }
 
 .tableRow {
@@ -108,7 +109,8 @@
   color: var(--text-dark);
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 12px;
 }
 
 .appLink:hover {
@@ -126,6 +128,15 @@
 .appImage {
   font-size: 0.8rem;
   color: var(--text-medium);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.appNameContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .containerCell {
@@ -150,6 +161,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  align-items: center;
+  text-align: center;
 }
 
 .serverLink {
@@ -230,12 +243,14 @@
 
 .portsCell {
   min-width: 0;
+  text-align: center;
 }
 
 .portBadges {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  justify-content: center;
 }
 
 .portBadge {
@@ -280,12 +295,14 @@
 .dateCell {
   font-size: 0.85rem;
   color: var(--text-medium);
+  text-align: center;
 }
 
 .actionsCell {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* Stats and Logs Rows */

@@ -166,29 +166,6 @@ templates:
 
   # ==================== WEB SERVERS ====================
 
-  - id: nginx
-    name: Nginx
-    description: High-performance web server and reverse proxy
-    category: web-servers
-    icon: 🌐
-    logo_url: https://nginx.org/nginx.png
-    image: nginx
-    tag: alpine
-    ports:
-      - host: "80"
-        container: "80"
-      - host: "443"
-        container: "443"
-    volumes:
-      - host: ./nginx.conf
-        container: /etc/nginx/nginx.conf
-        description: Nginx configuration file
-      - host: ./html
-        container: /usr/share/nginx/html
-        description: Static files directory
-    restart_policy: unless-stopped
-    documentation_url: https://hub.docker.com/_/nginx
-
   - id: traefik
     name: Traefik
     description: Modern reverse proxy and load balancer

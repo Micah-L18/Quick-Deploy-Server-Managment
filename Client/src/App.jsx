@@ -16,6 +16,7 @@ import Apps from './pages/Apps';
 import AppDetail from './pages/AppDetail';
 import Settings from './pages/Settings';
 import Storage from './pages/Storage';
+import Docs from './pages/Docs';
 import ComingSoon from './components/ComingSoon';
 import './styles/global.css';
 
@@ -47,7 +48,7 @@ function App() {
                   <Route path="/apps/:id" element={<AppDetail />} />
                   <Route path="/storage" element={<Storage />} />
                   <Route path="/connections" element={<ComingSoon title="Connections" icon="🔗" />} />
-                  <Route path="/docs" element={<ComingSoon title="Documentation" icon="📖" />} />
+                  <Route path="/docs" element={<Docs />} />
                   <Route path="/settings" element={<Settings />} />
                 </Routes>
                 <BackgroundJobsWidget />
