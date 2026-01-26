@@ -9,7 +9,7 @@ import SnapshotModal from '../components/SnapshotModal';
 import IconSelector from '../components/IconSelector';
 import { appsService } from '../api/apps';
 import { serversService } from '../api/servers';
-import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon, LayersIcon, HardDriveIcon, XIcon } from '../components/Icons';
+import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon, LayersIcon, HardDriveIcon, XIcon, ServerIcon } from '../components/Icons';
 import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
 import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
 import styles from './AppDetail.module.css';
@@ -65,6 +65,9 @@ const AppDetail = () => {
   const [customPorts, setCustomPorts] = useState([]);
   const [dockerStatus, setDockerStatus] = useState(null);
   const [checkingDocker, setCheckingDocker] = useState(false);
+  const [deployNickname, setDeployNickname] = useState('');
+  const [deployIcon, setDeployIcon] = useState('');
+  const [deployIconUrl, setDeployIconUrl] = useState('');
   const deployOutputRef = useRef(null);
   const socketRef = useRef(null);
 
@@ -376,6 +379,9 @@ const AppDetail = () => {
     setSelectedServer('');
     setCustomPorts(formData.ports || []);
     setDockerStatus(null);
+    setDeployNickname('');
+    setDeployIcon(formData.icon || '');
+    setDeployIconUrl(formData.icon_url || '');
   };
 
   // Check port availability when server is selected
@@ -398,18 +404,28 @@ const AppDetail = () => {
     setCheckingDocker(false);
     
     // Check port availability
-    if (customPorts.length > 0) {
-      try {
-        const result = await appsService.checkPorts(id, serverId, customPorts);
-        
-        // Backend returns { available, conflicts: [{ port, inUse, details }] }
-        if (result.conflicts && result.conflicts.length > 0) {
-          const conflictPorts = result.conflicts.map(c => c.port);
-          setPortConflicts(conflictPorts);
-        }
-      } catch (error) {
-        console.error('Failed to check ports:', error);
+    await checkPortConflicts(serverId, customPorts);
+  };
+
+  // Check port conflicts (separate function for re-checking)
+  const checkPortConflicts = async (serverId, ports) => {
+    if (!serverId || !ports || ports.length === 0) {
+      setPortConflicts(null);
+      return;
+    }
+    
+    try {
+      const result = await appsService.checkPorts(id, serverId, ports);
+      
+      // Backend returns { available, conflicts: [{ port, inUse, details }] }
+      if (result.conflicts && result.conflicts.length > 0) {
+        const conflictPorts = result.conflicts.map(c => c.port);
+        setPortConflicts(conflictPorts);
+      } else {
+        setPortConflicts(null);
       }
+    } catch (error) {
+      console.error('Failed to check ports:', error);
     }
   };
 
@@ -427,7 +443,10 @@ const AppDetail = () => {
     socketRef.current.emit('deploy-app', {
       appId: id,
       serverId: selectedServer,
-      portMappings: customPorts
+      portMappings: customPorts,
+      nickname: deployNickname || null,
+      icon: deployIcon || null,
+      iconUrl: deployIconUrl || null
     });
   };
 
@@ -1059,112 +1078,177 @@ const AppDetail = () => {
           }
         }}
         title={<><RocketIcon size={20} /> Deploy Application</>}
-        size="large"
+        size="xlarge"
         variant="terminal"
       >
         <div className={styles.deployModal}>
-          {!isDeploying && !deployOutput && (
-            <>
-              <div className={styles.formGroup}>
-                <label>Select Target Server</label>
-                <select
-                  value={selectedServer}
-                  onChange={(e) => handleServerSelect(e.target.value)}
-                  className={styles.serverSelect}
-                >
-                  <option value="">-- Select a server --</option>
-                  {dockerServers.map(server => (
-                    <option key={server.id} value={server.id}>
-                      {server.name || server.ip} ({server.ip})
-                    </option>
-                  ))}
-                </select>
-                {dockerServers.length === 0 && (
-                  <p className={styles.warning}>
-                    No online servers available. Make sure your servers are connected and have Docker installed.
-                  </p>
-                )}
+          {/* Left Panel - Configuration */}
+          <div className={styles.deployLeft}>
+            <div className={styles.deployLeftContent}>
+              {/* Server Selection Section */}
+              <div className={styles.deploySection}>
+                <div className={styles.deploySectionHeader}>
+                  <span className={styles.deploySectionTitle}>
+                    <ServerIcon size={16} />
+                    Target Server
+                  </span>
+                </div>
+                <div className={styles.deploySectionContent}>
+                  <div className={styles.formGroup}>
+                    <select
+                      value={selectedServer}
+                      onChange={(e) => handleServerSelect(e.target.value)}
+                      className={styles.serverSelect}
+                      disabled={isDeploying}
+                    >
+                      <option value="">-- Select a server --</option>
+                      {dockerServers.map(server => (
+                        <option key={server.id} value={server.id}>
+                          {server.name || server.ip} ({server.ip})
+                        </option>
+                      ))}
+                    </select>
+                    {dockerServers.length === 0 && (
+                      <p className={styles.warning}>
+                        No online servers available. Make sure your servers are connected and have Docker installed.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Docker Status Check */}
+                  {selectedServer && checkingDocker && (
+                    <div className={styles.dockerChecking}>
+                      <span className={styles.spinner}></span> Checking Docker installation...
+                    </div>
+                  )}
+
+                  {selectedServer && !checkingDocker && dockerStatus && !dockerStatus.installed && (
+                    <div className={styles.dockerError}>
+                      <strong><AlertIcon size={16} /> Docker Not Available</strong>
+                      <p>{dockerStatus.message || 'Docker is not installed on this server.'}</p>
+                      <p>Please install Docker on the server before deploying.</p>
+                      <Link to={`/servers/${selectedServer}?tab=services`} className={styles.dockerInstallLink}>
+                        <Button variant="secondary" size="small">Go to Services Tab →</Button>
+                      </Link>
+                    </div>
+                  )}
+
+                  {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && !dockerStatus.running && (
+                    <div className={styles.dockerWarning}>
+                      <strong><AlertIcon size={16} /> Docker Not Running</strong>
+                      <p>Docker is installed but the daemon is not running. Please start Docker on the server.</p>
+                    </div>
+                  )}
+
+                  {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && dockerStatus.running && (
+                    <div className={styles.dockerSuccess}>
+                      <CheckCircleIcon size={18} />
+                      <strong>Docker Ready</strong>
+                      <span>{dockerStatus.version}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Docker Status Check */}
-              {selectedServer && checkingDocker && (
-                <div className={styles.dockerChecking}>
-                  <span className={styles.spinner}></span> Checking Docker installation...
-                </div>
-              )}
-
-              {selectedServer && !checkingDocker && dockerStatus && !dockerStatus.installed && (
-                <div className={styles.dockerError}>
-                  <strong><AlertIcon size={18} style={{ marginRight: '8px', display: 'inline-block' }} />Docker Not Available</strong>
-                  <p>{dockerStatus.message || 'Docker is not installed on this server.'}</p>
-                  <p>Please install Docker on the server before deploying.</p>
-                  <Link to={`/servers/${selectedServer}?tab=services`} className={styles.dockerInstallLink}>
-                    <Button variant="secondary" size="small">Go to Services Tab →</Button>
-                  </Link>
-                </div>
-              )}
-
-              {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && !dockerStatus.running && (
-                <div className={styles.dockerWarning}>
-                  <strong><AlertIcon size={18} style={{ marginRight: '8px', display: 'inline-block' }} />Docker Not Running</strong>
-                  <p>Docker is installed but the daemon is not running. Please start Docker on the server.</p>
-                </div>
-              )}
-
-              {selectedServer && !checkingDocker && dockerStatus && dockerStatus.installed && dockerStatus.running && (
-                <div className={styles.dockerSuccess}>
-                  <CheckCircleIcon size={20} />
-                  <strong>Docker Ready</strong>
-                  <span>{dockerStatus.version}</span>
-                </div>
-              )}
-
-              {selectedServer && formData.ports.length > 0 && (
-                <div className={styles.portSection}>
-                  <label>Port Mappings</label>
-                  {customPorts.map((port, index) => (
-                    <div key={index} className={styles.portRow}>
-                      <input
-                        type="text"
-                        value={port.host}
-                        onChange={(e) => {
-                          const newPorts = [...customPorts];
-                          newPorts[index] = { ...newPorts[index], host: e.target.value };
-                          setCustomPorts(newPorts);
-                          // Re-check ports
-                          handleServerSelect(selectedServer);
-                        }}
-                        placeholder="Host"
-                      />
-                      <span>:</span>
-                      <input
-                        type="text"
-                        value={port.container}
-                        onChange={(e) => {
-                          const newPorts = [...customPorts];
-                          newPorts[index] = { ...newPorts[index], container: e.target.value };
-                          setCustomPorts(newPorts);
-                        }}
-                        placeholder="Container"
-                        disabled
-                      />
-                      {portConflicts && portConflicts.includes(port.host) && (
-                        <span className={styles.portConflict}><AlertIcon size={12} style={{ marginRight: '4px', display: 'inline-block' }} />In use</span>
-                      )}
+              {/* Port Configuration Section */}
+              {selectedServer && dockerStatus?.installed && dockerStatus?.running && formData.ports.length > 0 && (
+                <div className={styles.deploySection}>
+                  <div className={styles.deploySectionHeader}>
+                    <span className={styles.deploySectionTitle}>
+                      <GlobeAltIcon size={16} />
+                      Port Configuration
+                    </span>
+                  </div>
+                  <div className={styles.deploySectionContent}>
+                    <div className={styles.portSection}>
+                      <div className={styles.portLabels}>
+                        <span className={styles.portLabel}>Host (external)</span>
+                        <span className={styles.portLabelSpacer}></span>
+                        <span className={styles.portLabel}>Container (internal)</span>
+                      </div>
+                      {customPorts.map((port, index) => (
+                        <div key={index} className={styles.portRow}>
+                          <input
+                            type="text"
+                            value={port.host}
+                            onChange={(e) => {
+                              const newPorts = [...customPorts];
+                              newPorts[index] = { ...newPorts[index], host: e.target.value };
+                              setCustomPorts(newPorts);
+                              if (selectedServer) {
+                                checkPortConflicts(selectedServer, newPorts);
+                              }
+                            }}
+                            placeholder="Host"
+                            disabled={isDeploying}
+                          />
+                          <span>→</span>
+                          <input
+                            type="text"
+                            value={port.container}
+                            placeholder="Container"
+                            disabled
+                          />
+                          {portConflicts && portConflicts.includes(port.host) && (
+                            <span className={styles.portConflict}><AlertIcon size={12} /> In use</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+
+                    {portConflicts && portConflicts.length > 0 && (
+                      <div className={styles.conflictWarning}>
+                        <strong><AlertIcon size={16} /> Port Conflict Detected</strong>
+                        <p>Ports {portConflicts.join(', ')} are already in use on this server.</p>
+                        <p>You can change the host ports above, or proceed anyway (may fail).</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {portConflicts && portConflicts.length > 0 && (
-                <div className={styles.conflictWarning}>
-                  <strong><AlertIcon size={18} style={{ marginRight: '8px', display: 'inline-block' }} />Port Conflict Detected</strong>
-                  <p>Ports {portConflicts.join(', ')} are already in use on this server.</p>
-                  <p>You can change the host ports above, or proceed anyway (may fail).</p>
+              {/* Customization Section - Nickname & Icon */}
+              {selectedServer && dockerStatus?.installed && dockerStatus?.running && (
+                <div className={styles.deploySection}>
+                  <div className={styles.deploySectionHeader}>
+                    <span className={styles.deploySectionTitle}>
+                      <SettingsIcon size={16} />
+                      Customization
+                    </span>
+                    <span className={styles.optionalBadge}>Optional</span>
+                  </div>
+                  <div className={styles.deploySectionContent}>
+                    <div className={styles.customizationGrid}>
+                      <div className={styles.customizationField}>
+                        <label>Nickname</label>
+                        <input
+                          type="text"
+                          value={deployNickname}
+                          onChange={(e) => setDeployNickname(e.target.value)}
+                          placeholder="e.g. Production API"
+                          className={styles.input}
+                          disabled={isDeploying}
+                        />
+                        <span className={styles.fieldHint}>A friendly name to identify this deployment</span>
+                      </div>
+                      <IconSelector
+                        value={deployIcon}
+                        iconUrl={deployIconUrl}
+                        onChange={(selected) => {
+                          if (selected.icon) setDeployIcon(selected.icon);
+                          if (selected.iconUrl) setDeployIconUrl(selected.iconUrl);
+                        }}
+                        label="Icon"
+                        showCustomUpload={true}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
+            </div>
 
-              <div className={styles.deployActions}>
+            <div className={styles.deployActions}>
+              {!isDeploying && !deployOutput && (
                 <Button
                   variant="primary"
                   onClick={() => handleDeploy(portConflicts && portConflicts.length > 0)}
@@ -1172,35 +1256,38 @@ const AppDetail = () => {
                 >
                   {portConflicts && portConflicts.length > 0 ? 'Deploy Anyway' : 'Deploy'}
                 </Button>
-              </div>
-            </>
-          )}
-
-          {(isDeploying || deployOutput) && (
-            <div className={styles.deployTerminal}>
-              <div className={styles.terminalHeader}>
-                {isDeploying && <span className={styles.deployingIndicator}>● DEPLOYING</span>}
-                {!isDeploying && deployOutput && <span className={styles.doneIndicator}><CheckCircleIcon size={16} /> COMPLETE</span>}
-              </div>
-              <pre ref={deployOutputRef} className={styles.terminalOutput}>
-                {deployOutput || 'Starting deployment...'}
-              </pre>
+              )}
               {!isDeploying && deployOutput && (
-                <div className={styles.deployActions}>
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      setShowDeployModal(false);
-                      setDeployOutput('');
-                      setSelectedServer('');
-                    }}
-                  >
-                    Close
-                  </Button>
-                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowDeployModal(false);
+                    setDeployOutput('');
+                    setSelectedServer('');
+                  }}
+                >
+                  Close
+                </Button>
+              )}
+              {isDeploying && (
+                <Button variant="secondary" disabled>
+                  Deploying...
+                </Button>
               )}
             </div>
-          )}
+          </div>
+
+          {/* Right Panel - Terminal Output */}
+          <div className={styles.deployRight}>
+            <div className={styles.terminalHeader}>
+              {!isDeploying && !deployOutput && <span className={styles.idleIndicator}>● READY</span>}
+              {isDeploying && <span className={styles.deployingIndicator}>● DEPLOYING</span>}
+              {!isDeploying && deployOutput && <span className={styles.doneIndicator}><CheckCircleIcon size={16} /> COMPLETE</span>}
+            </div>
+            <pre ref={deployOutputRef} className={styles.terminalOutput}>
+              {deployOutput || 'Waiting to deploy...'}
+            </pre>
+          </div>
         </div>
       </Modal>
 

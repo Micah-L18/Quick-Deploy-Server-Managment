@@ -29,6 +29,11 @@
   width: 95%;
 }
 
+.modalXlarge {
+  max-width: 1400px;
+  width: 95%;
+}
+
 .modalTerminal {
   background: #0d1117;
   border: 1px solid #30363d;

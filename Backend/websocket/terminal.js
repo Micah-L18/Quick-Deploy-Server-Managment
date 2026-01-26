@@ -114,7 +114,7 @@ function initTerminalHandlers(io) {
     console.log('Client connected:', socket.id);
 
     // Handle app deployment
-    socket.on('deploy-app', async ({ appId, serverId, portMappings }) => {
+    socket.on('deploy-app', async ({ appId, serverId, portMappings, nickname, icon, iconUrl }) => {
       try {
         socket.emit('deploy-output', { data: '>>> Starting deployment...\n' });
         
@@ -230,8 +230,9 @@ function initTerminalHandlers(io) {
           containerName: actualContainerName,
           status: 'running',
           portMappings: portMappings || app.ports,
-          icon: app.icon,
-          iconUrl: app.icon_url
+          nickname: nickname || null,
+          icon: icon || app.icon,
+          iconUrl: iconUrl || app.icon_url
         });
         
         socket.emit('deploy-output', { data: '\n>>> Deployment complete!\n' });

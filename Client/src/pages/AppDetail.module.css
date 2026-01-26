@@ -848,90 +848,207 @@
 
 /* Deploy Modal */
 .deployModal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  height: 100%;
+  min-height: 500px;
+}
+
+.deployLeft {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  height: 100%;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.deployLeftContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.deployRight {
+  display: flex;
+  flex-direction: column;
+  background: #010409;
+  min-height: 0;
 }
 
 .deployActions {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  padding: 16px;
-  background: #161b22;
-  border-top: 1px solid #30363d;
-  margin: 0 -20px -20px -20px;
+  padding: 16px 24px;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-color);
 }
 
-.formGroup {
+@media (max-width: 900px) {
+  .deployModal {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .deployLeft {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+/* Deploy Modal Sections - matching EditDeploymentModal style */
+.deploySection {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
   padding: 20px;
 }
 
-.formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  /* color: #e6edf3; */
+.deploySectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.formGroup select {
+.deploySectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deploySectionTitle svg {
+  color: var(--primary-gradient);
+}
+
+.optionalBadge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border-radius: 2px;
+}
+
+.deploySectionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroup label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.85rem;
+}
+
+.formGroup select,
+.formGroup input {
   width: 100%;
   padding: 10px 14px;
-  border: 2px solid #30363d;
+  border: 2px solid var(--border-color);
   border-radius: 2px;
   font-size: 0.95rem;
-  background: #0d1117;
-  color: #e6edf3;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.formGroup select:focus {
+.formGroup select:focus,
+.formGroup input:focus {
   outline: none;
   border-color: var(--primary-color);
 }
 
-.warning {
-  color: #f59e0b;
-  font-size: 0.85rem;
-  margin-top: 8px;
-  padding: 8px;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: 2px;
+.formGroup select:disabled,
+.formGroup input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
+.formGroup input::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  padding: 10px 14px;
+  border-radius: 2px;
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+/* Port Section */
 .portSection {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 20px;
 }
 
-.portSection label {
+.portSection > label {
   font-weight: 600;
-  color: #e6edf3;
-  font-size: 0.95rem;
+  color: var(--text-dark);
+  font-size: 0.85rem;
+}
+
+.portLabels {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0;
+}
+
+.portLabel {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.portLabelSpacer {
+  width: 24px;
+  flex-shrink: 0;
 }
 
 .portRow {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  padding: 12px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 2px;
 }
 
 .portRow input {
-  width: 80px;
-  padding: 8px 10px;
-  border: 2px solid #30363d;
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--border-color);
   border-radius: 2px;
-  font-size: 0.9rem;
-  text-align: center;
-  background: #0d1117;
-  color: #e6edf3;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 .portRow input:focus {
@@ -939,44 +1056,131 @@
   border-color: var(--primary-color);
 }
 
-.portRow span {
-  color: #8b949e;
+.portRow input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.portRow input::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.portRow > span {
+  color: var(--text-medium);
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .portConflict {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: #ef4444;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .conflictWarning {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  color: #f59e0b;
+  padding: 10px 14px;
   border-radius: 2px;
-  color: #ef4444;
-  font-size: 0.9rem;
-  margin: 0 20px;
+  font-size: 0.85rem;
 }
 
 .conflictWarning strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
 .conflictWarning p {
   margin: 4px 0;
+  color: var(--text-medium);
+}
+
+/* Customization Grid (used inside deploy sections) */
+.customizationGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.customizationField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customizationField label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.85rem;
+}
+
+.customizationField .input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 2px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.customizationField .input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.customizationField .input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.customizationField .input::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.fieldHint {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+  margin-top: 4px;
+}
+
+/* IconSelector container in deploy modal */
+.customizationGrid > :global(.iconSelectorContainer) {
+  gap: 8px;
+}
+
+.customizationGrid > :global(.label) {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .customizationGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Docker Status Styles */
 .dockerChecking {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  margin: 0 20px;
+  gap: 12px;
+  padding: 10px 14px;
   background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid #3b82f6;
   border-radius: 2px;
   color: #3b82f6;
   font-size: 0.9rem;
@@ -997,22 +1201,23 @@
 
 .dockerError {
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 12px 16px;
+  border: 1px solid #ef4444;
+  padding: 12px 14px;
   border-radius: 2px;
   color: #ef4444;
   font-size: 0.9rem;
-  margin: 0 20px;
 }
 
 .dockerError strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
 .dockerError p {
   margin: 4px 0;
-  color: #f87171;
+  color: var(--text-medium);
 }
 
 .dockerInstallLink {
@@ -1023,55 +1228,48 @@
 
 .dockerWarning {
   background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  padding: 12px 16px;
+  border: 1px solid #f59e0b;
+  padding: 12px 14px;
   border-radius: 2px;
   color: #f59e0b;
   font-size: 0.9rem;
-  margin: 0 20px;
 }
 
 .dockerWarning strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
 .dockerWarning p {
   margin: 4px 0;
-  color: #fbbf24;
+  color: var(--text-medium);
 }
 
 .dockerSuccess {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  padding: 12px 16px;
+  gap: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid #10b981;
+  padding: 10px 14px;
   border-radius: 2px;
-  color: #22c55e;
+  color: #10b981;
   font-size: 0.9rem;
-  margin: 0 20px;
 }
 
 .dockerSuccess strong {
   font-weight: 600;
+  flex: 1;
 }
 
 .dockerSuccess span {
-  color: #4ade80;
+  color: var(--text-medium);
   font-size: 0.85rem;
 }
 
-/* Deploy Terminal */
-.deployTerminal {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
+/* Terminal Header and Output (Right Panel) */
 .terminalHeader {
   display: flex;
   justify-content: center;
@@ -1088,12 +1286,21 @@
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
   font-size: 0.85rem;
   line-height: 1.6;
-  color: #e6edf3;
+  color: #8b949e;
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
-  background: #0d1117;
+  background: #010409;
+}
+
+.idleIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8b949e;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .deployingIndicator {
@@ -1102,6 +1309,7 @@
   gap: 8px;
   color: #f59e0b;
   font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .deployingIndicator::before {
@@ -1119,6 +1327,7 @@
   gap: 8px;
   color: #10b981;
   font-size: 0.85rem;
+  font-weight: 500;
 }
 
 /* Modal Actions */

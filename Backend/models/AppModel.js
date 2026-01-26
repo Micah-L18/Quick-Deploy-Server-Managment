@@ -238,8 +238,8 @@ async function createDeployment(deployment) {
     : null;
 
   await run(`
-    INSERT INTO app_deployments (id, app_id, server_id, container_id, container_name, status, port_mappings, deployed_at, icon, icon_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO app_deployments (id, app_id, server_id, container_id, container_name, status, port_mappings, deployed_at, icon, icon_url, nickname)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     deployment.appId,
@@ -250,7 +250,8 @@ async function createDeployment(deployment) {
     portMappingsJson,
     deployedAt,
     deployment.icon || null,
-    deployment.iconUrl || null
+    deployment.iconUrl || null,
+    deployment.nickname || null
   ]);
 
   return { id, ...deployment, deployed_at: deployedAt };

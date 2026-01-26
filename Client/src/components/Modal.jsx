@@ -30,7 +30,8 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'default', var
     }
   };
 
-  const modalClasses = `${styles.modal} ${size === 'large' ? styles.modalLarge : ''} ${variant === 'terminal' ? styles.modalTerminal : ''}`;
+  const sizeClass = size === 'large' ? styles.modalLarge : size === 'xlarge' ? styles.modalXlarge : '';
+  const modalClasses = `${styles.modal} ${sizeClass} ${variant === 'terminal' ? styles.modalTerminal : ''}`;
 
   return (
     <div className={styles.modalOverlay} onClick={handleOverlayClick}>
