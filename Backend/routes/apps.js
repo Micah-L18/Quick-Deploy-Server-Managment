@@ -761,10 +761,11 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
   } = req.body;
 
   // Check if this is only an icon update (no container config changes)
-  const isIconOnlyUpdate = icon !== undefined && icon_url !== undefined &&
-    port_mappings === undefined && env_vars === undefined && volumes === undefined &&
-    restart_policy === undefined && network_mode === undefined && 
-    command === undefined && custom_args === undefined && web_ui_port === undefined;
+  const hasIconFields = icon !== undefined || icon_url !== undefined;
+  const hasContainerConfigFields = port_mappings !== undefined || env_vars !== undefined || 
+    volumes !== undefined || restart_policy !== undefined || network_mode !== undefined || 
+    command !== undefined || custom_args !== undefined || web_ui_port !== undefined;
+  const isIconOnlyUpdate = hasIconFields && !hasContainerConfigFields;
 
   // Only allow editing container config on stopped containers
   if (!isIconOnlyUpdate && deployment.status === 'running') {

@@ -72,6 +72,26 @@ router.get('/snapshots/:id/download', requireAuth, asyncHandler(async (req, res)
  * DELETE /api/snapshots/:id
  * Delete a snapshot
  */
+
+/**
+ * PATCH /api/snapshots/:id
+ * Update snapshot notes (rename)
+ */
+router.patch('/snapshots/:id', requireAuth, asyncHandler(async (req, res) => {
+  const { notes } = req.body;
+  const snapshot = await SnapshotModel.findById(req.params.id, req.session.userId);
+  
+  if (!snapshot) {
+    return res.status(404).json({ error: 'Snapshot not found' });
+  }
+  
+  await SnapshotModel.updateNotes(req.params.id, notes);
+  
+  const updatedSnapshot = await SnapshotModel.findById(req.params.id, req.session.userId);
+  
+  res.json(updatedSnapshot);
+}));
+
 router.delete('/snapshots/:id', requireAuth, asyncHandler(async (req, res) => {
   const snapshot = await SnapshotModel.findById(req.params.id, req.session.userId);
   

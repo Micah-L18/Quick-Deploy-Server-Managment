@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import AlertModal from '../components/AlertModal';
 import ConfirmModal from '../components/ConfirmModal';
 import Button from '../components/Button';
-import { TrashIcon, AlertIcon, UploadIcon, EditIcon } from '../components/Icons';
+import SnapshotCard from '../components/SnapshotCard';
+import { TrashIcon, AlertIcon, UploadIcon, EditIcon, SearchIcon, ChevronDownIcon } from '../components/Icons';
 import { uploadsService } from '../api/uploads';
 import * as snapshotsService from '../api/snapshots';
 import api from '../api/axiosConfig';
@@ -19,6 +20,11 @@ const Storage = () => {
   const fileInputRef = useRef(null);
   const [renameModal, setRenameModal] = useState({ isOpen: false, iconUrl: null, currentName: '' });
   const [newIconName, setNewIconName] = useState('');
+
+  // Snapshots search, sort, and filter state
+  const [snapshotSearch, setSnapshotSearch] = useState('');
+  const [snapshotSort, setSnapshotSort] = useState('newest');
+  const [snapshotFilter, setSnapshotFilter] = useState('all'); // all, orphaned, complete
 
   // Fetch storage info
   const { data: storageInfo, isLoading: loadingStorage } = useQuery({
@@ -146,6 +152,49 @@ const Storage = () => {
     },
   });
 
+  // Rename snapshot mutation
+  const renameSnapshotMutation = useMutation({
+    mutationFn: ({ snapshotId, notes }) => snapshotsService.update(snapshotId, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['snapshots-storage']);
+      setAlert({
+        isOpen: true,
+        type: 'success',
+        title: 'Success',
+        message: 'Snapshot notes updated successfully',
+      });
+    },
+    onError: (error) => {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: error.response?.data?.error || 'Failed to update snapshot notes',
+      });
+    },
+  });
+
+  // Restore snapshot mutation
+  const restoreSnapshotMutation = useMutation({
+    mutationFn: (snapshotId) => snapshotsService.restore(snapshotId),
+    onSuccess: () => {
+      setAlert({
+        isOpen: true,
+        type: 'success',
+        title: 'Success',
+        message: 'Snapshot restore initiated. Check deployment status for progress.',
+      });
+    },
+    onError: (error) => {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: error.response?.data?.error || 'Failed to restore snapshot',
+      });
+    },
+  });
+
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -220,12 +269,35 @@ const Storage = () => {
     });
   };
 
+  const handleRenameSnapshot = (snapshotId, notes) => {
+    renameSnapshotMutation.mutate({ snapshotId, notes });
+  };
+
+  const handleRestoreSnapshot = (snapshot) => {
+    setConfirm({
+      isOpen: true,
+      type: 'restoreSnapshot',
+      data: snapshot,
+    });
+  };
+
+  const handleSnapshotDelete = (snapshot) => {
+    setConfirm({
+      isOpen: true,
+      type: 'deleteSnapshot',
+      data: { snapshotId: snapshot.id, name: snapshot.app_name || 'Unknown' },
+    });
+  };
+
   const handleConfirm = () => {
     if (confirm.type === 'deleteIcon') {
       deleteIconMutation.mutate(confirm.data.iconUrl);
     } else if (confirm.type === 'deleteSnapshot') {
       deleteSnapshotMutation.mutate(confirm.data.snapshotId);
+    } else if (confirm.type === 'restoreSnapshot') {
+      restoreSnapshotMutation.mutate(confirm.data.id);
     }
+    closeConfirm();
   };
 
   const closeConfirm = () => {
@@ -252,6 +324,63 @@ const Storage = () => {
     return '#00d4ff';
   };
 
+  // Filtered and sorted snapshots
+  const filteredSnapshots = useMemo(() => {
+    if (!snapshotsData.snapshots || !Array.isArray(snapshotsData.snapshots)) return [];
+    
+    let result = [...snapshotsData.snapshots];
+    
+    // Apply search filter
+    if (snapshotSearch.trim()) {
+      const searchLower = snapshotSearch.toLowerCase();
+      result = result.filter(s => 
+        (s.app_name || '').toLowerCase().includes(searchLower) ||
+        (s.server_name || '').toLowerCase().includes(searchLower) ||
+        (s.notes || '').toLowerCase().includes(searchLower) ||
+        (s.container_name || '').toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (snapshotFilter === 'orphaned') {
+      result = result.filter(s => !s.app_name || s.app_name === null);
+    } else if (snapshotFilter === 'complete') {
+      result = result.filter(s => s.status === 'complete');
+    } else if (snapshotFilter === 'failed') {
+      result = result.filter(s => s.status === 'failed');
+    }
+    
+    // Apply sort
+    result.sort((a, b) => {
+      switch (snapshotSort) {
+        case 'newest':
+          return new Date(b.created_at) - new Date(a.created_at);
+        case 'oldest':
+          return new Date(a.created_at) - new Date(b.created_at);
+        case 'largest':
+          return (b.size_bytes || 0) - (a.size_bytes || 0);
+        case 'smallest':
+          return (a.size_bytes || 0) - (b.size_bytes || 0);
+        case 'name':
+          return (a.app_name || 'zzz').localeCompare(b.app_name || 'zzz');
+        default:
+          return 0;
+      }
+    });
+    
+    return result;
+  }, [snapshotsData.snapshots, snapshotSearch, snapshotSort, snapshotFilter]);
+
+  // Get unique servers for potential filter dropdown
+  const uniqueServers = useMemo(() => {
+    if (!snapshotsData.snapshots) return [];
+    const servers = new Set();
+    snapshotsData.snapshots.forEach(s => {
+      if (s.server_name) servers.add(s.server_name);
+    });
+    return Array.from(servers);
+  }, [snapshotsData.snapshots]);
+
   return (
     <Layout>
       <div className={styles.storageContainer}>
@@ -274,12 +403,12 @@ const Storage = () => {
           >
             Icons ({icons.length || 0})
           </button>
-          {/* <button
+          <button
             className={`${styles.tab} ${activeTab === 'snapshots' ? styles.activeTab : ''}`}
             onClick={() => setActiveTab('snapshots')}
           >
             Snapshots ({snapshotsData.snapshots?.length || 0})
-          </button> */}
+          </button>
         </div>
 
         {/* Content */}
@@ -454,47 +583,62 @@ const Storage = () => {
           {/* Snapshots Tab */}
           {activeTab === 'snapshots' && (
             <div className={styles.listSection}>
-              <h2>Snapshots</h2>
+              {/* Search and Filter Controls */}
+              <div className={styles.snapshotControls}>
+                <div className={styles.searchContainer}>
+                  <input
+                    type="text"
+                    placeholder="Search snapshots..."
+                    value={snapshotSearch}
+                    onChange={(e) => setSnapshotSearch(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                  <SearchIcon size={18} className={styles.searchIcon} />
+                </div>
+                <div className={styles.filterControls}>
+                  <select
+                    value={snapshotFilter}
+                    onChange={(e) => setSnapshotFilter(e.target.value)}
+                    className={styles.filterSelect}
+                  >
+                    <option value="all">All Snapshots</option>
+                    <option value="complete">Complete</option>
+                    <option value="orphaned">Orphaned</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                  <select
+                    value={snapshotSort}
+                    onChange={(e) => setSnapshotSort(e.target.value)}
+                    className={styles.filterSelect}
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="largest">Largest First</option>
+                    <option value="smallest">Smallest First</option>
+                    <option value="name">By App Name</option>
+                  </select>
+                </div>
+              </div>
+
               {loadingSnapshots ? (
                 <div className={styles.loading}>Loading snapshots...</div>
-              ) : !Array.isArray(snapshotsData.snapshots) || snapshotsData.snapshots?.length === 0 ? (
+              ) : filteredSnapshots.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <p>No snapshots found</p>
+                  <AlertIcon size={48} />
+                  <h3>{snapshotSearch || snapshotFilter !== 'all' ? 'No Matching Snapshots' : 'No Snapshots'}</h3>
+                  <p>{snapshotSearch || snapshotFilter !== 'all' 
+                    ? 'Try adjusting your search or filter criteria.' 
+                    : 'Snapshots are created from deployments in the Apps page.'}</p>
                 </div>
               ) : (
-                <div className={styles.snapshotsList}>
-                  {snapshotsData.snapshots.map((snapshot) => (
-                    <div key={snapshot.id} className={styles.snapshotItem}>
-                      <div className={styles.snapshotInfo}>
-                        <div className={styles.snapshotName}>
-                          {snapshot.deployment_name} - {snapshot.snapshot_name}
-                        </div>
-                        <div className={styles.snapshotDetails}>
-                          <span className={styles.snapshotSize}>
-                            Size: {formatBytes(snapshot.size || 0)}
-                          </span>
-                          <span className={styles.snapshotDate}>
-                            Created: {new Date(snapshot.created_at).toLocaleString()}
-                          </span>
-                          {snapshot.notes && (
-                            <span className={styles.snapshotNotes}>
-                              Notes: {snapshot.notes}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="danger"
-                        size="small"
-                        onClick={() =>
-                          handleDeleteSnapshot(snapshot.id, snapshot.snapshot_name)
-                        }
-                        disabled={deleteSnapshotMutation.isPending}
-                      >
-                        <TrashIcon size={16} />
-                        Delete
-                      </Button>
-                    </div>
+                <div className={styles.snapshotsGrid}>
+                  {filteredSnapshots.map((snapshot) => (
+                    <SnapshotCard
+                      key={snapshot.id}
+                      snapshot={snapshot}
+                      onDelete={handleSnapshotDelete}
+                      onRestore={handleRestoreSnapshot}
+                    />
                   ))}
                 </div>
               )}
@@ -518,18 +662,20 @@ const Storage = () => {
         onClose={closeConfirm}
         onConfirm={handleConfirm}
         title={
-          confirm.type === 'deleteIcon'
-            ? 'Delete Icon'
-            : 'Delete Snapshot'
+          confirm.type === 'deleteIcon' ? 'Delete Icon' 
+          : confirm.type === 'deleteSnapshot' ? 'Delete Snapshot'
+          : 'Restore Snapshot'
         }
         message={
-          confirm.type === 'deleteIcon'
+          confirm.type === 'deleteIcon' 
             ? `Are you sure you want to delete the icon "${confirm.data?.fileName}"? This action cannot be undone.`
-            : `Are you sure you want to delete the snapshot "${confirm.data?.name}"? This action cannot be undone.`
+            : confirm.type === 'deleteSnapshot'
+            ? `Are you sure you want to delete the snapshot "${confirm.data?.name}"? This action cannot be undone.`
+            : `Are you sure you want to restore the snapshot for "${confirm.data?.app_name || 'Unknown App'}"? This will replace the current deployment data.`
         }
-        confirmText="Delete"
+        confirmText={confirm.type === 'restoreSnapshot' ? 'Restore' : 'Delete'}
         cancelText="Cancel"
-        variant="danger"
+        variant={confirm.type === 'restoreSnapshot' ? 'primary' : 'danger'}
       />
 
       {/* Rename Modal */}

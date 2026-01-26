@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const { run } = require('../../database/connection');
 
 /**
  * Storage service for managing uploaded files
@@ -138,8 +139,23 @@ async function renameIcon(oldIconUrl, newFilename) {
   // Rename the file
   await fs.rename(oldFilePath, newFilePath);
   
+  const newIconUrl = `/uploads/icons/${finalNewFilename}`;
+  
+  // Update all database references to this icon
+  // Update apps table
+  await run(
+    'UPDATE apps SET icon_url = ? WHERE icon_url = ?',
+    [newIconUrl, oldIconUrl]
+  );
+  
+  // Update app_deployments table
+  await run(
+    'UPDATE app_deployments SET icon_url = ? WHERE icon_url = ?',
+    [newIconUrl, oldIconUrl]
+  );
+  
   // Return new URL
-  return `/uploads/icons/${finalNewFilename}`;
+  return newIconUrl;
 }
 
 /**

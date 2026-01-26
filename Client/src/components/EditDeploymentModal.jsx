@@ -35,6 +35,9 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     icon: '',
     icon_url: ''
   });
+  
+  // Track if form has been initialized to prevent re-initialization on refetch
+  const [formInitialized, setFormInitialized] = useState(false);
 
   // Fetch fresh deployment data when modal opens
   const { data: freshDeployment, isLoading: loadingDeployment } = useQuery({
@@ -44,9 +47,16 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     staleTime: 0, // Always fetch fresh
   });
 
-  // Initialize form when fresh deployment data is loaded
+  // Reset formInitialized when modal closes
   useEffect(() => {
-    if (isOpen && freshDeployment) {
+    if (!isOpen) {
+      setFormInitialized(false);
+    }
+  }, [isOpen]);
+
+  // Initialize form when fresh deployment data is loaded (only once per modal open)
+  useEffect(() => {
+    if (isOpen && freshDeployment && !formInitialized) {
       // Parse JSON fields if they're strings
       const parseJson = (val) => {
         if (!val) return [];
@@ -77,13 +87,14 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
         icon: freshDeployment.icon || appConfig.icon || '',
         icon_url: freshDeployment.icon_url || appConfig.icon_url || ''
       });
+      setFormInitialized(true);
       setError('');
       setIsSaving(false);
       setActiveTab('config');
       setCopied(null);
       setPortConflicts([]);
     }
-  }, [isOpen, freshDeployment]);
+  }, [isOpen, freshDeployment, formInitialized]);
 
   // Check port availability when ports change
   const checkPortAvailability = async () => {
@@ -221,9 +232,10 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
   const isRunning = (freshDeployment?.status || deployment?.status) === 'running';
 
   // Check if only the icon has changed
-  const iconChanged = freshDeployment && (
-    formData.icon !== (freshDeployment.icon || '') || 
-    formData.icon_url !== (freshDeployment.icon_url || '')
+  const currentDeployment = freshDeployment || deployment;
+  const iconChanged = currentDeployment && (
+    formData.icon !== (currentDeployment.icon || '') || 
+    formData.icon_url !== (currentDeployment.icon_url || '')
   );
 
   // Port mapping handlers
@@ -406,8 +418,8 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           <div className={styles.warningBox}>
             <StopCircleIcon size={16} />
             <span>
-              <strong>Container is running.</strong> Stop the container to make changes. 
-              Use the "Stop to Edit" button below.
+              <strong>Container is running.</strong> Stop the container to change ports, volumes, or other settings. 
+              You can still update the icon while running.
             </span>
           </div>
         ) : (
@@ -435,16 +447,14 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
             label=""
             showCustomUpload={true}
           />
-          {iconChanged && (
-            <Button
-              variant="primary"
-              onClick={handleSaveIcon}
-              disabled={isSaving}
-              style={{ marginTop: '12px' }}
-            >
-              {isSaving ? 'Saving...' : 'Save Icon'}
-            </Button>
-          )}
+          <Button
+            variant="primary"
+            onClick={handleSaveIcon}
+            disabled={isSaving || !iconChanged}
+            style={{ marginTop: '12px' }}
+          >
+            {isSaving ? 'Saving...' : 'Save Icon'}
+          </Button>
         </div>
 
         {/* Port Mappings */}

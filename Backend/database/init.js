@@ -141,6 +141,23 @@ async function initDatabase() {
  * Adds new columns to existing tables
  */
 async function runMigrations() {
+  // Migration: Add config snapshot fields to deployment_snapshots
+  const snapshotColumns = [
+    { name: 'app_config', type: 'TEXT' },
+    { name: 'deployment_config', type: 'TEXT' },
+    { name: 'app_id', type: 'TEXT' },
+    { name: 'app_name', type: 'TEXT' }
+  ];
+
+  for (const column of snapshotColumns) {
+    try {
+      await run(`ALTER TABLE deployment_snapshots ADD COLUMN ${column.name} ${column.type}`);
+      console.log(`Added column ${column.name} to deployment_snapshots`);
+    } catch (err) {
+      // Ignore duplicate column errors
+    }
+  }
+
   // Server metrics additional columns
   const metricsColumns = [
     { name: 'cpu_cores', type: 'INTEGER' },

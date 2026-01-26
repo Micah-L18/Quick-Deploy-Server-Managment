@@ -1,0 +1,456 @@
+
+.card {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+  padding: 16px 20px;
+  transition: background 0.2s;
+  gap: 16px;
+}
+
+.card:last-child {
+  border-bottom: none;
+}
+
+.card:hover {
+  background: rgba(0, 212, 255, 0.02);
+}
+
+.card.orphaned {
+  border-left: 3px solid var(--warning);
+  background: rgba(245, 158, 11, 0.03);
+}
+
+.header {
+  display: contents;
+}
+
+.appIcon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.appName {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.orphanedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--warning);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0;
+}
+
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.link {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.notesSection {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.notes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.notesLabel {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notesText {
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.editBtn {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.editBtn:hover {
+  color: var(--primary);
+}
+
+.editingNotes {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.notesInput {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--card-background);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.notesInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.editActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.saveBtn,
+.cancelBtn {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  transition: all 0.2s;
+}
+
+.saveBtn {
+  color: var(--success);
+}
+
+.saveBtn:hover {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
+.cancelBtn {
+  color: var(--danger);
+}
+
+.cancelBtn:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.status {
+  margin: 0;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 0;
+}
+
+.statusBadge.pending {
+  background: var(--warning);
+  color: white;
+}
+
+.statusBadge.creating {
+  background: var(--info);
+  color: white;
+}
+
+.statusBadge.failed {
+  background: var(--danger);
+  color: white;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.downloadLink {
+  text-decoration: none;
+}
+
+/* Details Modal */
+.detailsModal {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detailsHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detailsIcon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.detailsIcon .icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detailsTitle h2 {
+  margin: 0 0 4px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.statusBadgeInline {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 0;
+  background: var(--bg-tertiary);
+  color: var(--text-medium);
+}
+
+.statusBadgeInline.complete {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.statusBadgeInline.pending,
+.statusBadgeInline.creating {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.statusBadgeInline.failed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detailValue {
+  font-size: 0.95rem;
+  color: var(--text-dark);
+}
+
+.codeSmall {
+  font-family: monospace;
+  font-size: 0.8rem;
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 0;
+  word-break: break-all;
+}
+
+.detailsSection {
+  padding-top: 8px;
+}
+
+.detailsSection h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.volumeList {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.volumeList li {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-medium);
+  margin-bottom: 4px;
+}
+
+.notesContent {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: 0;
+}
+
+.configNote {
+  margin: 0 0 12px 0;
+  font-size: 0.85rem;
+  color: var(--text-medium);
+}
+
+.configGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.configItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.configLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-medium);
+  text-transform: uppercase;
+}
+
+.configItem code {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: 0;
+}
+
+.detailsActions {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.detailsActions .downloadLink {
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .card {
+    grid-template-columns: 1fr;
+    padding: 0.75rem 1rem;
+  }
+
+  .header {
+    align-items: flex-start;
+  }
+
+  .metadata {
+    gap: 0.5rem;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+
+  .actions button,
+  .downloadLink {
+    width: 100%;
+  }
+
+  .detailsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

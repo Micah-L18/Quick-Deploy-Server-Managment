@@ -104,6 +104,52 @@ async function resolveVolumePath(serverConfig, volumePath) {
 async function createSnapshot({ deployment, server, userId, notes = null, onProgress = () => {} }) {
   await ensureBackupDirs();
   
+  // Fetch full app configuration for orphan revival
+  let appConfig = null;
+  let appId = null;
+  let appName = null;
+  
+  if (deployment.app_id) {
+    try {
+      const app = await AppModel.findById(deployment.app_id, userId);
+      if (app) {
+        appConfig = {
+          name: app.name,
+          image: app.image,
+          tag: app.tag,
+          ports: app.ports ? JSON.parse(app.ports) : [],
+          env_vars: app.env_vars ? JSON.parse(app.env_vars) : [],
+          volumes: app.volumes ? JSON.parse(app.volumes) : [],
+          restart_policy: app.restart_policy,
+          command: app.command,
+          network_mode: app.network_mode,
+          privileged: app.privileged === 1,
+          memory_limit: app.memory_limit,
+          cpu_limit: app.cpu_limit,
+          icon: app.icon,
+          icon_url: app.icon_url
+        };
+        appId = app.id;
+        appName = app.name;
+      }
+    } catch (err) {
+      console.error('Failed to fetch app config for snapshot:', err);
+    }
+  }
+  
+  // Capture deployment-specific overrides
+  const deploymentConfig = {
+    container_name: deployment.container_name,
+    port_mappings: deployment.port_mappings ? JSON.parse(deployment.port_mappings) : null,
+    env_overrides: deployment.env_overrides ? JSON.parse(deployment.env_overrides) : null,
+    volume_overrides: deployment.volume_overrides ? JSON.parse(deployment.volume_overrides) : null,
+    command_override: deployment.command_override,
+    memory_limit_override: deployment.memory_limit_override,
+    cpu_limit_override: deployment.cpu_limit_override,
+    icon: deployment.icon,
+    icon_url: deployment.icon_url
+  };
+  
   const volumePaths = getVolumePaths(deployment);
   
   if (volumePaths.length === 0) {
@@ -122,7 +168,11 @@ async function createSnapshot({ deployment, server, userId, notes = null, onProg
     serverId: server.id,
     userId,
     volumePaths,
-    notes
+    notes,
+    appConfig,
+    deploymentConfig,
+    appId,
+    appName
   });
   
   const serverConfig = {

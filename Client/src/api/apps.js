@@ -85,4 +85,9 @@ export const appsService = {
     const response = await api.post(`/apps/${appId}/deployments/${deploymentId}/stop`);
     return response.data;
   },
+
+  updateDeployment: async (appId, deploymentId, config) => {
+    const response = await api.put(`/apps/${appId}/deployments/${deploymentId}`, config);
+    return response.data;
+  },
 };

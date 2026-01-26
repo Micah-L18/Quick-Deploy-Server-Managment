@@ -1,12 +1,29 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon, BookOpenIcon, HardDriveIcon } from './Icons';
+import { systemService } from '../api/system';
 import styles from './Sidebar.module.css';
 
 const Sidebar = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [version, setVersion] = useState(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        const data = await systemService.getVersion();
+        setVersion(data.currentVersion);
+        setUpdateAvailable(data.updateAvailable || false);
+      } catch (error) {
+        console.error('Failed to fetch version:', error);
+      }
+    };
+    fetchVersion();
+  }, []);
 
   const navItems = [
     { path: '/', icon: DashboardIcon, label: 'Dashboard' },
@@ -94,7 +111,21 @@ const Sidebar = () => {
           >
             <BookOpenIcon size={18} />
             <span className={styles.docsBtnLabel}>Docs</span>
+            {version && <span className={styles.versionBadge}>v{version}</span>}
           </NavLink>
+          {updateAvailable && (
+            <button
+              className={styles.updateNotification}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/settings');
+                handleNavClick();
+              }}
+            >
+              <span className={styles.updateDot}></span>
+              <span>Update Available</span>
+            </button>
+          )}
           {user && (
             <div className={styles.userCard}>
               <div className={styles.userInfo}>

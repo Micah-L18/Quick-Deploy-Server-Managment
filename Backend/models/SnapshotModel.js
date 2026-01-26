@@ -72,18 +72,26 @@ async function findById(snapshotId, userId = null) {
  * @param {string} params.userId - User ID
  * @param {Array<string>} params.volumePaths - Array of volume paths to backup
  * @param {string} params.notes - Optional notes
+@@ * @param {Object} params.appConfig - Full app configuration snapshot
+@@ * @param {Object} params.deploymentConfig - Full deployment configuration snapshot
+@@ * @param {string} params.appId - App ID
+@@ * @param {string} params.appName - App name
  * @returns {Promise<Object>}
  */
-async function create({ deploymentId, serverId, userId, volumePaths = [], notes = null }) {
+async function create({ deploymentId, serverId, userId, volumePaths = [], notes = null, appConfig = null, deploymentConfig = null, appId = null, appName = null }) {
   const id = uuidv4();
   const createdAt = new Date().toISOString();
   const archiveFilename = `snapshot_${id}.tar.gz`;
 
   await run(
     `INSERT INTO deployment_snapshots 
-     (id, deployment_id, server_id, user_id, created_at, volume_paths, archive_filename, status, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
-    [id, deploymentId, serverId, userId, createdAt, JSON.stringify(volumePaths), archiveFilename, notes]
+     (id, deployment_id, server_id, user_id, created_at, volume_paths, archive_filename, status, notes, app_config, deployment_config, app_id, app_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+    [id, deploymentId, serverId, userId, createdAt, JSON.stringify(volumePaths), archiveFilename, notes, 
+     appConfig ? JSON.stringify(appConfig) : null, 
+     deploymentConfig ? JSON.stringify(deploymentConfig) : null,
+     appId,
+     appName]
   );
 
   return {
@@ -126,6 +134,20 @@ async function updateStatus(snapshotId, status, sizeBytes = null) {
  * @param {string} snapshotId - Snapshot ID
  * @returns {Promise<void>}
  */
+
+/**
+ * Update snapshot notes
+ * @param {string} snapshotId - Snapshot ID
+ * @param {string} notes - New notes
+ * @returns {Promise<void>}
+ */
+async function updateNotes(snapshotId, notes) {
+  await run(
+    'UPDATE deployment_snapshots SET notes = ? WHERE id = ?',
+    [notes, snapshotId]
+  );
+}
+
 async function remove(snapshotId) {
   await run('DELETE FROM deployment_snapshots WHERE id = ?', [snapshotId]);
 }
@@ -187,6 +209,7 @@ module.exports = {
   findById,
   create,
   updateStatus,
+  updateNotes,
   remove,
   getTotalStorageUsed,
   getCountForDeployment,

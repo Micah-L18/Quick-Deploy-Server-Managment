@@ -19,6 +19,7 @@ const Settings = () => {
   const queryClient = useQueryClient();
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoMessage, setInfoMessage] = useState({ title: '', content: '' });
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [preferences, setPreferences] = useState({
     autoRefresh: true,
     notifications: true,
@@ -61,9 +62,11 @@ const Settings = () => {
   };
 
   const handleStartUpdate = () => {
-    if (!window.confirm('This will update the server to the latest version. You can continue working while the update runs in the background. Continue?')) {
-      return;
-    }
+    setShowUpdateModal(true);
+  };
+
+  const confirmUpdate = () => {
+    setShowUpdateModal(false);
     startSystemUpdate();
   };
 
@@ -178,6 +181,14 @@ const Settings = () => {
                 {showChangelog ? 'Hide changelog' : 'View changelog'}
               </button>
             </div>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={handleStartUpdate}
+              disabled={isUpdating}
+            >
+              {isUpdating ? 'Updating...' : 'Update Now'}
+            </Button>
           </div>
         )}
 
@@ -454,6 +465,43 @@ const Settings = () => {
           <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={() => setShowInfoModal(false)}>
               OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Update Confirmation Modal */}
+      <Modal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        title="Confirm System Update"
+      >
+        <div style={{ padding: '1rem 0' }}>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '1rem' }}>
+            This will update the server to the latest version ({versionInfo?.latestVersion}). 
+          </p>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '0' }}>
+            You can continue working while the update runs in the background.
+          </p>
+          {changelog?.commits?.length > 0 && (
+            <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--background-secondary)', borderRadius: '0' }}>
+              <strong style={{ color: 'var(--text-primary)', fontSize: '0.875rem' }}>
+                {changelog.commits.length} change{changelog.commits.length > 1 ? 's' : ''} incoming
+              </strong>
+            </div>
+          )}
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowUpdateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={confirmUpdate}
+            >
+              Update Now
             </Button>
           </div>
         </div>

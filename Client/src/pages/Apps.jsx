@@ -36,7 +36,8 @@ import {
   EditIcon,
   DockerIcon,
   GlobeAltIcon,
-  SettingsIcon
+  SettingsIcon,
+  SearchIcon
 } from '../components/Icons';
 import { SERVER_ICONS } from '../components/IconSelector';
 import styles from './Apps.module.css';
@@ -390,15 +391,23 @@ const Apps = () => {
   return (
     <Layout>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Apps</h1>
+        <div className={styles.headerInfo}>
+          <h1 className={styles.pageTitle}>Apps</h1>
+          <p className={styles.pageDescription}>
+            Manage your containerized applications. Deploy from templates, create custom apps, and monitor running containers across all your servers.
+          </p>
+        </div>
         <div className={styles.headerActions}>
-          <input
-            type="text"
-            placeholder={activeTab === 'deployed' ? 'Search deployments...' : 'Search apps...'}
-            className={styles.searchBox}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <div className={styles.searchContainer}>
+            <SearchIcon size={18} className={styles.searchIcon} />
+            <input
+              type="text"
+              placeholder={activeTab === 'deployed' ? 'Search deployments...' : 'Search apps...'}
+              className={styles.searchBox}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

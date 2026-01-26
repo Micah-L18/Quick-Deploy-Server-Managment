@@ -54,8 +54,8 @@ export const RefreshIcon = ({ size = 24, color = "currentColor" }) => (
   </svg>
 );
 
-export const SearchIcon = ({ size = 24, color = "currentColor" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+export const SearchIcon = ({ size = 24, color = "currentColor", className }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
     <path d="m21 21-4.35-4.35"></path>
   </svg>
@@ -449,5 +449,13 @@ export const GitBranchIcon = ({ size = 24, color = "currentColor" }) => (
     <circle cx="18" cy="6" r="3"></circle>
     <circle cx="6" cy="18" r="3"></circle>
     <path d="M18 9a9 9 0 0 1-9 9"></path>
+  </svg>
+);
+
+export const BoxIcon = ({ size = 24, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+    <line x1="12" y1="22.08" x2="12" y2="12"></line>
   </svg>
 );

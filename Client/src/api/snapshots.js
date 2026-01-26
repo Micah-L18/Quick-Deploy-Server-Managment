@@ -43,6 +43,15 @@ export const create = async (deploymentId, notes = null, socketId = null) => {
 /**
  * Delete a snapshot
  */
+
+/**
+ * Update snapshot notes
+ */
+export const update = async (snapshotId, notes) => {
+  const response = await api.patch(`/snapshots/${snapshotId}`, { notes });
+  return response.data;
+};
+
 export const remove = async (snapshotId) => {
   const response = await api.delete(`/snapshots/${snapshotId}`);
   return response.data;
