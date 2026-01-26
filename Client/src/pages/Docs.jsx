@@ -7,7 +7,6 @@ import {
   HardDriveIcon, 
   SettingsIcon,
   BookOpenIcon,
-  ChevronRightIcon,
   PlayIcon,
   StopCircleIcon,
   RefreshIcon,
@@ -73,23 +72,22 @@ const Docs = () => {
   return (
     <Layout>
       <div className={styles.container}>
-        <div className={styles.sidebar}>
-          <h2 className={styles.sidebarTitle}>
-            <BookOpenIcon size={20} /> Documentation
-          </h2>
-          <nav className={styles.nav}>
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                className={`${styles.navItem} ${activeSection === section.id ? styles.active : ''}`}
-                onClick={() => setActiveSection(section.id)}
-              >
-                {section.icon}
-                <span>{section.title}</span>
-                <ChevronRightIcon size={14} className={styles.chevron} />
-              </button>
-            ))}
-          </nav>
+        <div className={styles.header}>
+          <h1 className={styles.pageTitle}>
+            <BookOpenIcon size={24} /> Documentation
+          </h1>
+        </div>
+        <div className={styles.tabContainer}>
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              className={`${styles.tab} ${activeSection === section.id ? styles.tabActive : ''}`}
+              onClick={() => setActiveSection(section.id)}
+            >
+              {section.icon}
+              <span>{section.title}</span>
+            </button>
+          ))}
         </div>
         <div className={styles.content}>
           {renderContent()}
