@@ -172,6 +172,19 @@
   gap: 2px;
 }
 
+.originalAppName {
+  font-size: 0.75rem;
+  color: var(--text-medium);
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+.originalAppNameMobile {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+  font-weight: normal;
+}
+
 .containerCell {
   min-width: 0;
 }

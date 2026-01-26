@@ -239,7 +239,8 @@ async function runMigrations() {
     { name: 'custom_args', type: 'TEXT' },
     { name: 'web_ui_port', type: 'TEXT' },  // Host port that has web UI (null = no web UI)
     { name: 'icon', type: 'TEXT' },         // Icon type (predefined key or 'custom') - deployment-specific
-    { name: 'icon_url', type: 'TEXT' }      // URL to custom uploaded icon - deployment-specific
+    { name: 'icon_url', type: 'TEXT' },     // URL to custom uploaded icon - deployment-specific
+    { name: 'nickname', type: 'TEXT' }      // User-defined nickname for this deployment
   ];
 
   for (const column of deploymentColumns) {

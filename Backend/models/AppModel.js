@@ -334,6 +334,10 @@ async function updateDeploymentConfig(deploymentId, config) {
     fields.push('icon_url = ?');
     values.push(config.icon_url);
   }
+  if (config.nickname !== undefined) {
+    fields.push('nickname = ?');
+    values.push(config.nickname || null);
+  }
 
   if (fields.length === 0) return;
 

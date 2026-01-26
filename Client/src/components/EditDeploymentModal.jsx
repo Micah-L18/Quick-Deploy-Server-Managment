@@ -33,7 +33,8 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     custom_args: '',
     web_ui_port: '',
     icon: '',
-    icon_url: ''
+    icon_url: '',
+    nickname: ''
   });
   
   // Track if form has been initialized to prevent re-initialization on refetch
@@ -85,7 +86,8 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
         custom_args: freshDeployment.custom_args || appConfig.custom_args || '',
         web_ui_port: freshDeployment.web_ui_port || appConfig.web_ui_port || '',
         icon: freshDeployment.icon || appConfig.icon || '',
-        icon_url: freshDeployment.icon_url || appConfig.icon_url || ''
+        icon_url: freshDeployment.icon_url || appConfig.icon_url || '',
+        nickname: freshDeployment.nickname || ''
       });
       setFormInitialized(true);
       setError('');
@@ -223,6 +225,17 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
     });
   };
 
+  // Save nickname only (doesn't require stopping the app)
+  const handleSaveNickname = async () => {
+    setIsSaving(true);
+    setError('');
+    
+    // Only send nickname field
+    updateMutation.mutate({
+      nickname: formData.nickname
+    });
+  };
+
   const handleStop = () => {
     setError('');
     stopMutation.mutate();
@@ -236,6 +249,11 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
   const iconChanged = currentDeployment && (
     formData.icon !== (currentDeployment.icon || '') || 
     formData.icon_url !== (currentDeployment.icon_url || '')
+  );
+
+  // Check if nickname has changed
+  const nicknameChanged = currentDeployment && (
+    formData.nickname !== (currentDeployment.nickname || '')
   );
 
   // Port mapping handlers
@@ -419,7 +437,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
             <StopCircleIcon size={16} />
             <span>
               <strong>Container is running.</strong> Stop the container to change ports, volumes, or other settings. 
-              You can still update the icon while running.
+              You can still update the nickname and icon while running.
             </span>
           </div>
         ) : (
@@ -428,6 +446,29 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
             The container will be recreated with the new configuration.
           </div>
         )}
+
+        {/* Deployment Nickname */}
+        <div className={styles.configSection}>
+          <h3>Deployment Nickname</h3>
+          <p className={styles.hint}>Give this deployment a custom name. This is just a display name and won't affect the container.</p>
+          <div className={styles.nicknameRow}>
+            <input
+              type="text"
+              value={formData.nickname}
+              onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
+              placeholder={currentDeployment?.app_name || 'Enter nickname...'}
+              className={styles.nicknameInput}
+            />
+            <Button
+              variant="primary"
+              onClick={handleSaveNickname}
+              disabled={isSaving || !nicknameChanged}
+              size="small"
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
 
         {/* Deployment Icon */}
         <div className={styles.configSection}>

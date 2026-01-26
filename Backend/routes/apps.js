@@ -757,18 +757,19 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     custom_args,
     web_ui_port,
     icon,
-    icon_url
+    icon_url,
+    nickname
   } = req.body;
 
-  // Check if this is only an icon update (no container config changes)
-  const hasIconFields = icon !== undefined || icon_url !== undefined;
+  // Check if this is only a metadata update (no container config changes)
+  const hasMetadataFields = icon !== undefined || icon_url !== undefined || nickname !== undefined;
   const hasContainerConfigFields = port_mappings !== undefined || env_vars !== undefined || 
     volumes !== undefined || restart_policy !== undefined || network_mode !== undefined || 
     command !== undefined || custom_args !== undefined || web_ui_port !== undefined;
-  const isIconOnlyUpdate = hasIconFields && !hasContainerConfigFields;
+  const isMetadataOnlyUpdate = hasMetadataFields && !hasContainerConfigFields;
 
   // Only allow editing container config on stopped containers
-  if (!isIconOnlyUpdate && deployment.status === 'running') {
+  if (!isMetadataOnlyUpdate && deployment.status === 'running') {
     return res.status(400).json({ error: 'Cannot edit a running deployment. Stop the container first.' });
   }
 
@@ -825,7 +826,8 @@ router.put('/:appId/deployments/:deploymentId', requireAuth, asyncHandler(async 
     custom_args,
     web_ui_port,
     icon,
-    icon_url
+    icon_url,
+    nickname
   });
 
   // Log activity

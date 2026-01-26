@@ -495,7 +495,10 @@ const Apps = () => {
                                 </div>
                               )}
                               <div className={styles.appNameContainer}>
-                                <strong>{deployment.app_name}</strong>
+                                <strong>{deployment.nickname || deployment.app_name}</strong>
+                                {deployment.nickname && (
+                                  <span className={styles.originalAppName}>({deployment.app_name})</span>
+                                )}
                                 <span className={styles.appImage}>
                                   <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
                                 </span>
@@ -669,7 +672,8 @@ const Apps = () => {
                       <div key={deployment.id} className={`${styles.deploymentCard} ${isOrphaned ? styles.orphanedCard : ''}`}>
                         <div className={styles.deploymentCardHeader}>
                           <Link to={`/apps/${deployment.app_id}`} className={styles.deploymentCardTitle}>
-                            {deployment.app_name}
+                            {deployment.nickname || deployment.app_name}
+                            {deployment.nickname && <span className={styles.originalAppNameMobile}> ({deployment.app_name})</span>}
                           </Link>
                           <span className={`${styles.statusBadge} ${
                             isOrphaned ? styles.statusOrphaned :

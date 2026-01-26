@@ -96,6 +96,33 @@
   margin: 0 0 16px 0;
 }
 
+/* Nickname Input Row */
+.nicknameRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.nicknameInput {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.nicknameInput:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.nicknameInput::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
 /* Port Labels */
 .portLabels {
   display: flex;

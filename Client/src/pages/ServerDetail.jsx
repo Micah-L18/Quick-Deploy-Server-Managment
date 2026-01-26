@@ -1183,7 +1183,10 @@ const ServerDetail = () => {
                             <AppsIcon size={32} className={styles.appCellIcon} />
                           )}
                           <div className={styles.appNameContainer}>
-                            <strong>{deployment.app_name}</strong>
+                            <strong>{deployment.nickname || deployment.app_name}</strong>
+                            {deployment.nickname && (
+                              <span className={styles.originalAppName}>({deployment.app_name})</span>
+                            )}
                             <span className={styles.appImage}>
                               <DockerIcon size={12} /> {deployment.app_image}:{deployment.app_tag || 'latest'}
                             </span>
