@@ -382,8 +382,70 @@
   box-shadow: 0 0 1px var(--primary-gradient);
 }
 
+/* Split Update Container */
+.updateContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.updateLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.updateRight {
+  display: flex;
+  flex-direction: column;
+}
+
+.updateStatusCard {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.04));
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  border-radius: 2px;
+  padding: 24px;
+}
+
+.updateStatusHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.updateStatusIcon {
+  color: #f59e0b;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.updateStatusTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.updateStatusDetail {
+  font-size: 0.95rem;
+  color: var(--text-medium);
+  margin-top: 4px;
+}
+
+.updateStatusActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 @media (max-width: 768px) {
   .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .updateContainer {
     grid-template-columns: 1fr;
   }
 }

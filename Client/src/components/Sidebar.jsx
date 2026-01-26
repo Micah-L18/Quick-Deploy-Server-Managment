@@ -104,15 +104,6 @@ const Sidebar = () => {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <NavLink 
-            to="/docs" 
-            className={styles.docsBtn} 
-            onClick={handleNavClick}
-          >
-            <BookOpenIcon size={18} />
-            <span className={styles.docsBtnLabel}>Docs</span>
-            {version && <span className={styles.versionBadge}>v{version}</span>}
-          </NavLink>
           {updateAvailable && (
             <button
               className={styles.updateNotification}
@@ -126,6 +117,15 @@ const Sidebar = () => {
               <span>Update Available</span>
             </button>
           )}
+          <NavLink 
+            to="/docs" 
+            className={styles.docsBtn} 
+            onClick={handleNavClick}
+          >
+            <BookOpenIcon size={18} />
+            <span className={styles.docsBtnLabel}>Docs</span>
+            {version && <span className={styles.versionBadge}>v{version}</span>}
+          </NavLink>
           {user && (
             <div className={styles.userCard}>
               <div className={styles.userInfo}>

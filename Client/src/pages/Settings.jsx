@@ -137,63 +137,128 @@ const Settings = () => {
           System Update
         </h2>
         
-        {/* Version Info */}
-        <div className={styles.infoGrid}>
-          <div className={styles.infoCard}>
-            <div className={styles.infoLabel}>Current Version</div>
-            <div className={styles.infoValue}>
-              {versionLoading ? '...' : `v${versionInfo?.currentVersion || '?.?.?'}`}
-            </div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoLabel}>Git Commit</div>
-            <div className={styles.infoValue}>
-              {versionLoading ? '...' : versionInfo?.currentCommit || 'N/A'}
-            </div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoLabel}>Branch</div>
-            <div className={styles.infoValue}>
-              {versionLoading ? '...' : versionInfo?.currentBranch || 'N/A'}
-            </div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoLabel}>Server Uptime</div>
-            <div className={styles.infoValue}>
-              {statusLoading ? '...' : systemStatus?.uptime || 'N/A'}
-            </div>
-          </div>
-        </div>
+        {/* Split Layout when update available */}
+        {versionInfo?.updateAvailable ? (
+          <div className={styles.updateContainer}>
+            {/* Left: Update Status and Changelog */}
+            <div className={styles.updateLeft}>
+              <div className={styles.updateStatusCard}>
+                <div className={styles.updateStatusHeader}>
+                  <div className={styles.updateStatusIcon}>
+                    <AlertIcon size={28} />
+                  </div>
+                  <div>
+                    <div className={styles.updateStatusTitle}>Update Available</div>
+                    <div className={styles.updateStatusDetail}>
+                      {versionInfo.behindBy} commit{versionInfo.behindBy > 1 ? 's' : ''} behind
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.updateStatusActions}>
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={handleStartUpdate}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? 'Updating...' : 'Update Now'}
+                  </Button>
+                  <button 
+                    className={styles.changelogToggle}
+                    onClick={() => setShowChangelog(!showChangelog)}
+                  >
+                    {showChangelog ? 'Hide Changelog' : 'View Changelog'}
+                  </button>
+                </div>
+              </div>
 
-        {/* Update Status */}
-        {versionInfo?.updateAvailable && (
-          <div className={styles.updateBanner}>
-            <div className={styles.updateBannerIcon}>
-              <AlertIcon size={24} />
+              {/* Changelog */}
+              {showChangelog && changelog?.commits?.length > 0 && (
+                <div className={styles.changelog}>
+                  <h4>Incoming Changes:</h4>
+                  <ul>
+                    {changelog.commits.map((commit, idx) => (
+                      <li key={idx}>
+                        <code>{commit.hash}</code> {commit.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-            <div className={styles.updateBannerContent}>
-              <strong>Update Available!</strong>
-              <span>{versionInfo.behindBy} commit{versionInfo.behindBy > 1 ? 's' : ''} behind</span>
-              <button 
-                className={styles.changelogToggle}
-                onClick={() => setShowChangelog(!showChangelog)}
-              >
-                {showChangelog ? 'Hide changelog' : 'View changelog'}
-              </button>
+
+            {/* Right: Version Info */}
+            <div className={styles.updateRight}>
+              <div className={styles.infoGrid}>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoLabel}>Current Version</div>
+                  <div className={styles.infoValue}>
+                    {versionLoading ? '...' : `v${versionInfo?.currentVersion || '?.?.?'}`}
+                  </div>
+                </div>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoLabel}>Git Commit</div>
+                  <div className={styles.infoValue}>
+                    {versionLoading ? '...' : versionInfo?.currentCommit || 'N/A'}
+                  </div>
+                </div>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoLabel}>Branch</div>
+                  <div className={styles.infoValue}>
+                    {versionLoading ? '...' : versionInfo?.currentBranch || 'N/A'}
+                  </div>
+                </div>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoLabel}>Server Uptime</div>
+                  <div className={styles.infoValue}>
+                    {statusLoading ? '...' : systemStatus?.uptime || 'N/A'}
+                  </div>
+                </div>
+              </div>
+              {/* PM2 Notice - inside right column when split */}
+              {systemStatus && !systemStatus.pm2Running && (
+                <div className={styles.pm2Notice}>
+                  <AlertIcon size={16} />
+                  <span>
+                    <strong>Note:</strong> PM2 not detected. For automatic restarts after updates, 
+                    run the server with PM2: <code>npm run pm2:start</code>
+                  </span>
+                </div>
+              )}
             </div>
-            <Button
-              variant="primary"
-              size="small"
-              onClick={handleStartUpdate}
-              disabled={isUpdating}
-            >
-              {isUpdating ? 'Updating...' : 'Update Now'}
-            </Button>
+          </div>
+        ) : (
+          /* Regular Version Info Grid when no update */
+          <div className={styles.infoGrid}>
+            <div className={styles.infoCard}>
+              <div className={styles.infoLabel}>Current Version</div>
+              <div className={styles.infoValue}>
+                {versionLoading ? '...' : `v${versionInfo?.currentVersion || '?.?.?'}`}
+              </div>
+            </div>
+            <div className={styles.infoCard}>
+              <div className={styles.infoLabel}>Git Commit</div>
+              <div className={styles.infoValue}>
+                {versionLoading ? '...' : versionInfo?.currentCommit || 'N/A'}
+              </div>
+            </div>
+            <div className={styles.infoCard}>
+              <div className={styles.infoLabel}>Branch</div>
+              <div className={styles.infoValue}>
+                {versionLoading ? '...' : versionInfo?.currentBranch || 'N/A'}
+              </div>
+            </div>
+            <div className={styles.infoCard}>
+              <div className={styles.infoLabel}>Server Uptime</div>
+              <div className={styles.infoValue}>
+                {statusLoading ? '...' : systemStatus?.uptime || 'N/A'}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Changelog */}
-        {showChangelog && changelog?.commits?.length > 0 && (
+        {/* Changelog (outside container for non-split layout) */}
+        {!versionInfo?.updateAvailable && showChangelog && changelog?.commits?.length > 0 && (
           <div className={styles.changelog}>
             <h4>Incoming Changes:</h4>
             <ul>
@@ -296,8 +361,8 @@ const Settings = () => {
           )}
         </div>
 
-        {/* PM2 Notice */}
-        {systemStatus && !systemStatus.pm2Running && (
+        {/* PM2 Notice - only show here when NOT in split layout */}
+        {!versionInfo?.updateAvailable && systemStatus && !systemStatus.pm2Running && (
           <div className={styles.pm2Notice}>
             <AlertIcon size={16} />
             <span>
