@@ -148,7 +148,7 @@ const GettingStartedSection = () => (
         <div className={styles.feature}>
           <ActivityIcon size={24} />
           <h3>Real-time Metrics</h3>
-          <p>Monitor CPU, memory, disk, and GPU usage with historical charts</p>
+          <p>Monitor CPU, memory, disk, network, and GPU usage with historical charts</p>
         </div>
         <div className={styles.feature}>
           <DockerIcon size={24} />
@@ -273,6 +273,8 @@ const ServerDetailSection = () => (
         <li><strong>Memory:</strong> Used/free/total with visual progress bar</li>
         <li><strong>Disk:</strong> Storage usage with available space</li>
         <li><strong>GPU:</strong> NVIDIA GPU stats (if detected) - utilization, VRAM, temperature</li>
+        <li><strong>Network:</strong> Bandwidth usage (upload/download speeds in Mbps)</li>
+        <li><strong>Ping:</strong> Server latency measurement with historical tracking</li>
       </ul>
       <p>Click any metric card to view its historical chart. Use the time range selector (1hr, 6hr, 24hr, 1 week) to adjust the view.</p>
     </div>
@@ -339,7 +341,9 @@ const ServerDetailSection = () => (
         <li>Start/Stop containers with one click</li>
         <li>View container stats (CPU, memory usage)</li>
         <li>View container logs</li>
-        <li>Edit deployment configuration</li>
+        <li>Edit deployment configuration (nickname, icon, ports, environment variables)</li>
+        <li>Create and restore snapshots for backup</li>
+        <li>Migrate or copy deployments to other servers</li>
         <li>Remove deployments</li>
       </ul>
     </div>
@@ -380,7 +384,7 @@ const AppsSection = () => (
         <tbody>
           <tr>
             <td>App</td>
-            <td>App name, icon, and Docker image</td>
+            <td>App name (or custom nickname), icon, and Docker image</td>
           </tr>
           <tr>
             <td>Container</td>
@@ -441,7 +445,7 @@ const AppsSection = () => (
           <SettingsIcon size={16} />
           <div>
             <strong>Config</strong>
-            <p>Edit deployment settings (ports, env vars, etc.)</p>
+            <p>Edit deployment settings (nickname, icon, ports, env vars, etc.)</p>
           </div>
         </div>
         <div className={styles.actionItem}>
@@ -524,10 +528,11 @@ const AppDetailSection = () => (
 
       <h3>Basic Information</h3>
       <ul className={styles.list}>
-        <li><strong>App Name:</strong> Display name for the app</li>
+        <li><strong>App Name:</strong> Display name for the app template</li>
         <li><strong>Description:</strong> Optional description</li>
         <li><strong>Icon:</strong> Choose built-in or upload custom</li>
       </ul>
+      <p className={styles.tip}><LightbulbIcon size={14} /> When deploying, you can set a unique nickname and icon for each deployment instance</p>
 
       <h3>Docker Image</h3>
       <ul className={styles.list}>
@@ -572,10 +577,13 @@ const AppDetailSection = () => (
         <li>Configure the app settings (or use a template)</li>
         <li>Click the <strong>"Deploy"</strong> button</li>
         <li>Select a target server (must be online with Docker installed)</li>
-        <li>Review and customize port mappings if needed</li>
-        <li>Watch the real-time deployment progress</li>
+        <li>Review and customize port mappings - the modal shows host (external) and container (internal) ports clearly labeled</li>
+        <li>Set a custom <strong>nickname</strong> for this deployment (optional) - useful for distinguishing multiple instances</li>
+        <li>Choose a custom <strong>icon</strong> for the deployment - select from presets or upload your own</li>
+        <li>Watch the real-time deployment progress in the terminal panel</li>
         <li>Once complete, the container will start automatically</li>
       </ol>
+      <p className={styles.tip}><LightbulbIcon size={14} /> The deploy modal shows port conflicts in real-time - if a port is already in use, you'll be warned before deploying</p>
       <div className={styles.warning}>
         <AlertIcon size={16} />
         <span>Make sure Docker is installed on the target server before deploying</span>
