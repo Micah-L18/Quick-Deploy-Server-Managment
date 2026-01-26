@@ -1,6 +1,6 @@
 {
   "name": "quick-deploy-server-manager",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Multi-server SSH connection management application",
   "repository": {
     "type": "git",

@@ -22,8 +22,10 @@ async function store(serverId, metrics) {
       os, hostname, uptime, timestamp,
       gpu_vendor, gpu_count, gpu_name, gpu_memory_total, gpu_memory_used, gpu_memory_free,
       gpu_memory_percentage, gpu_utilization, gpu_temperature, gpu_data,
-      cpu_temperature
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      cpu_temperature,
+      network_interface, network_rx_rate, network_tx_rate, network_rx_total, network_tx_total,
+      ping_ms
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     serverId,
@@ -57,7 +59,15 @@ async function store(serverId, metrics) {
     metrics.gpu?.temperature ?? null,
     gpuData,
     // CPU temperature - use ?? to preserve 0 values
-    metrics.cpu?.temperature ?? null
+    metrics.cpu?.temperature ?? null,
+    // Network metrics
+    metrics.network?.interface ?? null,
+    metrics.network?.rx_rate ?? null,
+    metrics.network?.tx_rate ?? null,
+    metrics.network?.rx_total ?? null,
+    metrics.network?.tx_total ?? null,
+    // Ping latency
+    metrics.ping ?? null
   ]);
 }
 
@@ -171,6 +181,22 @@ function toApiFormat(row) {
         // Ignore parse errors
       }
     }
+  }
+
+  // Include network data if present
+  if (row.network_interface || row.network_rx_rate != null) {
+    result.network = {
+      interface: row.network_interface,
+      rx_rate: row.network_rx_rate,
+      tx_rate: row.network_tx_rate,
+      rx_total: row.network_rx_total,
+      tx_total: row.network_tx_total
+    };
+  }
+
+  // Include ping if present
+  if (row.ping_ms != null) {
+    result.ping = row.ping_ms;
   }
 
   return result;

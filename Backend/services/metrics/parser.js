@@ -142,6 +142,22 @@ function parseMetrics(results) {
     }
   }
 
+  // Parse network bandwidth from /proc/net/dev (two readings)
+  if (results[12] && !results[12].error && results[12].trim()) {
+    const networkData = parseNetworkBandwidth(results[12]);
+    if (networkData) {
+      metrics.network = networkData;
+    }
+  }
+
+  // Parse ping latency
+  if (results[13] && !results[13].error && results[13].trim()) {
+    const pingMs = parseFloat(results[13].trim());
+    if (!isNaN(pingMs)) {
+      metrics.ping = Math.round(pingMs * 10) / 10; // Round to 1 decimal
+    }
+  }
+
   return metrics;
 }
 
@@ -171,6 +187,55 @@ function parseCpuTemperature(output) {
   
   // Already in degrees (from lm-sensors)
   return Math.round(numValue);
+}
+
+/**
+ * Parse network bandwidth from /proc/net/dev output (two readings 1 second apart)
+ * @param {string} output - Two readings of interface rx_bytes tx_bytes
+ * @returns {Object|null} - Network stats with rx/tx rates in bytes/sec
+ */
+function parseNetworkBandwidth(output) {
+  if (!output || !output.trim()) {
+    return null;
+  }
+
+  const lines = output.trim().split('\n');
+  if (lines.length < 2) {
+    return null;
+  }
+
+  // Parse first and second readings
+  // Format: "interface: rx_bytes tx_bytes" or "interface rx_bytes tx_bytes"
+  const parseLine = (line) => {
+    const parts = line.trim().replace(':', ' ').split(/\s+/);
+    if (parts.length >= 3) {
+      return {
+        interface: parts[0],
+        rx: parseInt(parts[1]) || 0,
+        tx: parseInt(parts[2]) || 0
+      };
+    }
+    return null;
+  };
+
+  const reading1 = parseLine(lines[0]);
+  const reading2 = parseLine(lines[1]);
+
+  if (!reading1 || !reading2) {
+    return null;
+  }
+
+  // Calculate bytes per second (readings are 1 second apart)
+  const rxRate = reading2.rx - reading1.rx;
+  const txRate = reading2.tx - reading1.tx;
+
+  return {
+    interface: reading1.interface.replace(':', ''),
+    rx_rate: Math.max(0, rxRate), // bytes/sec download
+    tx_rate: Math.max(0, txRate), // bytes/sec upload
+    rx_total: reading2.rx,
+    tx_total: reading2.tx
+  };
 }
 
 /**
@@ -350,6 +415,22 @@ function parseWindowsMetrics(output) {
       }
     }
 
+    // Parse network data if present
+    if (data.network) {
+      result.network = {
+        interface: data.network.interface || 'Unknown',
+        rx_rate: data.network.rx_rate || 0,
+        tx_rate: data.network.tx_rate || 0,
+        rx_total: data.network.rx_total || 0,
+        tx_total: data.network.tx_total || 0
+      };
+    }
+
+    // Parse ping if present
+    if (data.ping != null) {
+      result.ping = data.ping;
+    }
+
     return result;
   } catch (err) {
     console.error('Failed to parse Windows metrics:', err.message, 'Output:', output);
@@ -492,6 +573,7 @@ module.exports = {
   parseMetrics,
   parseCpuUsage,
   parseCpuTemperature,
+  parseNetworkBandwidth,
   parseOsRelease,
   parseWindowsMetrics,
   parseGpuMetrics,

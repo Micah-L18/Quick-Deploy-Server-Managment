@@ -181,7 +181,15 @@ async function runMigrations() {
     { name: 'gpu_temperature', type: 'REAL' },      // GPU temperature in Celsius
     { name: 'gpu_data', type: 'TEXT' },             // JSON string for multi-GPU detailed data
     // CPU temperature
-    { name: 'cpu_temperature', type: 'REAL' }       // CPU temperature in Celsius
+    { name: 'cpu_temperature', type: 'REAL' },      // CPU temperature in Celsius
+    // Network metrics
+    { name: 'network_interface', type: 'TEXT' },    // Network interface name
+    { name: 'network_rx_rate', type: 'INTEGER' },   // Download rate in bytes/sec
+    { name: 'network_tx_rate', type: 'INTEGER' },   // Upload rate in bytes/sec
+    { name: 'network_rx_total', type: 'INTEGER' },  // Total bytes received
+    { name: 'network_tx_total', type: 'INTEGER' },  // Total bytes sent
+    // Ping latency
+    { name: 'ping_ms', type: 'REAL' }               // Ping latency in milliseconds
   ];
 
   for (const column of metricsColumns) {

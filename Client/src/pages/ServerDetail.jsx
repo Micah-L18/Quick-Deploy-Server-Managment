@@ -17,6 +17,15 @@ import { getRegionFlag } from '../utils/formatters';
 import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon, DockerIcon, GlobeAltIcon, XIcon, CheckCircleIcon, SettingsIcon, DocumentTextIcon, MoreVerticalIcon } from '../components/Icons';
 import styles from './ServerDetail.module.css';
 
+// Format bandwidth in human-readable format
+const formatBandwidth = (bytesPerSec) => {
+  if (bytesPerSec == null || isNaN(bytesPerSec)) return '0 B';
+  if (bytesPerSec < 1024) return `${bytesPerSec} B`;
+  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB`;
+  if (bytesPerSec < 1024 * 1024 * 1024) return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(bytesPerSec / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
 const ServerDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -687,6 +696,44 @@ const ServerDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* Network Metrics Card */}
+              {(metrics.network || metrics.ping != null) && (
+                <div 
+                  className={`${styles.metricCard} ${styles.selectableCard} ${selectedMetricCard === 'network' ? styles.selectedCard : ''}`}
+                  onClick={() => setSelectedMetricCard('network')}
+                >
+                  <h3 className={styles.metricTitle}>Network</h3>
+                  <div className={styles.metricContent}>
+                    {metrics.network && (
+                      <>
+                        <div className={styles.metricDetail}>
+                          <span className={styles.metricLabel}>Interface</span>
+                          <span className={styles.metricValue}>{metrics.network.interface}</span>
+                        </div>
+                        <div className={styles.metricDetail}>
+                          <span className={styles.metricLabel}>Download</span>
+                          <span className={styles.metricValue}>
+                            {formatBandwidth(metrics.network.rx_rate)}/s
+                          </span>
+                        </div>
+                        <div className={styles.metricDetail}>
+                          <span className={styles.metricLabel}>Upload</span>
+                          <span className={styles.metricValue}>
+                            {formatBandwidth(metrics.network.tx_rate)}/s
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {metrics.ping != null && (
+                      <div className={styles.metricDetail}>
+                        <span className={styles.metricLabel}>Latency</span>
+                        <span className={styles.metricValue}>{metrics.ping} ms</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -939,6 +986,79 @@ const ServerDetail = () => {
                                 />
                                 <Legend />
                                 <Line type="monotone" dataKey="GPU °C" stroke="#ec4899" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Network Charts - shown when Network card is selected */}
+                    {selectedMetricCard === 'network' && (
+                      <>
+                        {/* Network Bandwidth Chart */}
+                        {metricsHistory.some(m => m.network_rx_rate != null || m.network_tx_rate != null) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>Network Bandwidth</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.network_rx_rate != null || m.network_tx_rate != null).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'Download KB/s': m.network_rx_rate ? Math.round(m.network_rx_rate / 1024) : 0,
+                                'Upload KB/s': m.network_tx_rate ? Math.round(m.network_tx_rate / 1024) : 0,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="Download KB/s" stroke="#10b981" strokeWidth={2} dot={false} />
+                                <Line type="monotone" dataKey="Upload KB/s" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+
+                        {/* Latency Chart */}
+                        {metricsHistory.some(m => m.ping_ms != null) && (
+                          <div className={styles.chartCard}>
+                            <h3 className={styles.chartTitle}>Latency</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <LineChart data={metricsHistory.filter(m => m.ping_ms != null).map(m => ({
+                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                'Ping (ms)': m.ping_ms,
+                              }))}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis 
+                                  dataKey="time" 
+                                  stroke="var(--text-medium)"
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis 
+                                  stroke="var(--text-medium)" 
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <Tooltip 
+                                  contentStyle={{
+                                    backgroundColor: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="Ping (ms)" stroke="#f59e0b" strokeWidth={2} dot={false} />
                               </LineChart>
                             </ResponsiveContainer>
                           </div>

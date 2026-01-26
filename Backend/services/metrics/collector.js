@@ -21,7 +21,13 @@ const LINUX_METRICS_COMMANDS = [
   // Format: name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu (one line per GPU)
   'nvidia-smi --query-gpu=gpu_name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || rocm-smi --showuse --showmemuse --showtemp --csv 2>/dev/null || echo ""',
   // CPU temperature - try multiple sources (lm-sensors, thermal zones, etc.)
-  'cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -1 || sensors 2>/dev/null | grep -i "core 0" | grep -oP "\\+\\d+\\.\\d+" | head -1 || echo ""'
+  'cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -1 || sensors 2>/dev/null | grep -i "core 0" | grep -oP "\\+\\d+\\.\\d+" | head -1 || echo ""',
+  // Network bandwidth - get two readings 1 second apart for rate calculation
+  // /proc/net/dev format: "  iface: rx_bytes rx_packets ... tx_bytes tx_packets ..."
+  // We use default route interface and extract rx_bytes (field 2) and tx_bytes (field 10)
+  "iface=$(ip route 2>/dev/null | grep default | head -1 | awk '{print $5}'); if [ -n \"$iface\" ]; then awk -v iface=\"$iface:\" '$1 == iface {print iface, $2, $10}' /proc/net/dev && sleep 1 && awk -v iface=\"$iface:\" '$1 == iface {print iface, $2, $10}' /proc/net/dev; else echo \"\"; fi",
+  // Ping to 8.8.8.8 (Google DNS) to measure latency - quick timeout
+  'ping -c 1 -W 2 8.8.8.8 2>/dev/null | grep -E "time=" | sed -E "s/.*time=([0-9.]+).*/\\1/" || echo ""'
 ];
 
 /**
@@ -82,6 +88,35 @@ try {
   }
 } catch {}
 
+# Network bandwidth - get active adapter stats
+$networkInfo = $null
+try {
+  $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.InterfaceDescription -notmatch 'Loopback' } | Select-Object -First 1
+  if ($adapter) {
+    $stats1 = Get-NetAdapterStatistics -Name $adapter.Name
+    Start-Sleep -Seconds 1
+    $stats2 = Get-NetAdapterStatistics -Name $adapter.Name
+    $rxRate = ($stats2.ReceivedBytes - $stats1.ReceivedBytes)
+    $txRate = ($stats2.SentBytes - $stats1.SentBytes)
+    $networkInfo = @{
+      interface = $adapter.Name
+      rx_rate = $rxRate
+      tx_rate = $txRate
+      rx_total = $stats2.ReceivedBytes
+      tx_total = $stats2.SentBytes
+    }
+  }
+} catch {}
+
+# Ping to measure latency
+$pingMs = $null
+try {
+  $pingResult = Test-Connection -ComputerName 8.8.8.8 -Count 1 -ErrorAction SilentlyContinue
+  if ($pingResult) {
+    $pingMs = $pingResult.ResponseTime
+  }
+} catch {}
+
 $result = @{
   os = $os.Caption + ' ' + $os.Version
   hostname = $env:COMPUTERNAME
@@ -105,6 +140,8 @@ $result = @{
     percentage = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 0)
   }
   gpu = $gpuInfo
+  network = $networkInfo
+  ping = $pingMs
 }
 $result | ConvertTo-Json -Compress -Depth 4
 `;
