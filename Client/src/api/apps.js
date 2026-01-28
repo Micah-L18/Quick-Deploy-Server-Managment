@@ -110,4 +110,12 @@ export const appsService = {
     });
     return response.data;
   },
+
+  writeContainerFile: async (appId, deploymentId, path, content) => {
+    const response = await api.put(`/apps/${appId}/deployments/${deploymentId}/files/write`, {
+      path,
+      content
+    });
+    return response.data;
+  },
 };

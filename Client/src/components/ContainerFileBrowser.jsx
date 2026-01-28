@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Modal from './Modal';
 import Button from './Button';
-import { FolderIcon, FileIcon, XIcon, ChevronRightIcon, AlertIcon, RefreshIcon } from './Icons';
+import { FolderIcon, FileIcon, XIcon, ChevronRightIcon, AlertIcon, RefreshIcon, EditIcon, SaveIcon } from './Icons';
 import { appsService } from '../api/apps';
 import styles from './ContainerFileBrowser.module.css';
 
@@ -10,6 +10,9 @@ const ContainerFileBrowser = ({ appId, deploymentId, containerStatus }) => {
   const [currentPath, setCurrentPath] = useState('/');
   const [selectedFile, setSelectedFile] = useState(null);
   const [showFileModal, setShowFileModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const queryClient = useQueryClient();
 
   // Fetch file list for current path
   const { data: fileData, isLoading, error, refetch } = useQuery({
@@ -24,6 +27,34 @@ const ContainerFileBrowser = ({ appId, deploymentId, containerStatus }) => {
     queryFn: () => appsService.readContainerFile(appId, deploymentId, selectedFile),
     enabled: !!selectedFile && showFileModal,
   });
+
+  // Save file mutation
+  const saveFileMutation = useMutation({
+    mutationFn: ({ path, content }) => appsService.writeContainerFile(appId, deploymentId, path, content),
+    onSuccess: () => {
+      // Invalidate file content cache to refresh
+      queryClient.invalidateQueries(['container-file-content', appId, deploymentId, selectedFile]);
+      setIsEditing(false);
+    },
+  });
+
+  // Update edited content when file content loads
+  useEffect(() => {
+    if (fileContent?.content) {
+      setEditedContent(fileContent.content);
+    }
+  }, [fileContent?.content]);
+
+  // Reset edit state when modal closes
+  useEffect(() => {
+    if (!showFileModal) {
+      setIsEditing(false);
+      setEditedContent('');
+    }
+  }, [showFileModal]);
+
+  const isRunning = containerStatus === 'running';
+  const hasChanges = editedContent !== fileContent?.content;
 
   // Generate breadcrumb from path
   const getBreadcrumbs = () => {
@@ -164,6 +195,13 @@ const ContainerFileBrowser = ({ appId, deploymentId, containerStatus }) => {
           <div className={styles.fileViewer}>
             {loadingContent ? (
               <div className={styles.loadingContent}>Loading file...</div>
+            ) : isEditing ? (
+              <textarea
+                className={styles.fileEditor}
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                spellCheck={false}
+              />
             ) : fileContent?.content ? (
               <pre className={styles.fileContent}>{fileContent.content}</pre>
             ) : (
@@ -171,10 +209,55 @@ const ContainerFileBrowser = ({ appId, deploymentId, containerStatus }) => {
             )}
           </div>
           <div className={styles.fileViewerActions}>
-            <Button variant="secondary" onClick={closeFileModal}>
-              Close
-            </Button>
+            {!isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+                disabled={isRunning}
+                title={isRunning ? 'Cannot edit files while container is running' : 'Edit file'}
+              >
+                <EditIcon size={16} />
+                Edit
+              </Button>
+            )}
+            {isEditing && hasChanges && (
+              <Button
+                variant="primary"
+                onClick={() => saveFileMutation.mutate({ path: selectedFile, content: editedContent })}
+                disabled={saveFileMutation.isPending}
+              >
+                <SaveIcon size={16} />
+                {saveFileMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            )}
+            {isEditing && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedContent(fileContent?.content || '');
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+            {!isEditing && (
+              <Button variant="secondary" onClick={closeFileModal}>
+                Close
+              </Button>
+            )}
           </div>
+          {saveFileMutation.isError && (
+            <div className={styles.saveError}>
+              <AlertIcon size={16} />
+              {saveFileMutation.error?.response?.data?.error || 'Failed to save file'}
+            </div>
+          )}
+          {saveFileMutation.isSuccess && (
+            <div className={styles.saveSuccess}>
+              File saved successfully!
+            </div>
+          )}
         </Modal>
       )}
     </div>

@@ -953,4 +953,63 @@ router.get('/:appId/deployments/:deploymentId/files/read', requireAuth, asyncHan
   }
 }));
 
+/**
+ * PUT /api/apps/:appId/deployments/:deploymentId/files/write
+ * Write file content to container volume
+ */
+router.put('/:appId/deployments/:deploymentId/files/write', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+  const { path: filePath, content } = req.body;
+
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required' });
+  }
+
+  if (content === undefined || content === null) {
+    return res.status(400).json({ error: 'File content is required' });
+  }
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  // Check if container is running - only allow editing when stopped
+  const isRunning = await containerFileService.isContainerRunning(
+    { 
+      host: deployment.ip,
+      username: deployment.username,
+      privateKeyPath: deployment.private_key_path
+    },
+    containerRef
+  );
+
+  if (isRunning) {
+    return res.status(400).json({ error: 'Cannot edit files while container is running. Stop the container first.' });
+  }
+
+  try {
+    await containerFileService.writeContainerFile(
+      { 
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      containerRef,
+      filePath,
+      content
+    );
+
+    res.json({ success: true, message: 'File saved successfully', path: filePath });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to write file' });
+  }
+}));
+
 module.exports = router;

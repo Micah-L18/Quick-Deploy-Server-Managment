@@ -70,20 +70,30 @@ async function listContainerFiles(serverConfig, containerId, path = '/') {
   try {
     const mounts = await getContainerMounts(serverConfig, containerId);
     
+    console.log(`[listContainerFiles] Container: ${containerId}, Path: ${safePath}, Mounts:`, mounts);
+    
     // If requesting root, return available volumes as directories
     if (safePath === '/' && mounts.length > 0) {
-      const volumeDirs = mounts.map(mount => ({
-        name: mount.destination.substring(1) || mount.destination, // Remove leading /
-        isDirectory: true,
-        isSymlink: false,
-        size: 0,
-        modified: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0],
-        permissions: 'drwxr-xr-x',
-        owner: 'root',
-        group: 'root',
-        _volumeMount: true,
-        _hostPath: mount.source
-      }));
+      const volumeDirs = mounts.map(mount => {
+        // Remove leading / from destination, but handle root mounts
+        let displayName = mount.destination.substring(1);
+        if (!displayName) displayName = mount.destination; // If destination is just "/", use it
+        
+        return {
+          name: displayName,
+          isDirectory: true,
+          isSymlink: false,
+          size: 0,
+          modified: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0],
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          group: 'root',
+          _volumeMount: true,
+          _hostPath: mount.source
+        };
+      });
+      
+      console.log(`[listContainerFiles] Returning ${volumeDirs.length} volume directories`);
       
       return {
         path: safePath,
@@ -95,14 +105,18 @@ async function listContainerFiles(serverConfig, containerId, path = '/') {
     
     const hostPath = mapContainerPathToHost(mounts, safePath);
     
+    console.log(`[listContainerFiles] Mapped host path: ${hostPath}`);
+    
     // If path is in a volume, access it directly from host
     if (hostPath) {
-      const volumeCommand = `ls -la --time-style=long-iso "${hostPath}" 2>&1`;
+      const volumeCommand = `sudo ls -la --time-style=long-iso "${hostPath}" 2>&1`;
       const volumeResult = await connectionManager.executeCommand(serverConfig, volumeCommand);
       
       if (volumeResult.code === 0) {
         return parseListOutput(volumeResult.stdout, safePath);
       }
+      
+      console.log(`[listContainerFiles] Volume ls failed:`, volumeResult.stderr);
     }
     
     // Fall back to docker exec if volume access didn't work
@@ -209,10 +223,14 @@ async function readContainerFile(serverConfig, containerId, filePath) {
     const mounts = await getContainerMounts(serverConfig, containerId);
     const hostPath = mapContainerPathToHost(mounts, safePath);
     
+    console.log(`[readContainerFile] Container: ${containerId}, File: ${safePath}, Host path: ${hostPath}`);
+    
     // If path is in a volume, access it directly from host
     if (hostPath) {
-      const volumeCommand = `cat "${hostPath}" 2>&1`;
+      const volumeCommand = `sudo cat "${hostPath}" 2>&1`;
       const volumeResult = await connectionManager.executeCommand(serverConfig, volumeCommand);
+      
+      console.log(`[readContainerFile] Volume cat result - code: ${volumeResult.code}, stdout length: ${volumeResult.stdout?.length || 0}`);
       
       if (volumeResult.code === 0) {
         return volumeResult.stdout;
@@ -228,6 +246,10 @@ async function readContainerFile(serverConfig, containerId, filePath) {
       if (volumeResult.stderr.includes('Is a directory')) {
         throw new Error('Path is a directory, not a file');
       }
+      
+      console.log(`[readContainerFile] Volume cat failed:`, volumeResult.stderr);
+    } else {
+      console.log(`[readContainerFile] Path not in volume mounts`);
     }
     
     // Fall back to docker exec if volume access didn't work
@@ -253,6 +275,84 @@ async function readContainerFile(serverConfig, containerId, filePath) {
     throw new Error('File not accessible. It may not be in a mounted volume or the container may be stopped.');
   } catch (error) {
     console.error('Error reading container file:', error);
+    throw error;
+  }
+}
+
+/**
+ * Write file content to container volume
+ * @param {Object} serverConfig - Server connection configuration
+ * @param {string} containerId - Docker container ID
+ * @param {string} filePath - File path to write
+ * @param {string} content - Content to write
+ * @returns {Promise<boolean>} Success status
+ */
+async function writeContainerFile(serverConfig, containerId, filePath, content) {
+  // Sanitize path
+  const safePath = filePath.replace(/[;&|`$]/g, '');
+  
+  try {
+    // Only allow writing via volume (not docker exec for safety)
+    const mounts = await getContainerMounts(serverConfig, containerId);
+    const hostPath = mapContainerPathToHost(mounts, safePath);
+    
+    if (!hostPath) {
+      throw new Error('File not in a mounted volume. Only files in mounted volumes can be edited.');
+    }
+    
+    // Get original file permissions and ownership (needs sudo for Docker volumes)
+    const statCommand = `sudo stat -c '%a|%U|%G' "${hostPath}" 2>&1`;
+    const statResult = await connectionManager.executeCommand(serverConfig, statCommand);
+    
+    let originalPerms = '644';
+    let originalOwner = null;
+    let originalGroup = null;
+    
+    if (statResult.code === 0 && statResult.stdout) {
+      const [perms, owner, group] = statResult.stdout.trim().split('|');
+      originalPerms = perms;
+      originalOwner = owner;
+      originalGroup = group;
+    }
+    
+    // Create a temporary file with the content
+    const tempFile = `/tmp/containerfile_${Date.now()}.tmp`;
+    
+    // Write content to temp file using printf for better handling of special characters
+    // Escape backslashes and percent signs for printf
+    const escapedContent = content.replace(/\\/g, '\\\\').replace(/%/g, '%%');
+    const writeCommand = `printf '%s' '${escapedContent.replace(/'/g, "'\\''")}' > ${tempFile}`;
+    const writeResult = await connectionManager.executeCommand(serverConfig, writeCommand);
+    
+    if (writeResult.code !== 0) {
+      throw new Error('Failed to create temporary file');
+    }
+    
+    // Copy temp file to destination (needs sudo for Docker volumes)
+    const copyCommand = `sudo cp -f ${tempFile} "${hostPath}"`;
+    const copyResult = await connectionManager.executeCommand(serverConfig, copyCommand);
+    
+    if (copyResult.code !== 0) {
+      // Clean up temp file
+      await connectionManager.executeCommand(serverConfig, `rm -f ${tempFile}`);
+      throw new Error(copyResult.stderr || 'Failed to write file');
+    }
+    
+    // Restore original permissions and ownership
+    if (originalPerms) {
+      await connectionManager.executeCommand(serverConfig, `sudo chmod ${originalPerms} "${hostPath}"`);
+    }
+    
+    if (originalOwner && originalGroup) {
+      await connectionManager.executeCommand(serverConfig, `sudo chown ${originalOwner}:${originalGroup} "${hostPath}"`);
+    }
+    
+    // Clean up temp file
+    await connectionManager.executeCommand(serverConfig, `rm -f ${tempFile}`);
+    
+    return true;
+  } catch (error) {
+    console.error('Error writing container file:', error);
     throw error;
   }
 }
@@ -320,6 +420,7 @@ async function isContainerRunning(serverConfig, containerId) {
 module.exports = {
   listContainerFiles,
   readContainerFile,
+  writeContainerFile,
   getContainerFileStats,
   isContainerRunning
 };
