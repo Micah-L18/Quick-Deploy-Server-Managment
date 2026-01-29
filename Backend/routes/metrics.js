@@ -65,6 +65,20 @@ router.get('/:id/metrics/history', requireAuth, asyncHandler(async (req, res) =>
 }));
 
 /**
+ * GET /api/servers/:id/metrics/averages
+ * Get metric averages for various time periods (6h, 12h, 24h, 7d)
+ */
+router.get('/:id/metrics/averages', requireAuth, asyncHandler(async (req, res) => {
+  const check = await checkServerOwnership(req.params.id, req.session.userId);
+  if (check.error) {
+    return res.status(check.status).json({ error: check.error });
+  }
+
+  const averages = await MetricsModel.getAverages(req.params.id);
+  res.json(averages);
+}));
+
+/**
  * POST /api/servers/:id/metrics/refresh
  * Force refresh metrics for a server
  */

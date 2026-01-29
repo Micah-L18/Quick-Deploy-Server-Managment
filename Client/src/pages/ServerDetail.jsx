@@ -26,6 +26,35 @@ const formatBandwidth = (bytesPerSec) => {
   return `${(bytesPerSec / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 };
 
+// Format metric averages for display
+const formatAveragesDisplay = (current, averages, metricKey, unit = '%', formatFn = null) => {
+  const parts = [];
+  
+  // Current value
+  if (current != null) {
+    const val = formatFn ? formatFn(current) : `${Math.round(current * 10) / 10}${unit}`;
+    parts.push(`Current: ${val}`);
+  }
+  
+  // Time-based averages
+  const periods = [
+    { key: '6h', label: '6h' },
+    { key: '12h', label: '12h' },
+    { key: '24h', label: '24h' },
+    { key: '7d', label: '7d' }
+  ];
+  
+  for (const period of periods) {
+    const val = averages?.[period.key]?.[metricKey];
+    if (val != null) {
+      const formatted = formatFn ? formatFn(val) : `${val}${unit}`;
+      parts.push(`${period.label}: ${formatted}`);
+    }
+  }
+  
+  return parts.length > 0 ? ` (${parts.join(' | ')})` : '';
+};
+
 const ServerDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -108,6 +137,14 @@ const ServerDetail = () => {
     queryFn: () => serversService.getMetricsHistory(id, timeRange),
     enabled: !!server && server.status === 'online',
     refetchInterval: 5000,
+    retry: 1,
+  });
+
+  const { data: metricsAverages } = useQuery({
+    queryKey: ['server-metrics-averages', id],
+    queryFn: () => serversService.getMetricsAverages(id),
+    enabled: !!server && server.status === 'online',
+    refetchInterval: 30000, // Refresh every 30 seconds
     retry: 1,
   });
 
@@ -751,7 +788,7 @@ const ServerDetail = () => {
                         {/* CPU Usage Chart */}
                         {metricsHistory.some(m => m.cpu_usage != null) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>CPU Usage</h3>
+                            <h3 className={styles.chartTitle}>CPU Usage{formatAveragesDisplay(metrics?.cpu?.usage, metricsAverages, 'cpu_usage')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.cpu_usage != null).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),
@@ -785,7 +822,7 @@ const ServerDetail = () => {
                         {/* CPU Temperature Chart - only shown if CPU temp data exists in history */}
                         {metricsHistory.some(m => m.cpu_temperature !== null && m.cpu_temperature !== undefined) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>CPU Temperature</h3>
+                            <h3 className={styles.chartTitle}>CPU Temperature{formatAveragesDisplay(metrics?.cpu?.temperature, metricsAverages, 'cpu_temperature', '°C')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.cpu_temperature !== null && m.cpu_temperature !== undefined).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),
@@ -821,7 +858,7 @@ const ServerDetail = () => {
                     {/* Memory Charts - shown when Memory card is selected */}
                     {selectedMetricCard === 'memory' && (
                       <div className={styles.chartCard}>
-                        <h3 className={styles.chartTitle}>Memory Usage</h3>
+                        <h3 className={styles.chartTitle}>Memory Usage{formatAveragesDisplay(metrics?.memory?.percentage, metricsAverages, 'memory_percentage')}</h3>
                         <ResponsiveContainer width="100%" height={250}>
                           <LineChart data={metricsHistory.map(m => ({
                             time: new Date(m.timestamp).toLocaleTimeString(),
@@ -855,7 +892,7 @@ const ServerDetail = () => {
                     {/* Disk Charts - shown when Disk card is selected */}
                     {selectedMetricCard === 'disk' && (
                       <div className={styles.chartCard}>
-                        <h3 className={styles.chartTitle}>Disk Usage</h3>
+                        <h3 className={styles.chartTitle}>Disk Usage{formatAveragesDisplay(metrics?.disk?.percentage, metricsAverages, 'disk_percentage')}</h3>
                         <ResponsiveContainer width="100%" height={250}>
                           <LineChart data={metricsHistory.map(m => ({
                             time: new Date(m.timestamp).toLocaleTimeString(),
@@ -892,7 +929,7 @@ const ServerDetail = () => {
                         {/* GPU Usage Chart - only shown if GPU data exists in history */}
                         {metricsHistory.some(m => m.gpu_utilization !== null && m.gpu_utilization !== undefined) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>GPU Usage</h3>
+                            <h3 className={styles.chartTitle}>GPU Usage{formatAveragesDisplay(metrics?.gpu?.utilization, metricsAverages, 'gpu_utilization')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.gpu_utilization !== null && m.gpu_utilization !== undefined).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),
@@ -926,7 +963,7 @@ const ServerDetail = () => {
                         {/* GPU Memory Chart - only shown if GPU memory data exists in history */}
                         {metricsHistory.some(m => m.gpu_memory_percentage !== null && m.gpu_memory_percentage !== undefined) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>GPU Memory</h3>
+                            <h3 className={styles.chartTitle}>GPU Memory{formatAveragesDisplay(metrics?.gpu?.memory_percentage, metricsAverages, 'gpu_memory_percentage')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.gpu_memory_percentage !== null && m.gpu_memory_percentage !== undefined).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),
@@ -960,7 +997,7 @@ const ServerDetail = () => {
                         {/* GPU Temperature Chart - only shown if GPU temp data exists in history */}
                         {metricsHistory.some(m => m.gpu_temperature !== null && m.gpu_temperature !== undefined) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>GPU Temperature</h3>
+                            <h3 className={styles.chartTitle}>GPU Temperature{formatAveragesDisplay(metrics?.gpu?.temperature, metricsAverages, 'gpu_temperature', '°C')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.gpu_temperature !== null && m.gpu_temperature !== undefined).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),
@@ -999,7 +1036,7 @@ const ServerDetail = () => {
                         {/* Network Bandwidth Chart */}
                         {metricsHistory.some(m => m.network_rx_rate != null || m.network_tx_rate != null) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>Network Bandwidth</h3>
+                            <h3 className={styles.chartTitle}>Network Bandwidth{formatAveragesDisplay(metrics?.network?.rx_rate, metricsAverages, 'network_rx_rate', '', (v) => formatBandwidth(v) + '/s')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.network_rx_rate != null || m.network_tx_rate != null).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),
@@ -1034,7 +1071,7 @@ const ServerDetail = () => {
                         {/* Latency Chart */}
                         {metricsHistory.some(m => m.ping_ms != null) && (
                           <div className={styles.chartCard}>
-                            <h3 className={styles.chartTitle}>Latency</h3>
+                            <h3 className={styles.chartTitle}>Latency{formatAveragesDisplay(metrics?.ping, metricsAverages, 'ping_ms', 'ms')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
                               <LineChart data={metricsHistory.filter(m => m.ping_ms != null).map(m => ({
                                 time: new Date(m.timestamp).toLocaleTimeString(),

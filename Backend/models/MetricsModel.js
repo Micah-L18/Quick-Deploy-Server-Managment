@@ -202,10 +202,63 @@ function toApiFormat(row) {
   return result;
 }
 
+/**
+ * Get metric averages for various time periods
+ * @param {string} serverId - Server ID
+ * @returns {Promise<Object>} - Averages for 6h, 12h, 24h, 7d periods
+ */
+async function getAverages(serverId) {
+  const now = Date.now();
+  const periods = {
+    '6h': new Date(now - 6 * 60 * 60 * 1000).toISOString(),
+    '12h': new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+    '24h': new Date(now - 24 * 60 * 60 * 1000).toISOString(),
+    '7d': new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString()
+  };
+
+  const results = {};
+
+  for (const [period, since] of Object.entries(periods)) {
+    const row = await get(`
+      SELECT 
+        AVG(cpu_usage) as cpu_usage,
+        AVG(cpu_temperature) as cpu_temperature,
+        AVG(memory_percentage) as memory_percentage,
+        AVG(disk_percentage) as disk_percentage,
+        AVG(gpu_utilization) as gpu_utilization,
+        AVG(gpu_memory_percentage) as gpu_memory_percentage,
+        AVG(gpu_temperature) as gpu_temperature,
+        AVG(network_rx_rate) as network_rx_rate,
+        AVG(network_tx_rate) as network_tx_rate,
+        AVG(ping_ms) as ping_ms,
+        COUNT(*) as data_points
+      FROM server_metrics 
+      WHERE server_id = ? AND timestamp > ?
+    `, [serverId, since]);
+
+    results[period] = {
+      cpu_usage: row?.cpu_usage != null ? Math.round(row.cpu_usage * 10) / 10 : null,
+      cpu_temperature: row?.cpu_temperature != null ? Math.round(row.cpu_temperature * 10) / 10 : null,
+      memory_percentage: row?.memory_percentage != null ? Math.round(row.memory_percentage * 10) / 10 : null,
+      disk_percentage: row?.disk_percentage != null ? Math.round(row.disk_percentage * 10) / 10 : null,
+      gpu_utilization: row?.gpu_utilization != null ? Math.round(row.gpu_utilization * 10) / 10 : null,
+      gpu_memory_percentage: row?.gpu_memory_percentage != null ? Math.round(row.gpu_memory_percentage * 10) / 10 : null,
+      gpu_temperature: row?.gpu_temperature != null ? Math.round(row.gpu_temperature * 10) / 10 : null,
+      network_rx_rate: row?.network_rx_rate != null ? Math.round(row.network_rx_rate) : null,
+      network_tx_rate: row?.network_tx_rate != null ? Math.round(row.network_tx_rate) : null,
+      ping_ms: row?.ping_ms != null ? Math.round(row.ping_ms * 10) / 10 : null,
+      data_points: row?.data_points || 0
+    };
+  }
+
+  return results;
+}
+
 module.exports = {
   store,
   getLatest,
   getHistory,
+  getAverages,
   deleteOlderThan,
   deleteForServer,
   toApiFormat

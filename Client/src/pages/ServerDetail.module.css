@@ -586,6 +586,31 @@
   font-size: 1rem;
 }
 
+/* Charts Grid */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.chartCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  padding: 24px;
+}
+
+.chartTitle {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary-color);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
 .offlineNotice {
   background: var(--card-bg);
   border: 1px solid var(--border-color);

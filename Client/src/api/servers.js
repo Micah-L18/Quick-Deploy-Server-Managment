@@ -47,6 +47,11 @@ export const serversService = {
     return response.data;
   },
 
+  getMetricsAverages: async (id) => {
+    const response = await api.get(`/servers/${id}/metrics/averages`);
+    return response.data;
+  },
+
   listFiles: async (id, path = '/root') => {
     const response = await api.get(`/servers/${id}/files?path=${encodeURIComponent(path)}`);
     return response.data;
