@@ -1,9 +1,14 @@
 const { connectionManager } = require('./ssh');
+const { downloadFileToBuffer } = require('./ssh/sftpService');
+const path = require('path');
 
 /**
  * Container File Service
  * Provides file browsing capabilities for Docker containers and their volumes
  */
+
+// Size threshold for warning (50MB)
+const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024;
 
 /**
  * Get volume mounts for a container
@@ -417,10 +422,213 @@ async function isContainerRunning(serverConfig, containerId) {
   }
 }
 
+/**
+ * Download file from container (supports both volume and non-volume containers)
+ * @param {Object} serverConfig - Server connection configuration
+ * @param {string} containerId - Docker container ID
+ * @param {string} filePath - File path to download
+ * @param {boolean} isDirectory - Whether the path is a directory (for bulk download)
+ * @returns {Promise<{buffer: Buffer, filename: string, size: number, isLarge: boolean}>}
+ */
+async function downloadContainerFile(serverConfig, containerId, filePath, isDirectory = false) {
+  // Sanitize path
+  const safePath = filePath.replace(/[;&|`$]/g, '');
+  const timestamp = Date.now();
+  const tempPath = `/tmp/qdeploy_dl_${timestamp}`;
+  
+  console.log(`[downloadContainerFile] Container: ${containerId}, Path: ${safePath}, IsDir: ${isDirectory}`);
+  
+  try {
+    const mounts = await getContainerMounts(serverConfig, containerId);
+    const hostPath = mapContainerPathToHost(mounts, safePath);
+    
+    let downloadPath;
+    let needsCleanup = false;
+    let archiveFilename;
+    
+    if (isDirectory) {
+      // For directories, create a tar.gz archive
+      archiveFilename = `${path.basename(safePath) || 'root'}_${timestamp}.tar.gz`;
+      const archivePath = `${tempPath}.tar.gz`;
+      
+      if (hostPath) {
+        // Volume-mapped directory - tar from host path
+        console.log(`[downloadContainerFile] Creating tar from host path: ${hostPath}`);
+        const tarCommand = `sudo tar -czf ${archivePath} -C "${path.dirname(hostPath)}" "${path.basename(hostPath)}" 2>&1`;
+        const tarResult = await connectionManager.executeCommand(serverConfig, tarCommand);
+        
+        if (tarResult.code !== 0) {
+          throw new Error(`Failed to create archive: ${tarResult.stderr || tarResult.stdout}`);
+        }
+      } else {
+        // Non-volume directory - use docker cp to temp, then tar
+        console.log(`[downloadContainerFile] Using docker cp for non-volume path`);
+        
+        // Create temp directory
+        await connectionManager.executeCommand(serverConfig, `mkdir -p ${tempPath}`);
+        
+        // docker cp from container (works for both running and stopped containers)
+        const cpCommand = `docker cp "${containerId}:${safePath}" "${tempPath}/" 2>&1`;
+        const cpResult = await connectionManager.executeCommand(serverConfig, cpCommand);
+        
+        if (cpResult.code !== 0) {
+          // Check if container exists
+          if (cpResult.stdout.includes('No such container') || cpResult.stderr.includes('No such container')) {
+            throw new Error('Container not found. It may have been removed.');
+          }
+          throw new Error(`Failed to copy from container: ${cpResult.stderr || cpResult.stdout}`);
+        }
+        
+        // Create tar from the copied files
+        const tarCommand = `tar -czf ${archivePath} -C "${tempPath}" . 2>&1`;
+        const tarResult = await connectionManager.executeCommand(serverConfig, tarCommand);
+        
+        if (tarResult.code !== 0) {
+          throw new Error(`Failed to create archive: ${tarResult.stderr || tarResult.stdout}`);
+        }
+        
+        // Clean up temp directory (keep tar file)
+        await connectionManager.executeCommand(serverConfig, `rm -rf ${tempPath}`);
+      }
+      
+      downloadPath = archivePath;
+      needsCleanup = true;
+    } else {
+      // Single file download
+      if (hostPath) {
+        // Volume-mapped file - download directly via SFTP with sudo copy
+        console.log(`[downloadContainerFile] Downloading from host path: ${hostPath}`);
+        
+        // Copy to temp with sudo (Docker volumes often need elevated permissions)
+        const cpCommand = `sudo cp "${hostPath}" "${tempPath}" && sudo chmod 644 "${tempPath}"`;
+        const cpResult = await connectionManager.executeCommand(serverConfig, cpCommand);
+        
+        if (cpResult.code !== 0) {
+          throw new Error(`Failed to access file: ${cpResult.stderr || 'Permission denied'}`);
+        }
+        
+        downloadPath = tempPath;
+        needsCleanup = true;
+        archiveFilename = path.basename(safePath);
+      } else {
+        // Non-volume file - use docker cp
+        console.log(`[downloadContainerFile] Using docker cp for non-volume file`);
+        
+        const cpCommand = `docker cp "${containerId}:${safePath}" "${tempPath}" 2>&1`;
+        const cpResult = await connectionManager.executeCommand(serverConfig, cpCommand);
+        
+        if (cpResult.code !== 0) {
+          if (cpResult.stdout.includes('No such container') || cpResult.stderr.includes('No such container')) {
+            throw new Error('Container not found. It may have been removed.');
+          }
+          throw new Error(`Failed to copy from container: ${cpResult.stderr || cpResult.stdout}`);
+        }
+        
+        downloadPath = tempPath;
+        needsCleanup = true;
+        archiveFilename = path.basename(safePath);
+      }
+    }
+    
+    // Get file size for large file warning
+    const sizeResult = await connectionManager.executeCommand(serverConfig, `stat -c%s "${downloadPath}" 2>/dev/null || echo 0`);
+    const fileSize = parseInt(sizeResult.stdout.trim()) || 0;
+    const isLarge = fileSize > LARGE_FILE_THRESHOLD;
+    
+    console.log(`[downloadContainerFile] Downloading ${downloadPath}, size: ${fileSize} bytes`);
+    
+    // Download file to buffer via SFTP
+    const buffer = await downloadFileToBuffer(serverConfig, downloadPath);
+    
+    // Cleanup temp file if needed
+    if (needsCleanup) {
+      await connectionManager.executeCommand(serverConfig, `rm -f "${downloadPath}"`);
+    }
+    
+    return {
+      buffer,
+      filename: archiveFilename,
+      size: fileSize,
+      isLarge
+    };
+  } catch (error) {
+    // Cleanup on error
+    await connectionManager.executeCommand(serverConfig, `rm -rf ${tempPath} ${tempPath}.tar.gz 2>/dev/null`);
+    console.error('Error downloading container file:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get file/directory info for download (check size before downloading)
+ * @param {Object} serverConfig - Server connection configuration
+ * @param {string} containerId - Docker container ID
+ * @param {string} filePath - File path to check
+ * @returns {Promise<{isDirectory: boolean, size: number, isLarge: boolean, exists: boolean}>}
+ */
+async function getContainerFileInfo(serverConfig, containerId, filePath) {
+  // Sanitize path
+  const safePath = filePath.replace(/[;&|`$]/g, '');
+  
+  try {
+    const mounts = await getContainerMounts(serverConfig, containerId);
+    const hostPath = mapContainerPathToHost(mounts, safePath);
+    
+    let statCommand;
+    if (hostPath) {
+      // Use host path with sudo
+      statCommand = `sudo stat -c '%F|%s' "${hostPath}" 2>&1`;
+    } else {
+      // Use docker exec for non-volume paths
+      statCommand = `docker exec ${containerId} stat -c '%F|%s' "${safePath}" 2>&1`;
+    }
+    
+    const result = await connectionManager.executeCommand(serverConfig, statCommand);
+    
+    if (result.code !== 0 || result.stdout.includes('No such file') || result.stdout.includes('cannot stat')) {
+      return { exists: false, isDirectory: false, size: 0, isLarge: false };
+    }
+    
+    const [fileType, size] = result.stdout.trim().split('|');
+    const isDirectory = fileType.includes('directory');
+    const fileSize = parseInt(size) || 0;
+    
+    // For directories, estimate size with du
+    let totalSize = fileSize;
+    if (isDirectory) {
+      let duCommand;
+      if (hostPath) {
+        duCommand = `sudo du -sb "${hostPath}" 2>/dev/null | cut -f1`;
+      } else {
+        duCommand = `docker exec ${containerId} du -sb "${safePath}" 2>/dev/null | cut -f1`;
+      }
+      const duResult = await connectionManager.executeCommand(serverConfig, duCommand);
+      if (duResult.code === 0) {
+        totalSize = parseInt(duResult.stdout.trim()) || 0;
+      }
+    }
+    
+    return {
+      exists: true,
+      isDirectory,
+      size: totalSize,
+      isLarge: totalSize > LARGE_FILE_THRESHOLD
+    };
+  } catch (error) {
+    console.error('Error getting container file info:', error);
+    return { exists: false, isDirectory: false, size: 0, isLarge: false };
+  }
+}
+
 module.exports = {
   listContainerFiles,
   readContainerFile,
   writeContainerFile,
   getContainerFileStats,
-  isContainerRunning
+  isContainerRunning,
+  downloadContainerFile,
+  getContainerFileInfo,
+  getContainerMounts,
+  mapContainerPathToHost,
+  LARGE_FILE_THRESHOLD
 };

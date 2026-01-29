@@ -1012,4 +1012,120 @@ router.put('/:appId/deployments/:deploymentId/files/write', requireAuth, asyncHa
   }
 }));
 
+/**
+ * GET /api/apps/:appId/deployments/:deploymentId/files/info
+ * Get file/directory info (size, type) before downloading
+ */
+router.get('/:appId/deployments/:deploymentId/files/info', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+  const filePath = req.query.path;
+
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required' });
+  }
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  try {
+    const info = await containerFileService.getContainerFileInfo(
+      { 
+        host: deployment.ip,
+        username: deployment.username,
+        privateKeyPath: deployment.private_key_path
+      },
+      containerRef,
+      filePath
+    );
+
+    res.json({
+      ...info,
+      path: filePath,
+      largeFileThreshold: containerFileService.LARGE_FILE_THRESHOLD
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to get file info' });
+  }
+}));
+
+/**
+ * GET /api/apps/:appId/deployments/:deploymentId/files/download
+ * Download file or directory from container
+ * Query params:
+ *   - path: file or directory path to download
+ *   - bulk: set to 'true' to download directory as tar.gz
+ */
+router.get('/:appId/deployments/:deploymentId/files/download', requireAuth, asyncHandler(async (req, res) => {
+  const { appId, deploymentId } = req.params;
+  const filePath = req.query.path;
+  const bulk = req.query.bulk === 'true';
+
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required' });
+  }
+
+  const deployment = await AppModel.findDeploymentById(deploymentId, appId, req.session.userId);
+  
+  if (!deployment) {
+    return res.status(404).json({ error: 'Deployment not found' });
+  }
+
+  const containerRef = deployment.container_name || deployment.container_id;
+  if (!containerRef) {
+    return res.status(400).json({ error: 'No container reference found' });
+  }
+
+  const serverConfig = { 
+    host: deployment.ip,
+    username: deployment.username,
+    privateKeyPath: deployment.private_key_path
+  };
+
+  try {
+    // Get file info first to determine if it's a directory
+    const fileInfo = await containerFileService.getContainerFileInfo(serverConfig, containerRef, filePath);
+    
+    if (!fileInfo.exists) {
+      return res.status(404).json({ error: 'File or directory not found' });
+    }
+
+    // If it's a directory, force bulk mode
+    const isDirectory = fileInfo.isDirectory || bulk;
+    
+    console.log(`[files/download] Downloading ${filePath}, isDirectory: ${isDirectory}, size: ${fileInfo.size}`);
+
+    const { buffer, filename, size, isLarge } = await containerFileService.downloadContainerFile(
+      serverConfig,
+      containerRef,
+      filePath,
+      isDirectory
+    );
+
+    // Set appropriate headers
+    const contentType = isDirectory ? 'application/gzip' : 'application/octet-stream';
+    const downloadFilename = isDirectory && !filename.endsWith('.tar.gz') 
+      ? `${filename}.tar.gz` 
+      : filename;
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('X-File-Size', size);
+    res.setHeader('X-Is-Large', isLarge ? 'true' : 'false');
+    
+    res.send(buffer);
+  } catch (error) {
+    console.error('[files/download] Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to download file' });
+  }
+}));
+
 module.exports = router;

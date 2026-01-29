@@ -118,4 +118,116 @@ export const appsService = {
     });
     return response.data;
   },
+
+  // Get file/directory info (for size check before download)
+  getContainerFileInfo: async (appId, deploymentId, path) => {
+    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}/files/info`, {
+      params: { path }
+    });
+    return response.data;
+  },
+
+  // Download single file or directory from container
+  // Returns a blob for browser download
+  downloadContainerFile: async (appId, deploymentId, path, bulk = false) => {
+    const response = await api.get(`/apps/${appId}/deployments/${deploymentId}/files/download`, {
+      params: { path, bulk: bulk ? 'true' : 'false' },
+      responseType: 'blob'
+    });
+    
+    // Extract filename from Content-Disposition header
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = path.split('/').pop() || 'download';
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+      if (match) {
+        filename = match[1];
+      }
+    }
+    
+    return {
+      blob: response.data,
+      filename,
+      size: parseInt(response.headers['x-file-size']) || 0,
+      isLarge: response.headers['x-is-large'] === 'true'
+    };
+  },
+
+  // Download with progress tracking (for large files)
+  // Uses XMLHttpRequest for progress events
+  downloadContainerFileWithProgress: (appId, deploymentId, path, bulk = false, onProgress) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const baseUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
+      const url = `${baseUrl}/api/apps/${appId}/deployments/${deploymentId}/files/download?path=${encodeURIComponent(path)}&bulk=${bulk ? 'true' : 'false'}`;
+      
+      xhr.open('GET', url, true);
+      xhr.responseType = 'blob';
+      xhr.withCredentials = true;
+      
+      // Track download progress
+      xhr.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const percent = (event.loaded / event.total) * 100;
+          onProgress(percent, event.loaded, event.total);
+        } else if (onProgress) {
+          // If content-length not available, show indeterminate progress
+          onProgress(-1, event.loaded, 0);
+        }
+      };
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Extract filename from Content-Disposition header
+          const contentDisposition = xhr.getResponseHeader('content-disposition');
+          let filename = path.split('/').pop() || 'download';
+          if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+            if (match) {
+              filename = match[1];
+            }
+          }
+          
+          resolve({
+            blob: xhr.response,
+            filename,
+            size: parseInt(xhr.getResponseHeader('x-file-size')) || 0
+          });
+        } else {
+          // Try to parse error from blob
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const error = JSON.parse(reader.result);
+              reject(new Error(error.error || 'Download failed'));
+            } catch {
+              reject(new Error(`Download failed: ${xhr.status}`));
+            }
+          };
+          reader.onerror = () => reject(new Error(`Download failed: ${xhr.status}`));
+          reader.readAsText(xhr.response);
+        }
+      };
+      
+      xhr.onerror = () => reject(new Error('Network error during download'));
+      xhr.onabort = () => reject(new Error('Download cancelled'));
+      
+      xhr.send();
+      
+      // Return abort function for cancellation
+      return () => xhr.abort();
+    });
+  },
+
+  // Helper to trigger browser download from blob
+  triggerBlobDownload: (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
 };

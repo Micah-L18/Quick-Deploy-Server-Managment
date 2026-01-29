@@ -1,0 +1,125 @@
+.jobDetailsModal {
+  padding: 0.5rem 0;
+}
+
+.jobDetailsHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.jobDetailsIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: var(--primary-color, #3b82f6);
+  color: white;
+}
+
+.jobDetailsIcon svg {
+  opacity: 0.9;
+}
+
+.jobDetailsTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+.jobDetailsTitle h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jobDetailsType {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #999);
+}
+
+.jobDetailsProgress {
+  margin-bottom: 1.5rem;
+}
+
+.jobDetailsProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.jobDetailsProgressHeader span:first-child {
+  color: var(--text-secondary, #999);
+}
+
+.jobDetailsProgressHeader span:last-child {
+  font-weight: 600;
+}
+
+.jobDetailsProgressBar {
+  height: 8px;
+  background: var(--input-background, #2a2a2a);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.jobDetailsProgressFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.jobDetailsMessage {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #999);
+}
+
+.jobDetailsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--input-background, #2a2a2a);
+  border-radius: 8px;
+}
+
+.jobDetailsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.jobDetailsLabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #999);
+}
+
+.jobDetailsValue {
+  font-size: 0.9rem;
+  color: var(--text-primary, #fff);
+  display: flex;
+  align-items: center;
+  max-width: 60%;
+  text-align: right;
+  word-break: break-all;
+}
+
+.jobDetailsActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #333);
+}

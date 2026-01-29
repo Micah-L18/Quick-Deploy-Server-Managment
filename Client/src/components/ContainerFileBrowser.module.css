@@ -106,7 +106,7 @@
 
 .fileHeader {
   display: grid;
-  grid-template-columns: 1fr 120px 180px 140px;
+  grid-template-columns: 1fr 100px 160px 80px;
   gap: 12px;
   padding: 12px 16px;
   background: var(--bg-secondary);
@@ -122,10 +122,11 @@
 .fileHeaderSize { grid-column: 2; text-align: right; }
 .fileHeaderModified { grid-column: 3; }
 .fileHeaderPermissions { grid-column: 4; }
+.fileHeaderActions { grid-column: 4; text-align: center; }
 
 .fileRow {
   display: grid;
-  grid-template-columns: 1fr 120px 180px 140px;
+  grid-template-columns: 1fr 100px 160px 80px;
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
@@ -187,6 +188,69 @@
   padding: 2px 6px;
   border-radius: 2px;
   font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* File Actions */
+.fileActions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-medium);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionButton:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.dismissError {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.dismissError:hover {
+  opacity: 1;
 }
 
 /* Empty States */
@@ -322,4 +386,6 @@
 
   .fileHeaderName { grid-column: 1; }
   .fileName { grid-column: 1; }
+  .fileHeaderActions { grid-column: 2; }
+  .fileActions { grid-column: 2; }
 }

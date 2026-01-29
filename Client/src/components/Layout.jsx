@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Sidebar from './Sidebar';
+import JobDetailsModal from './JobDetailsModal';
 import styles from './Layout.module.css';
 
 const Layout = ({ children }) => {
@@ -21,6 +22,7 @@ const Layout = ({ children }) => {
       <main className={styles.mainContent}>
         <div className={styles.container}>{children}</div>
       </main>
+      <JobDetailsModal />
     </div>
   );
 };

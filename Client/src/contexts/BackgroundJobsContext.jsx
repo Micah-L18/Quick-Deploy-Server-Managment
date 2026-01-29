@@ -17,6 +17,8 @@ export const BackgroundJobsProvider = ({ children }) => {
   const [jobs, setJobs] = useState({});
   const [progress, setProgress] = useState({}); // Track progress from socket events
   const [fileJobs, setFileJobs] = useState({}); // Track file operation jobs
+  const [downloadJobs, setDownloadJobs] = useState({}); // Track download jobs (client-side)
+  const [selectedJobId, setSelectedJobId] = useState(null); // For job details modal
   
   // System update state - persists across navigation
   const [systemUpdate, setSystemUpdate] = useState({
@@ -330,8 +332,83 @@ export const BackgroundJobsProvider = ({ children }) => {
     }
   }, []);
 
-  // Combine deployment jobs and file jobs
-  const allJobs = { ...jobs, ...fileJobs };
+  // ========== Download Job Management ==========
+  
+  // Start a download job (returns job ID)
+  const startDownloadJob = useCallback((fileName, appName, isDirectory = false, totalSize = 0) => {
+    const jobId = `download-${Date.now()}`;
+    setDownloadJobs(prev => ({
+      ...prev,
+      [jobId]: {
+        id: jobId,
+        type: isDirectory ? 'Downloading Archive' : 'Downloading',
+        fileName,
+        appName,
+        percent: 0,
+        loaded: 0,
+        total: totalSize,
+        stage: 'starting',
+        message: 'Preparing download...',
+        timestamp: Date.now()
+      }
+    }));
+    return jobId;
+  }, []);
+
+  // Update download progress
+  const updateDownloadProgress = useCallback((jobId, percent, loaded, total) => {
+    setDownloadJobs(prev => {
+      if (!prev[jobId]) return prev;
+      return {
+        ...prev,
+        [jobId]: {
+          ...prev[jobId],
+          percent: Math.round(percent >= 0 ? percent : 50),
+          loaded: loaded || 0,
+          total: total || prev[jobId].total || 0,
+          stage: 'downloading',
+          message: null // Will be formatted in UI
+        }
+      };
+    });
+  }, []);
+
+  // Complete a download job
+  const completeDownloadJob = useCallback((jobId, success = true, error = null) => {
+    setDownloadJobs(prev => {
+      if (!prev[jobId]) return prev;
+      const updated = {
+        ...prev,
+        [jobId]: {
+          ...prev[jobId],
+          stage: success ? 'complete' : 'error',
+          percent: success ? 100 : prev[jobId].percent,
+          message: success ? 'Download complete' : (error || 'Download failed')
+        }
+      };
+      
+      // Remove after delay
+      setTimeout(() => {
+        setDownloadJobs(current => {
+          const { [jobId]: removed, ...rest } = current;
+          return rest;
+        });
+      }, success ? 3000 : 5000);
+      
+      return updated;
+    });
+  }, []);
+
+  // Cancel a download job (just removes from UI)
+  const cancelDownloadJob = useCallback((jobId) => {
+    setDownloadJobs(prev => {
+      const { [jobId]: removed, ...rest } = prev;
+      return rest;
+    });
+  }, []);
+
+  // Combine deployment jobs, file jobs, and download jobs
+  const allJobs = { ...jobs, ...fileJobs, ...downloadJobs };
   
   // Add system update as a job if active
   if (systemUpdate.status === 'updating') {
@@ -353,13 +430,21 @@ export const BackgroundJobsProvider = ({ children }) => {
       jobs: jobsList,
       jobCount,
       getSocketId,
+      // Job details modal
+      selectedJobId,
+      setSelectedJobId,
       // System update specific
       systemUpdate,
       showUpdateModal,
       startSystemUpdate,
       restartServer,
       dismissUpdateModal,
-      clearUpdateStatus
+      clearUpdateStatus,
+      // Download job management
+      startDownloadJob,
+      updateDownloadProgress,
+      completeDownloadJob,
+      cancelDownloadJob
     }}>
       {children}
     </BackgroundJobsContext.Provider>

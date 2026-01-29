@@ -746,6 +746,7 @@ const EditDeploymentModal = ({ isOpen, onClose, deployment, serverId, server }) 
           appId={deployment?.app_id}
           deploymentId={deployment?.id}
           containerStatus={freshDeployment?.status || deployment?.status}
+          appName={deployment?.app_name || deployment?.container_name}
         />
       )}
 

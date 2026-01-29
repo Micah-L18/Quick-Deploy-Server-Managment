@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBackgroundJobs } from '../contexts/BackgroundJobsContext';
-import { ChevronUpIcon, ChevronDownIcon, CheckIcon, AlertIcon, RefreshIcon, XIcon, SettingsIcon } from './Icons';
+import { ChevronUpIcon, ChevronDownIcon, CheckIcon, AlertIcon, RefreshIcon, XIcon, SettingsIcon, DownloadIcon } from './Icons';
 import migrationsService from '../api/migrations';
 import styles from './BackgroundJobsWidget.module.css';
 
+// Helper to format bytes compactly
+const formatBytes = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return (bytes / Math.pow(k, i)).toFixed(i > 1 ? 1 : 0) + ' ' + sizes[i];
+};
+
 const BackgroundJobsWidget = () => {
-  const { jobs, jobCount, systemUpdate } = useBackgroundJobs();
+  const { jobs, jobCount, systemUpdate, setSelectedJobId } = useBackgroundJobs();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -34,10 +43,14 @@ const BackgroundJobsWidget = () => {
     }
   };
 
-  const handleJobClick = (job) => {
+  const handleJobClick = (job, e) => {
+    e.stopPropagation();
     // Navigate to Settings page if it's a system update job
     if (job.id === 'system-update') {
       navigate('/settings');
+    } else {
+      // Open job details modal (via context)
+      setSelectedJobId(job.id);
     }
   };
 
@@ -91,51 +104,60 @@ const BackgroundJobsWidget = () => {
             </button>
           )}
           <div className={`${styles.jobsList} ${expanded ? styles.expanded : ''}`}>
-            {jobs.map((job, index) => (
-              <div 
-                key={job.id} 
-                className={`${styles.jobItem} ${!expanded && index > 0 ? styles.hidden : ''} ${job.id === 'system-update' ? styles.systemUpdateJob : ''}`}
-                onClick={() => handleJobClick(job)}
-                style={{ cursor: job.id === 'system-update' ? 'pointer' : 'default' }}
-              >
-                <div className={styles.jobInfo}>
-                  <div className={styles.jobLeft}>
-                    {job.id === 'system-update' && <SettingsIcon size={12} className={styles.jobIcon} />}
-                    <span className={styles.jobType}>{cancelled[job.deploymentId] ? 'Cancelled' : job.type}</span>
-                    <span className={styles.jobName}>
-                      {job.id === 'system-update' ? 'NoBase' : (job.containerName || job.appName || job.fileName)}
-                    </span>
+            {jobs.map((job, index) => {
+              const isDownloadJob = job.id?.startsWith('download-');
+              return (
+                <div 
+                  key={job.id} 
+                  className={`${styles.jobItem} ${!expanded && index > 0 ? styles.hidden : ''} ${job.id === 'system-update' ? styles.systemUpdateJob : ''} ${isDownloadJob ? styles.downloadJob : ''}`}
+                  onClick={(e) => handleJobClick(job, e)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className={styles.jobInfo}>
+                    <div className={styles.jobLeft}>
+                      {job.id === 'system-update' && <SettingsIcon size={12} className={styles.jobIcon} />}
+                      {isDownloadJob && <DownloadIcon size={12} className={styles.jobIcon} />}
+                      <span className={styles.jobType}>{cancelled[job.deploymentId] ? 'Cancelled' : job.type}</span>
+                      <span className={styles.jobName}>
+                        {job.id === 'system-update' ? 'NoBase' : (job.containerName || job.appName || job.fileName)}
+                      </span>
+                    </div>
+                    <div className={styles.jobRight}>
+                      <span className={styles.jobPercent} style={{ color: getStatusColor(job.stage, job.deploymentId) }}>
+                        {getStatusIcon(job.stage, job.deploymentId) || `${job.percent}%`}
+                      </span>
+                      {canCancel(job) && !cancelled[job.deploymentId] && (
+                        <button 
+                          className={styles.cancelBtn}
+                          onClick={() => handleCancel(job)}
+                          disabled={cancelling[job.deploymentId]}
+                          title="Cancel migration"
+                        >
+                          <XIcon size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className={styles.jobRight}>
-                    <span className={styles.jobPercent} style={{ color: getStatusColor(job.stage, job.deploymentId) }}>
-                      {getStatusIcon(job.stage, job.deploymentId) || `${job.percent}%`}
-                    </span>
-                    {canCancel(job) && !cancelled[job.deploymentId] && (
-                      <button 
-                        className={styles.cancelBtn}
-                        onClick={() => handleCancel(job)}
-                        disabled={cancelling[job.deploymentId]}
-                        title="Cancel migration"
-                      >
-                        <XIcon size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className={styles.progressBar}>
-                  <div 
-                    className={styles.progressFill} 
-                    style={{ 
-                      width: `${job.percent}%`, 
-                      backgroundColor: getStatusColor(job.stage) 
+                  <div className={styles.progressBar}>
+                    <div 
+                      className={styles.progressFill} 
+                      style={{ 
+                        width: `${job.percent}%`, 
+                        backgroundColor: getStatusColor(job.stage) 
                     }}
                   />
                 </div>
-                {job.message && (
+                {/* Show download size for download jobs, otherwise show message */}
+                {isDownloadJob && (job.loaded > 0 || job.total > 0) ? (
+                  <div className={styles.jobMessage}>
+                    {formatBytes(job.loaded)} / {job.total > 0 ? formatBytes(job.total) : '...'}
+                  </div>
+                ) : job.message ? (
                   <div className={styles.jobMessage}>{job.message}</div>
-                )}
+                ) : null}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
