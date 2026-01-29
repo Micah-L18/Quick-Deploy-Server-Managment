@@ -10,11 +10,25 @@
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
   z-index: 1000;
   border-right: 1px solid var(--border-color);
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: 72px;
 }
 
 .sidebarHeader {
   padding: 30px 20px;
   border-bottom: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sidebar.collapsed .sidebarHeader {
+  padding: 20px 12px;
+  justify-content: center;
 }
 
 .logo {
@@ -30,6 +44,46 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar.collapsed .logo {
+  gap: 0;
+}
+
+.sidebar.collapsed .logoText {
+  display: none;
+}
+
+.collapseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--text-medium);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.collapseBtn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  color: #00a8cc;
+}
+
+.sidebar.collapsed .collapseBtn {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .sidebarNav {
@@ -67,10 +121,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .navIcon {
+  margin-right: 0;
 }
 
 .navLabel {
   font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .navLabel {
+  display: none;
+}
+
+.sidebar.collapsed .navItem {
+  justify-content: center;
+  padding: 14px;
+  margin: 4px 8px;
 }
 
 .sidebarFooter {
@@ -79,6 +150,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.sidebar.collapsed .sidebarFooter {
+  padding: 12px;
+  align-items: center;
 }
 
 .docsBtn {
@@ -98,6 +174,16 @@
 .docsBtn:hover {
   background: rgba(0, 212, 255, 0.15);
   color: #00a8cc;
+}
+
+.sidebar.collapsed .docsBtn {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebar.collapsed .docsBtnLabel,
+.sidebar.collapsed .versionBadge {
+  display: none;
 }
 
 .docsBtnLabel {
@@ -138,6 +224,15 @@
   border-color: rgba(245, 158, 11, 0.5);
 }
 
+.sidebar.collapsed .updateNotification {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebar.collapsed .updateNotification span:not(.updateDot) {
+  display: none;
+}
+
 .updateDot {
   display: inline-block;
   width: 8px;
@@ -161,6 +256,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.sidebar.collapsed .userCard {
+  justify-content: center;
+}
+
+.sidebar.collapsed .userInfo {
+  display: none;
 }
 
 .settingsBtn {
@@ -294,6 +397,11 @@
 
   .sidebarHeader {
     padding: 20px;
+    justify-content: center;
+  }
+
+  .collapseBtn {
+    display: none;
   }
 
   .logo {

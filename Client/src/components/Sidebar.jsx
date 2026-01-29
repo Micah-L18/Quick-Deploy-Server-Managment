@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon, BookOpenIcon, HardDriveIcon } from './Icons';
+import { DashboardIcon, ServersIcon, AppsIcon, ConnectionsIcon, SettingsIcon, BookOpenIcon, HardDriveIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
 import { systemService } from '../api/system';
 import styles from './Sidebar.module.css';
 
@@ -9,6 +9,10 @@ const Sidebar = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
   const [version, setVersion] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
@@ -24,6 +28,16 @@ const Sidebar = () => {
     };
     fetchVersion();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', collapsed);
+    // Dispatch custom event for Layout component to listen to
+    window.dispatchEvent(new Event('sidebarToggle'));
+  }, [collapsed]);
+
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+  };
 
   const navItems = [
     { path: '/', icon: DashboardIcon, label: 'Dashboard' },
@@ -56,7 +70,7 @@ const Sidebar = () => {
         <div className={styles.mobileOverlay} onClick={() => setMobileOpen(false)} />
       )}
 
-      <div className={`${styles.sidebar} ${mobileOpen ? styles.mobileOpen : ''}`}>
+      <div className={`${styles.sidebar} ${mobileOpen ? styles.mobileOpen : ''} ${collapsed ? styles.collapsed : ''}`}>
         <div className={styles.sidebarHeader}>
           <div className={styles.logo}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="32">
@@ -79,6 +93,13 @@ const Sidebar = () => {
             </svg>
             <span className={styles.logoText}>NoBase</span>
           </div>
+          <button 
+            className={styles.collapseBtn}
+            onClick={toggleCollapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRightIcon size={18} /> : <ChevronLeftIcon size={18} />}
+          </button>
         </div>
 
         <nav className={styles.sidebarNav}>
@@ -93,6 +114,7 @@ const Sidebar = () => {
                 }
                 end={item.path === '/'}
                 onClick={handleNavClick}
+                title={collapsed ? item.label : undefined}
               >
                 <span className={styles.navIcon}>
                   <IconComponent size={20} />
@@ -112,6 +134,7 @@ const Sidebar = () => {
                 navigate('/settings');
                 handleNavClick();
               }}
+              title={collapsed ? 'Update Available' : undefined}
             >
               <span className={styles.updateDot}></span>
               <span>Update Available</span>
@@ -121,6 +144,7 @@ const Sidebar = () => {
             to="/docs" 
             className={styles.docsBtn} 
             onClick={handleNavClick}
+            title={collapsed ? 'Documentation' : undefined}
           >
             <BookOpenIcon size={18} />
             <span className={styles.docsBtnLabel}>Docs</span>
@@ -132,7 +156,7 @@ const Sidebar = () => {
                 <div className={styles.userName}>{user.name}</div>
                 <div className={styles.userEmail}>{user.email}</div>
               </div>
-              <NavLink to="/settings" className={styles.settingsBtn} onClick={handleNavClick}>
+              <NavLink to="/settings" className={styles.settingsBtn} onClick={handleNavClick} title="Settings">
                 <SettingsIcon size={20} />
               </NavLink>
             </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import DebouncedChart from '../components/DebouncedChart';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
 import Terminal from '../components/Terminal';
@@ -24,6 +25,25 @@ const formatBandwidth = (bytesPerSec) => {
   if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB`;
   if (bytesPerSec < 1024 * 1024 * 1024) return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB`;
   return `${(bytesPerSec / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
+// Format timestamp for chart X-axis based on time range
+const formatChartTime = (timestamp, hours) => {
+  const date = new Date(timestamp);
+  if (hours <= 1) {
+    // Last hour: show time only (HH:MM:SS)
+    return date.toLocaleTimeString();
+  } else if (hours <= 24) {
+    // Up to 24 hours: show time only (HH:MM)
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (hours <= 72) {
+    // 1-3 days: show day + time (Mon 14:00)
+    return date.toLocaleDateString([], { weekday: 'short' }) + ' ' + 
+           date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else {
+    // Week view: show date (Jan 28)
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
 };
 
 // Format metric averages for display
@@ -132,12 +152,15 @@ const ServerDetail = () => {
     },
   });
 
-  const { data: metricsHistory, isLoading: historyLoading } = useQuery({
+  const { data: metricsHistory, isLoading: historyLoading, isFetching: historyFetching } = useQuery({
     queryKey: ['server-metrics-history', id, timeRange],
     queryFn: () => serversService.getMetricsHistory(id, timeRange),
     enabled: !!server && server.status === 'online',
-    refetchInterval: 5000,
+    // Adjust refetch interval based on time range - longer ranges need less frequent updates
+    refetchInterval: timeRange >= 168 ? 60000 : timeRange >= 24 ? 30000 : 10000,
     retry: 1,
+    staleTime: 5000, // Consider data fresh for 5 seconds
+    keepPreviousData: true, // Show old data while fetching new time range
   });
 
   const { data: metricsAverages } = useQuery({
@@ -551,7 +574,9 @@ const ServerDetail = () => {
                     {!isMobile && (
                       <>
                         <option value={6}>Last 6 Hours</option>
+                        <option value={12}>Last 12 Hours</option>
                         <option value={24}>Last 24 Hours</option>
+                        <option value={72}>Last 3 Days</option>
                         <option value={168}>Last Week</option>
                       </>
                     )}
@@ -779,6 +804,9 @@ const ServerDetail = () => {
                 <>
                   <h2 className={styles.sectionTitle} style={{ marginTop: '48px', marginBottom: '24px' }}>
                     Historical Trends
+                    {historyFetching && !historyLoading && (
+                      <span className={styles.fetchingIndicator}>Updating...</span>
+                    )}
                   </h2>
                   
                   <div className={styles.chartsGrid}>
@@ -789,9 +817,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.cpu_usage != null) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>CPU Usage{formatAveragesDisplay(metrics?.cpu?.usage, metricsAverages, 'cpu_usage')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.cpu_usage != null).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'CPU %': m.cpu_usage,
                               }))}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -815,7 +843,7 @@ const ServerDetail = () => {
                                 <Legend />
                                 <Line type="monotone" dataKey="CPU %" stroke="#8b5cf6" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
 
@@ -823,9 +851,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.cpu_temperature !== null && m.cpu_temperature !== undefined) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>CPU Temperature{formatAveragesDisplay(metrics?.cpu?.temperature, metricsAverages, 'cpu_temperature', '°C')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.cpu_temperature !== null && m.cpu_temperature !== undefined).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'CPU °C': m.cpu_temperature,
                               }))}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -849,7 +877,7 @@ const ServerDetail = () => {
                                 <Legend />
                                 <Line type="monotone" dataKey="CPU °C" stroke="#f97316" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
                       </>
@@ -859,9 +887,9 @@ const ServerDetail = () => {
                     {selectedMetricCard === 'memory' && (
                       <div className={styles.chartCard}>
                         <h3 className={styles.chartTitle}>Memory Usage{formatAveragesDisplay(metrics?.memory?.percentage, metricsAverages, 'memory_percentage')}</h3>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <DebouncedChart>
                           <LineChart data={metricsHistory.map(m => ({
-                            time: new Date(m.timestamp).toLocaleTimeString(),
+                            time: formatChartTime(m.timestamp, timeRange),
                             'Usage %': m.memory_percentage,
                           }))}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -885,7 +913,7 @@ const ServerDetail = () => {
                             <Legend />
                             <Line type="monotone" dataKey="Usage %" stroke="#f59e0b" strokeWidth={2} dot={false} />
                           </LineChart>
-                        </ResponsiveContainer>
+                        </DebouncedChart>
                       </div>
                     )}
 
@@ -893,9 +921,9 @@ const ServerDetail = () => {
                     {selectedMetricCard === 'disk' && (
                       <div className={styles.chartCard}>
                         <h3 className={styles.chartTitle}>Disk Usage{formatAveragesDisplay(metrics?.disk?.percentage, metricsAverages, 'disk_percentage')}</h3>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <DebouncedChart>
                           <LineChart data={metricsHistory.map(m => ({
-                            time: new Date(m.timestamp).toLocaleTimeString(),
+                            time: formatChartTime(m.timestamp, timeRange),
                             'Usage %': m.disk_percentage,
                           }))}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -919,7 +947,7 @@ const ServerDetail = () => {
                             <Legend />
                             <Line type="monotone" dataKey="Usage %" stroke="#ef4444" strokeWidth={2} dot={false} />
                           </LineChart>
-                        </ResponsiveContainer>
+                        </DebouncedChart>
                       </div>
                     )}
 
@@ -930,9 +958,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.gpu_utilization !== null && m.gpu_utilization !== undefined) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>GPU Usage{formatAveragesDisplay(metrics?.gpu?.utilization, metricsAverages, 'gpu_utilization')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.gpu_utilization !== null && m.gpu_utilization !== undefined).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'GPU %': m.gpu_utilization,
                               }))}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -956,7 +984,7 @@ const ServerDetail = () => {
                                 <Legend />
                                 <Line type="monotone" dataKey="GPU %" stroke="#10b981" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
 
@@ -964,9 +992,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.gpu_memory_percentage !== null && m.gpu_memory_percentage !== undefined) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>GPU Memory{formatAveragesDisplay(metrics?.gpu?.memory_percentage, metricsAverages, 'gpu_memory_percentage')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.gpu_memory_percentage !== null && m.gpu_memory_percentage !== undefined).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'VRAM %': m.gpu_memory_percentage,
                               }))}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -990,7 +1018,7 @@ const ServerDetail = () => {
                                 <Legend />
                                 <Line type="monotone" dataKey="VRAM %" stroke="#06b6d4" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
 
@@ -998,9 +1026,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.gpu_temperature !== null && m.gpu_temperature !== undefined) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>GPU Temperature{formatAveragesDisplay(metrics?.gpu?.temperature, metricsAverages, 'gpu_temperature', '°C')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.gpu_temperature !== null && m.gpu_temperature !== undefined).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'GPU °C': m.gpu_temperature,
                               }))}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -1024,7 +1052,7 @@ const ServerDetail = () => {
                                 <Legend />
                                 <Line type="monotone" dataKey="GPU °C" stroke="#ec4899" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
                       </>
@@ -1037,9 +1065,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.network_rx_rate != null || m.network_tx_rate != null) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>Network Bandwidth{formatAveragesDisplay(metrics?.network?.rx_rate, metricsAverages, 'network_rx_rate', '', (v) => formatBandwidth(v) + '/s')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.network_rx_rate != null || m.network_tx_rate != null).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'Download KB/s': m.network_rx_rate ? Math.round(m.network_rx_rate / 1024) : 0,
                                 'Upload KB/s': m.network_tx_rate ? Math.round(m.network_tx_rate / 1024) : 0,
                               }))}>
@@ -1064,7 +1092,7 @@ const ServerDetail = () => {
                                 <Line type="monotone" dataKey="Download KB/s" stroke="#10b981" strokeWidth={2} dot={false} />
                                 <Line type="monotone" dataKey="Upload KB/s" stroke="#3b82f6" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
 
@@ -1072,9 +1100,9 @@ const ServerDetail = () => {
                         {metricsHistory.some(m => m.ping_ms != null) && (
                           <div className={styles.chartCard}>
                             <h3 className={styles.chartTitle}>Latency{formatAveragesDisplay(metrics?.ping, metricsAverages, 'ping_ms', 'ms')}</h3>
-                            <ResponsiveContainer width="100%" height={250}>
+                            <DebouncedChart>
                               <LineChart data={metricsHistory.filter(m => m.ping_ms != null).map(m => ({
-                                time: new Date(m.timestamp).toLocaleTimeString(),
+                                time: formatChartTime(m.timestamp, timeRange),
                                 'Ping (ms)': m.ping_ms,
                               }))}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
@@ -1097,7 +1125,7 @@ const ServerDetail = () => {
                                 <Legend />
                                 <Line type="monotone" dataKey="Ping (ms)" stroke="#f59e0b" strokeWidth={2} dot={false} />
                               </LineChart>
-                            </ResponsiveContainer>
+                            </DebouncedChart>
                           </div>
                         )}
                       </>

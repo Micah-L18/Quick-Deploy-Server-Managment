@@ -86,7 +86,7 @@ async function getLatest(serverId) {
 }
 
 /**
- * Get metrics history for a server
+ * Get metrics history for a server with intelligent downsampling
  * @param {string} serverId - Server ID
  * @param {number} hours - Number of hours to look back
  * @returns {Promise<Array>}
@@ -94,11 +94,89 @@ async function getLatest(serverId) {
 async function getHistory(serverId, hours = 24) {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   
-  return all(`
-    SELECT * FROM server_metrics 
+  // Determine aggregation interval based on time range
+  // Goal: ~100-200 data points max for good chart performance
+  let intervalMinutes;
+  if (hours <= 1) {
+    // 1 hour: no aggregation, return all points (~120 max)
+    intervalMinutes = 0;
+  } else if (hours <= 6) {
+    // 6 hours: 5-minute intervals (~72 points)
+    intervalMinutes = 5;
+  } else if (hours <= 12) {
+    // 12 hours: 10-minute intervals (~72 points)
+    intervalMinutes = 10;
+  } else if (hours <= 24) {
+    // 24 hours: 15-minute intervals (~96 points)
+    intervalMinutes = 15;
+  } else if (hours <= 72) {
+    // 3 days: 30-minute intervals (~144 points)
+    intervalMinutes = 30;
+  } else {
+    // 7+ days: 1-hour intervals (~168 points for 7 days)
+    intervalMinutes = 60;
+  }
+
+  // If no aggregation needed, return raw data
+  if (intervalMinutes === 0) {
+    return all(`
+      SELECT * FROM server_metrics 
+      WHERE server_id = ? AND timestamp > ?
+      ORDER BY timestamp ASC
+    `, [serverId, since]);
+  }
+
+  // Use SQLite's strftime to group by time intervals
+  // Group timestamp into intervals by dividing minutes
+  const intervalSeconds = intervalMinutes * 60;
+  
+  const aggregated = await all(`
+    SELECT 
+      datetime(
+        (strftime('%s', timestamp) / ?) * ?, 
+        'unixepoch'
+      ) as timestamp,
+      AVG(cpu_usage) as cpu_usage,
+      AVG(cpu_cores) as cpu_cores,
+      MAX(cpu_model) as cpu_model,
+      AVG(cpu_load_1min) as cpu_load_1min,
+      AVG(cpu_load_5min) as cpu_load_5min,
+      AVG(cpu_load_15min) as cpu_load_15min,
+      AVG(memory_used) as memory_used,
+      AVG(memory_total) as memory_total,
+      AVG(memory_free) as memory_free,
+      AVG(memory_percentage) as memory_percentage,
+      AVG(disk_total) as disk_total,
+      AVG(disk_used) as disk_used,
+      AVG(disk_available) as disk_available,
+      AVG(disk_percentage) as disk_percentage,
+      MAX(os) as os,
+      MAX(hostname) as hostname,
+      AVG(uptime) as uptime,
+      MAX(gpu_vendor) as gpu_vendor,
+      AVG(gpu_count) as gpu_count,
+      MAX(gpu_name) as gpu_name,
+      AVG(gpu_memory_total) as gpu_memory_total,
+      AVG(gpu_memory_used) as gpu_memory_used,
+      AVG(gpu_memory_free) as gpu_memory_free,
+      AVG(gpu_memory_percentage) as gpu_memory_percentage,
+      AVG(gpu_utilization) as gpu_utilization,
+      AVG(gpu_temperature) as gpu_temperature,
+      AVG(cpu_temperature) as cpu_temperature,
+      MAX(network_interface) as network_interface,
+      AVG(network_rx_rate) as network_rx_rate,
+      AVG(network_tx_rate) as network_tx_rate,
+      AVG(network_rx_total) as network_rx_total,
+      AVG(network_tx_total) as network_tx_total,
+      AVG(ping_ms) as ping_ms,
+      COUNT(*) as sample_count
+    FROM server_metrics 
     WHERE server_id = ? AND timestamp > ?
+    GROUP BY (strftime('%s', timestamp) / ?)
     ORDER BY timestamp ASC
-  `, [serverId, since]);
+  `, [intervalSeconds, intervalSeconds, serverId, since, intervalSeconds]);
+
+  return aggregated;
 }
 
 /**

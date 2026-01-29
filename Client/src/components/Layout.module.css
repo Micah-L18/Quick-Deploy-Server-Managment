@@ -8,6 +8,11 @@
   flex: 1;
   padding: 30px;
   animation: fadeIn 0.3s ease;
+  transition: margin-left 0.3s ease;
+}
+
+.mainContent.sidebarCollapsed {
+  margin-left: 72px;
 }
 
 .container {
