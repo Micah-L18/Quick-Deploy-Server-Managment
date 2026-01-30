@@ -12,6 +12,7 @@ import { serversService } from '../api/servers';
 import { AppsIcon, AlertIcon, RefreshIcon, TrashIcon, PlayIcon, CheckCircleIcon, XCircleIcon, RocketIcon, DockerIcon, ClipboardIcon, SettingsIcon, GlobeAltIcon, FileIcon, LayersIcon, HardDriveIcon, XIcon, ServerIcon } from '../components/Icons';
 import { parseDockerRun, generateDockerRun } from '../utils/dockerParser';
 import { parseDockerComposeYaml, generateDockerComposeYaml } from '../utils/yamlParser';
+import { showCopied, showSuccess, showError } from '../utils/toast';
 import styles from './AppDetail.module.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3044';
@@ -99,6 +100,10 @@ const AppDetail = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['app', id]);
       setHasChanges(false);
+      showSuccess('App configuration saved');
+    },
+    onError: (error) => {
+      showError(error.response?.data?.error || 'Failed to save configuration');
     },
   });
 
@@ -106,13 +111,21 @@ const AppDetail = () => {
   const deleteMutation = useMutation({
     mutationFn: () => appsService.deleteApp(id),
     onSuccess: () => {
+      showSuccess('App deleted');
       navigate('/apps');
+    },
+    onError: (error) => {
+      showError(error.response?.data?.error || 'Failed to delete app');
     },
   });
   const removeDeploymentMutation = useMutation({
     mutationFn: (deploymentId) => appsService.removeDeployment(id, deploymentId),
     onSuccess: () => {
       queryClient.invalidateQueries(['app-deployments', id]);
+      showSuccess('Deployment removed');
+    },
+    onError: (error) => {
+      showError(error.response?.data?.error || 'Failed to remove deployment');
     },
   });
 
@@ -981,6 +994,7 @@ const AppDetail = () => {
                   size="small"
                   onClick={() => {
                     navigator.clipboard.writeText(yamlText);
+                    showCopied('YAML copied!');
                   }}
                 >
                   <ClipboardIcon size={14} /> Copy
@@ -1012,6 +1026,7 @@ const AppDetail = () => {
                 size="small"
                 onClick={() => {
                   navigator.clipboard.writeText(generateDockerRunCommand());
+                  showCopied('Docker command copied!');
                 }}
               >
                 <ClipboardIcon size={14} /> Copy

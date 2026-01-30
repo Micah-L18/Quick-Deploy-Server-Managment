@@ -15,6 +15,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { serversService } from '../api/servers';
 import { appsService } from '../api/apps';
 import { getRegionFlag } from '../utils/formatters';
+import { showCopied, showSuccess, showError } from '../utils/toast';
 import { RefreshIcon, ServersIcon, AlertIcon, EyeIcon, EyeOffIcon, AppsIcon, PlayIcon, StopCircleIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, EditIcon, DockerIcon, GlobeAltIcon, XIcon, CheckCircleIcon, SettingsIcon, DocumentTextIcon, MoreVerticalIcon } from '../components/Icons';
 import styles from './ServerDetail.module.css';
 
@@ -394,6 +395,7 @@ const ServerDetail = () => {
   const handleCopyCommand = () => {
     if (server?.setupCommand) {
       navigator.clipboard.writeText(server.setupCommand.trim());
+      showCopied('Setup command copied!');
     }
   };
 
@@ -1529,6 +1531,7 @@ const ServerSettingsTab = ({ server, onUpdate, onDelete, isDeleting, deleteWarni
   const handleCopyCommand = () => {
     if (server.setupCommand) {
       navigator.clipboard.writeText(server.setupCommand.trim());
+      showCopied('Setup command copied!');
     }
   };
 

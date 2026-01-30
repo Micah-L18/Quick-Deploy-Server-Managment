@@ -30,6 +30,7 @@ const {
   snapshotRoutes,
   migrationRoutes
 } = require('./routes');
+
 const templateRoutes = require('./routes/templates');
 const uploadsRoutes = require('./routes/uploads');
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBackgroundJobs } from '../contexts/BackgroundJobsContext';
 import { ChevronUpIcon, ChevronDownIcon, CheckIcon, AlertIcon, RefreshIcon, XIcon, SettingsIcon, DownloadIcon } from './Icons';
 import migrationsService from '../api/migrations';
+import { showApiError } from '../utils/toast';
 import styles from './BackgroundJobsWidget.module.css';
 
 // Helper to format bytes compactly
@@ -37,7 +38,7 @@ const BackgroundJobsWidget = () => {
       }, 2000);
     } catch (error) {
       console.error('Failed to cancel migration:', error);
-      alert(error.response?.data?.error || 'Failed to cancel migration');
+      showApiError(error, 'Failed to cancel migration');
     } finally {
       setCancelling(prev => ({ ...prev, [job.deploymentId]: false }));
     }

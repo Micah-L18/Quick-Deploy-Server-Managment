@@ -1,19 +1,18 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import AlertModal from '../components/AlertModal';
 import ConfirmModal from '../components/ConfirmModal';
 import Button from '../components/Button';
 import SnapshotCard from '../components/SnapshotCard';
 import { TrashIcon, AlertIcon, UploadIcon, EditIcon, SearchIcon, ChevronDownIcon } from '../components/Icons';
 import { uploadsService } from '../api/uploads';
 import * as snapshotsService from '../api/snapshots';
+import { showSuccess, showError } from '../utils/toast';
 import api from '../api/axiosConfig';
 import styles from './Storage.module.css';
 
 const Storage = () => {
   const queryClient = useQueryClient();
-  const [alert, setAlert] = useState({ isOpen: false, type: 'info', title: '', message: '' });
   const [confirm, setConfirm] = useState({ isOpen: false, type: '', data: null });
   const [activeTab, setActiveTab] = useState('overview');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -64,21 +63,11 @@ const Storage = () => {
       queryClient.invalidateQueries(['uploaded-icons']);
       queryClient.invalidateQueries(['storage-info']);
       setUploadProgress(0);
-      setAlert({
-        isOpen: true,
-        type: 'success',
-        title: 'Success',
-        message: 'Icon uploaded successfully',
-      });
+      showSuccess('Icon uploaded successfully');
     },
     onError: (error) => {
       setUploadProgress(0);
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to upload icon',
-      });
+      showError(error.response?.data?.error || 'Failed to upload icon');
     },
   });
 
@@ -89,20 +78,10 @@ const Storage = () => {
       queryClient.invalidateQueries(['uploaded-icons']);
       setRenameModal({ isOpen: false, iconUrl: null, currentName: '' });
       setNewIconName('');
-      setAlert({
-        isOpen: true,
-        type: 'success',
-        title: 'Success',
-        message: 'Icon renamed successfully',
-      });
+      showSuccess('Icon renamed successfully');
     },
     onError: (error) => {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to rename icon',
-      });
+      showError(error.response?.data?.error || 'Failed to rename icon');
     },
   });
 
@@ -112,20 +91,10 @@ const Storage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['uploaded-icons']);
       queryClient.invalidateQueries(['storage-info']);
-      setAlert({
-        isOpen: true,
-        type: 'success',
-        title: 'Success',
-        message: 'Icon deleted successfully',
-      });
+      showSuccess('Icon deleted successfully');
     },
     onError: (error) => {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to delete icon',
-      });
+      showError(error.response?.data?.error || 'Failed to delete icon');
     },
   });
 
@@ -135,20 +104,10 @@ const Storage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['snapshots-storage']);
       queryClient.invalidateQueries(['storage-info']);
-      setAlert({
-        isOpen: true,
-        type: 'success',
-        title: 'Success',
-        message: 'Snapshot deleted successfully',
-      });
+      showSuccess('Snapshot deleted successfully');
     },
     onError: (error) => {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to delete snapshot',
-      });
+      showError(error.response?.data?.error || 'Failed to delete snapshot');
     },
   });
 
@@ -157,20 +116,10 @@ const Storage = () => {
     mutationFn: ({ snapshotId, notes }) => snapshotsService.update(snapshotId, notes),
     onSuccess: () => {
       queryClient.invalidateQueries(['snapshots-storage']);
-      setAlert({
-        isOpen: true,
-        type: 'success',
-        title: 'Success',
-        message: 'Snapshot notes updated successfully',
-      });
+      showSuccess('Snapshot notes updated successfully');
     },
     onError: (error) => {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to update snapshot notes',
-      });
+      showError(error.response?.data?.error || 'Failed to update snapshot notes');
     },
   });
 
@@ -178,20 +127,10 @@ const Storage = () => {
   const restoreSnapshotMutation = useMutation({
     mutationFn: (snapshotId) => snapshotsService.restore(snapshotId),
     onSuccess: () => {
-      setAlert({
-        isOpen: true,
-        type: 'success',
-        title: 'Success',
-        message: 'Snapshot restore initiated. Check deployment status for progress.',
-      });
+      showSuccess('Snapshot restore initiated. Check deployment status for progress.');
     },
     onError: (error) => {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to restore snapshot',
-      });
+      showError(error.response?.data?.error || 'Failed to restore snapshot');
     },
   });
 
@@ -202,24 +141,14 @@ const Storage = () => {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type)) {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Invalid File Type',
-        message: 'Please upload an image file (JPEG, PNG, GIF, WebP, or SVG)',
-      });
+      showError('Please upload an image file (JPEG, PNG, GIF, WebP, or SVG)');
       return;
     }
 
     // Validate file size (5MB limit)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'File Too Large',
-        message: 'Icon must be less than 5MB',
-      });
+      showError('Icon must be less than 5MB');
       return;
     }
 
@@ -239,12 +168,7 @@ const Storage = () => {
 
   const handleConfirmRename = () => {
     if (!newIconName.trim()) {
-      setAlert({
-        isOpen: true,
-        type: 'error',
-        title: 'Error',
-        message: 'Filename cannot be empty',
-      });
+      showError('Filename cannot be empty');
       return;
     }
     renameIconMutation.mutate({
@@ -646,15 +570,6 @@ const Storage = () => {
           )}
         </div>
       </div>
-
-      {/* Alert Modal */}
-      <AlertModal
-        isOpen={alert.isOpen}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={() => setAlert({ ...alert, isOpen: false })}
-      />
 
       {/* Confirm Modal */}
       <ConfirmModal

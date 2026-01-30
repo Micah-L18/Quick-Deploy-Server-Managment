@@ -8,6 +8,7 @@ import ServerSettingsModal from '../components/ServerSettingsModal';
 import { SERVER_ICONS } from '../components/IconSelector';
 import { serversService } from '../api/servers';
 import { getRegionFlag } from '../utils/formatters';
+import { showError, showCopied } from '../utils/toast';
 import { RefreshIcon, PlusIcon, ServersIcon, EyeIcon, EyeOffIcon, SettingsIcon, ClipboardIcon, AlertIcon } from '../components/Icons';
 import styles from './Servers.module.css';
 
@@ -123,7 +124,7 @@ const Servers = () => {
     e.preventDefault();
     // Validate OS selection
     if (!formData.osType) {
-      alert('Please select an operating system for your server.');
+      showError('Please select an operating system for your server.');
       return;
     }
     // Username defaults to 'nobase' on backend if not provided
@@ -659,6 +660,7 @@ const Servers = () => {
           <Button 
             onClick={() => {
               navigator.clipboard.writeText((newServerData?.setupCommand || '').trim());
+              showCopied('Setup command copied!');
             }}
             style={{ marginTop: '1rem', width: '100%' }}
           >

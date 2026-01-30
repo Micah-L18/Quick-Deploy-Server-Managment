@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastContainer } from 'react-toastify';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SnapshotProgressProvider } from './contexts/SnapshotProgressContext';
@@ -19,6 +20,8 @@ import Storage from './pages/Storage';
 import Docs from './pages/Docs';
 import ComingSoon from './components/ComingSoon';
 import './styles/global.css';
+import 'react-toastify/dist/ReactToastify.css';
+import './styles/toast.css';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -53,6 +56,18 @@ function App() {
                 </Routes>
                 <BackgroundJobsWidget />
                 <UpdatePromptModal />
+                <ToastContainer
+                  position="bottom-right"
+                  autoClose={4000}
+                  hideProgressBar={false}
+                  newestOnTop
+                  closeOnClick
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                  theme="colored"
+                />
               </BrowserRouter>
             </BackgroundJobsProvider>
           </SnapshotProgressProvider>

@@ -6,9 +6,9 @@ import { filesService } from '../api/files';
 import FileEditor from './FileEditor';
 import Modal from './Modal';
 import Button from './Button';
-import AlertModal from './AlertModal';
 import ConfirmModal from './ConfirmModal';
 import { useBackgroundJobs } from '../contexts/BackgroundJobsContext';
+import { showSuccess, showError, showWarning, showInfo } from '../utils/toast';
 import { FolderIcon, FileIcon } from './Icons';
 import styles from './FileBrowser.module.css';
 
@@ -29,7 +29,6 @@ const FileBrowser = ({ serverId }) => {
   const [newFolderName, setNewFolderName] = useState('');
   const [draggedItem, setDraggedItem] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
-  const [alert, setAlert] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [confirm, setConfirm] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [cancelTokenSource, setCancelTokenSource] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -155,12 +154,7 @@ const FileBrowser = ({ serverId }) => {
       setIsUploading(false);
       setUploadProgress(null);
       
-      setAlert({
-        isOpen: true,
-        title: 'Upload Cancelled',
-        message: 'Upload cancelled and partial files removed.',
-        type: 'info'
-      });
+      showInfo('Upload cancelled and partial files removed.');
     }
   };
 
@@ -198,24 +192,14 @@ const FileBrowser = ({ serverId }) => {
 
       // Refresh file list after successful upload
       refetch();
-      setAlert({
-        isOpen: true,
-        title: 'Upload Successful',
-        message: `File "${file.name}" uploaded successfully!`,
-        type: 'success'
-      });
+      showSuccess(`File "${file.name}" uploaded successfully!`);
     } catch (error) {
       if (axios.isCancel(error)) {
         console.log('Upload cancelled:', error.message);
         // Cancel handler already showed the alert
       } else {
         console.error('Upload failed:', error);
-        setAlert({
-          isOpen: true,
-          title: 'Upload Failed',
-          message: `Failed to upload file: ${error.message}`,
-          type: 'error'
-        });
+        showError(`Failed to upload file: ${error.message}`);
       }
     } finally {
       setCancelTokenSource(null);
@@ -233,12 +217,7 @@ const FileBrowser = ({ serverId }) => {
     event.stopPropagation(); // Prevent file opening in editor
     
     if (file.isDirectory) {
-      setAlert({
-        isOpen: true,
-        title: 'Invalid Selection',
-        message: 'Cannot download directories. Please select a file.',
-        type: 'warning'
-      });
+      showWarning('Cannot download directories. Please select a file.');
       return;
     }
 
@@ -250,12 +229,7 @@ const FileBrowser = ({ serverId }) => {
       await filesService.downloadFile(serverId, filePath);
     } catch (error) {
       console.error('Download failed:', error);
-      setAlert({
-        isOpen: true,
-        title: 'Download Failed',
-        message: `Failed to download file: ${error.message}`,
-        type: 'error'
-      });
+      showError(`Failed to download file: ${error.message}`);
     }
   };
 
@@ -279,12 +253,7 @@ const FileBrowser = ({ serverId }) => {
           refetch();
         } catch (error) {
           console.error('Delete failed:', error);
-          setAlert({
-            isOpen: true,
-            title: 'Delete Failed',
-            message: `Failed to delete ${itemType}: ${error.message}`,
-            type: 'error'
-          });
+          showError(`Failed to delete ${itemType}: ${error.message}`);
         }
       }
     });
@@ -292,12 +261,7 @@ const FileBrowser = ({ serverId }) => {
 
   const handleCreateFile = async () => {
     if (!newFileName.trim()) {
-      setAlert({
-        isOpen: true,
-        title: 'Invalid Input',
-        message: 'Please enter a file name',
-        type: 'warning'
-      });
+      showWarning('Please enter a file name');
       return;
     }
 
@@ -315,23 +279,13 @@ const FileBrowser = ({ serverId }) => {
       setSelectedFile(filePath);
     } catch (error) {
       console.error('File creation failed:', error);
-      setAlert({
-        isOpen: true,
-        title: 'Creation Failed',
-        message: `Failed to create file: ${error.message}`,
-        type: 'error'
-      });
+      showError(`Failed to create file: ${error.message}`);
     }
   };
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
-      setAlert({
-        isOpen: true,
-        title: 'Invalid Input',
-        message: 'Please enter a folder name',
-        type: 'warning'
-      });
+      showWarning('Please enter a folder name');
       return;
     }
 
@@ -346,12 +300,7 @@ const FileBrowser = ({ serverId }) => {
       setNewFolderName('');
     } catch (error) {
       console.error('Folder creation failed:', error);
-      setAlert({
-        isOpen: true,
-        title: 'Creation Failed',
-        message: `Failed to create folder: ${error.message}`,
-        type: 'error'
-      });
+      showError(`Failed to create folder: ${error.message}`);
     }
   };
 
@@ -414,12 +363,7 @@ const FileBrowser = ({ serverId }) => {
 
     // Don't allow dropping a parent into its child
     if (targetPath.startsWith(draggedItem.path + '/')) {
-      setAlert({
-        isOpen: true,
-        title: 'Invalid Operation',
-        message: 'Cannot move a folder into itself',
-        type: 'warning'
-      });
+      showWarning('Cannot move a folder into itself');
       setDraggedItem(null);
       setDropTarget(null);
       return;
@@ -432,12 +376,7 @@ const FileBrowser = ({ serverId }) => {
       refetch();
     } catch (error) {
       console.error('Move failed:', error);
-      setAlert({
-        isOpen: true,
-        title: 'Move Failed',
-        message: `Failed to move: ${error.message}`,
-        type: 'error'
-      });
+      showError(`Failed to move: ${error.message}`);
     } finally {
       setDraggedItem(null);
       setDropTarget(null);
@@ -477,12 +416,7 @@ const FileBrowser = ({ serverId }) => {
       refetch();
     } catch (error) {
       console.error('Move failed:', error);
-      setAlert({
-        isOpen: true,
-        title: 'Move Failed',
-        message: `Failed to move: ${error.message}`,
-        type: 'error'
-      });
+      showError(`Failed to move: ${error.message}`);
     } finally {
       setDraggedItem(null);
       setDropTarget(null);
@@ -845,15 +779,6 @@ const FileBrowser = ({ serverId }) => {
           </div>
         </div>
       </Modal>
-
-      {/* Alert Modal */}
-      <AlertModal
-        isOpen={alert.isOpen}
-        onClose={() => setAlert({ ...alert, isOpen: false })}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-      />
 
       {/* Confirm Modal */}
       <ConfirmModal

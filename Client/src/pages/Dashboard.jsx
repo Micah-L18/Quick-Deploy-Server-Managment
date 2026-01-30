@@ -7,7 +7,7 @@ import { serversService } from '../api/servers';
 import { appsService } from '../api/apps';
 import { activitiesService } from '../api/activities';
 import { formatDate } from '../utils/formatters';
-import { ServersIcon, AppsIcon, PlusIcon, CheckIcon, XIcon, AlertIcon } from '../components/Icons';
+import { ServersIcon, AppsIcon, PlusIcon, CheckIcon, XIcon, AlertIcon, HardDriveIcon } from '../components/Icons';
 import styles from './Dashboard.module.css';
 
 const Dashboard = () => {
@@ -46,6 +46,12 @@ const Dashboard = () => {
       title: 'Create App',
       description: 'Launch a new application',
       to: '/apps',
+    },
+    {
+      icon: HardDriveIcon,
+      title: 'Storage',
+      description: 'Manage backups & files',
+      to: '/storage',
     },
   ];
 

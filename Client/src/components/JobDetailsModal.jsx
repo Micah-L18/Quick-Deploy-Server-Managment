@@ -4,6 +4,7 @@ import Modal from './Modal';
 import Button from './Button';
 import { DownloadIcon, RefreshIcon, ClockIcon, XIcon } from './Icons';
 import migrationsService from '../api/migrations';
+import { showApiError } from '../utils/toast';
 import styles from './JobDetailsModal.module.css';
 
 // Helper to format timestamp
@@ -73,7 +74,7 @@ const JobDetailsModal = () => {
       }, 2000);
     } catch (error) {
       console.error('Failed to cancel migration:', error);
-      alert(error.response?.data?.error || 'Failed to cancel migration');
+      showApiError(error, 'Failed to cancel migration');
     } finally {
       setCancelling(false);
     }

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { uploadsService } from '../api/uploads';
+import { showError, showSuccess } from '../utils/toast';
 import styles from './IconUploader.module.css';
 
 // Helper to get full icon URL
@@ -22,13 +23,13 @@ const IconUploader = ({ currentIcon, currentIconUrl, onIconChange }) => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showError('Please select an image file');
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      showError('Image must be less than 5MB');
       return;
     }
 
@@ -55,7 +56,7 @@ const IconUploader = ({ currentIcon, currentIconUrl, onIconChange }) => {
 
     } catch (error) {
       console.error('Icon upload failed:', error);
-      alert(`Failed to upload icon: ${error.message}`);
+      showError(`Failed to upload icon: ${error.message}`);
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -83,7 +84,7 @@ const IconUploader = ({ currentIcon, currentIconUrl, onIconChange }) => {
       });
     } catch (error) {
       console.error('Icon removal failed:', error);
-      alert(`Failed to remove icon: ${error.message}`);
+      showError(`Failed to remove icon: ${error.message}`);
     }
   };
 
